@@ -1,0 +1,305 @@
+# SPEC — Multi-Entity Financial Management Platform
+
+## 0. How to use this file
+
+Save this at `docs/SPEC.md` in an empty repo. Then start Claude Code with:
+
+> Read `docs/SPEC.md` in full. Do not write any code yet. First, list every ambiguity or decision you need from me (section 12 lists the ones I already know about). After I answer, write `docs/PLAN.md` breaking the build into the phases in section 2, with a checklist per phase. Then build Phase 1 only and stop.
+
+Build one phase per session. At the end of each phase: run the tests, commit, and update `docs/PLAN.md` with what is done and what changed.
+
+---
+
+## 1. Context and goal
+
+I run two legal entities. Their finances currently live in three spreadsheets. I want one web app that replaces all three.
+
+The two entities:
+
+- **Dynamics Data (DDGROUP)**
+- **Gabriel Sampaio Jacob** (individual/PJ entity)
+
+They have **different clients**, **separate books**, and **separate reports**. The revenue-recognition logic is shared code, never shared data. There is also a **consolidated view** that sums both.
+
+Everything is BRL, pt-BR number and date formatting (`1.234,56` and `dd/mm/aaaa`), timezone `America/Sao_Paulo`. UI language: Portuguese. Code, comments, and variable names: English.
+
+The three things the app must do:
+
+1. **Cash flow (regime de caixa)** — every real movement of money in and out, per entity, imported from bank and credit-card statements and categorized.
+2. **Management P&L (regime de competência, gerencial)** — revenue and costs assigned to the month they *relate to*, not the month cash moved.
+3. **Revenue recognition** — the engine that converts contracts into monthly recognized revenue.
+
+This is a **management** P&L, not an accounting one. It does not have to satisfy any accountant, auditor, or the Receita Federal. It has to be correct, auditable by me, and reconcilable back to the bank.
+
+---
+
+## 2. Build phases
+
+Do not attempt this in one pass. Ship in this order, each phase working and tested before the next.
+
+| Phase | Scope | Done when |
+|---|---|---|
+| 1 | Auth, entities, DB schema, migrations, seed data, empty shell UI | I can log in, switch entity, and see empty pages |
+| 2 | Manual transaction CRUD + chart of accounts + cash flow report | I can type transactions by hand and get a correct cash flow |
+| 3 | Statement import: OFX + CSV, dedup, staging/review screen | I can import a real statement and approve it into the ledger |
+| 4 | Categorization: deterministic rules engine + rule learning | Repeat transactions auto-categorize without AI |
+| 5 | Clients, contracts, recognition schedules, % completion input | I can create a contract and see its recognition schedule |
+| 6 | Management P&L per entity + consolidated P&L | Numbers match the acceptance tests in section 11 |
+| 7 | AI layer: LLM suggestions for uncategorized transactions, contract PDF extraction | Suggestions appear as drafts a human confirms |
+| 8 | Dashboards, exports (XLSX/CSV), audit log UI | I can export anything I can see |
+
+AI is **phase 7, not phase 1**. The system must be fully usable with zero AI calls. AI only ever reduces typing.
+
+---
+
+## 3. Stack (fixed — do not substitute)
+
+- Next.js (App Router) + TypeScript, strict mode
+- Supabase: Postgres, Auth, Storage, Row Level Security
+- Tailwind + shadcn/ui
+- Drizzle or Supabase migrations — pick one, use it for every schema change, never edit tables by hand
+- `decimal.js` or integer cents for all money. **Never** JavaScript floats for money. Store money as `numeric(14,2)` in Postgres and as integer cents or Decimal in TS.
+- Vitest for unit tests, Playwright for one happy-path E2E
+- LLM calls behind a single `lib/ai/provider.ts` interface so the model can be swapped. Default to Anthropic; make the key an env var. No LLM call may ever write directly to a ledger table.
+
+Multi-tenant from the first migration: **every** business table carries `entity_id` and an RLS policy. Retrofitting this later is painful, so do it now.
+
+---
+
+## 4. Glossary — get this vocabulary right in code and UI
+
+- **Caixa** — cash basis. Money actually moved.
+- **Competência** — accrual basis. The period the economic event belongs to.
+- **Reconhecimento de receita** — revenue recognition.
+- **Retainer / suporte contínuo** — recurring monthly contract.
+- **Projeto** — fixed-scope contract recognized by percentage of completion (POC).
+- **Conciliação** — matching a cash entry to a contract/client/expense.
+
+---
+
+## 5. Core architectural rule: two ledgers, never one
+
+This is the single most important design decision. **Do not** try to derive the P&L by re-tagging cash transactions with a different date. Model two separate tables:
+
+1. `cash_entries` — one row per real money movement. Immutable once approved. Source: bank/card statement or manual entry. Has `occurred_on` (real date).
+2. `recognition_entries` — one row per unit of recognized revenue or accrued cost. Has `period` (the month, e.g. `2026-03-01`). Generated by the recognition engine or entered manually.
+
+They are linked, not merged, via `contract_id` / `client_id` and an optional `cash_entry_id`.
+
+Consequences to implement:
+
+- A single R$50.000 payment for a 5-month project produces **1** cash entry in the payment month and **5** recognition entries of R$10.000 across the project months (or POC-weighted amounts — see section 8).
+- Cash flow reports read only `cash_entries`. P&L reads only `recognition_entries`. They will not tie out month to month, and that is correct.
+- Build a **deferred revenue** report showing, per client: cash received − revenue recognized to date. This is the reconciliation between the two ledgers and it is the number I will use to catch bugs.
+
+---
+
+## 6. Data model (minimum)
+
+Design these tables. Add columns as needed but do not drop concepts.
+
+```
+entities          id, name, legal_name, tax_id, currency, active
+
+users             (Supabase auth)
+user_entities     user_id, entity_id, role            -- access control
+
+accounts          id, entity_id, name, type(bank|credit_card|cash),
+                  institution, last_digits, opening_balance, active
+
+categories        id, entity_id, code, name, kind(revenue|cost|expense|tax|
+                  transfer|owner_draw), parent_id, dre_group, active
+                  -- dre_group drives the P&L line ordering
+
+clients           id, entity_id, name, tax_id, notes, active
+people            id, entity_id, name, role, kind(employee|contractor|partner)
+
+contracts         id, entity_id, client_id, name,
+                  type(retainer|project), status,
+                  total_value, currency,
+                  start_date, end_date,
+                  billing_terms(text), payment_terms(text),
+                  recognition_method(straight_line|poc|manual),
+                  source_file_id, extracted_json, confirmed_by, confirmed_at
+
+contract_items    id, contract_id, description, value, notes   -- optional breakdown
+
+statement_imports id, entity_id, account_id, filename, file_hash, format,
+                  period_start, period_end, status, imported_by, created_at
+
+staged_transactions  id, import_id, raw_json, external_id, occurred_on,
+                     description, amount, suggested_category_id,
+                     suggested_client_id, suggested_person_id,
+                     suggestion_source(rule|ai|none), confidence,
+                     dedup_hash, status(pending|approved|rejected|duplicate)
+
+cash_entries      id, entity_id, account_id, occurred_on, amount,
+                  direction(in|out), description, category_id,
+                  client_id?, person_id?, contract_id?, vendor?,
+                  external_id, dedup_hash, import_id?, created_by, created_at
+                  -- unique(entity_id, dedup_hash)
+
+recognition_entries id, entity_id, period(date, first of month),
+                    contract_id?, client_id?, category_id,
+                    kind(revenue|cost), amount, method, source(engine|manual),
+                    poc_report_id?, created_at
+                    -- unique(contract_id, period, source) for engine rows
+
+poc_reports       id, contract_id, period, percent_complete_cumulative,
+                  reported_by, reported_at, notes
+
+categorization_rules id, entity_id, priority, match_type(contains|regex|exact|
+                     amount_range), pattern, account_id?,
+                     category_id, client_id?, person_id?, active, hit_count
+
+audit_log         id, entity_id, actor, action, table_name, row_id,
+                  before_json, after_json, created_at
+```
+
+Every mutation of `cash_entries`, `recognition_entries`, `contracts`, and `categorization_rules` writes to `audit_log`.
+
+---
+
+## 7. Statement ingestion
+
+Supported inputs, in priority order:
+
+1. **OFX/OFC** — primary. Brazilian banks (Itaú, Bradesco, BB, Nubank, Inter, Santander) all export it. Parse `FITID` as `external_id`. This is reliable; build it first.
+2. **CSV** — with a column-mapping UI (the user maps *their* file's columns to date/description/amount/balance once per account, saved as a template). Handle `1.234,56`, `1,234.56`, `R$` prefixes, `D`/`C` suffix columns, and separate debit/credit columns.
+3. **PDF** — last. Extract text, and if the layout is not parseable, say so and ask the user to upload OFX/CSV instead. Never silently guess numbers from a PDF.
+
+Rules:
+
+- Every import goes to `staged_transactions` first. **Nothing** enters `cash_entries` without an explicit human approval click on the review screen.
+- Dedup: `dedup_hash = sha256(account_id | occurred_on | amount | normalized_description)`. Also dedup on `external_id` when present. Re-importing an overlapping statement must flag duplicates, not create them.
+- Credit card statements: import the individual card purchases as expenses, and mark the bank payment of the card bill as a `transfer` category so it does not double-count. Explain this behavior in the UI. Handle `parcelado` (installment) purchases: capture `installment_current`/`installment_total` from the description when present.
+- Show a running imported-balance vs. statement-closing-balance check and warn on mismatch.
+
+---
+
+## 8. Categorization
+
+Three layers, in this order. Each one only runs if the previous produced nothing.
+
+1. **Exact match** on `external_id` / previously-seen identical description → reuse last categorization.
+2. **Rules engine** — user-defined `categorization_rules`, evaluated by priority. When a user categorizes a staged transaction manually, offer "create a rule from this" prefilled with a normalized description fragment.
+3. **AI suggestion** (phase 7) — batch the remaining uncategorized descriptions into one LLM call. Return strict JSON: `{external_id, category_code, client_id?, person_id?, confidence, reasoning}`. Validate every returned id against the DB and drop anything that does not resolve. Write to `suggested_*` fields only.
+
+Hard constraints:
+
+- The LLM never sees or produces amounts used in calculations. It classifies text. Amounts come from the parser.
+- Confidence below a configurable threshold (default 0.8) is shown but not pre-selected.
+- Salaries: match against `people` by name fragment. Pró-labore, INSS, FGTS, and IRRF get their own categories.
+- Subscriptions: detect recurrence (same normalized vendor, ±5 days, similar amount, 3+ occurrences) and surface a "Assinaturas" screen listing vendor, monthly cost, annualized cost, last charge.
+
+---
+
+## 9. Contracts and revenue recognition
+
+Contract upload (PDF/DOCX) → store in Supabase Storage → LLM extracts a **draft**: client name, contract type, total value, start/end dates, monthly value, payment schedule, scope description. The draft lands in `contracts.extracted_json` with `status = 'draft'`. **A human must review and confirm every field before a recognition schedule is generated.** Show extracted value next to the source snippet where possible.
+
+Recognition engine, run per (contract, period):
+
+**Retainer / suporte contínuo**
+- Straight line: `monthly_amount = total_value / months_in_term`, or an explicit monthly value if the contract states one.
+- Partial first/last months: prorate by days by default, with a per-contract toggle for "full month".
+- Indefinite retainers (no end date): recognize the monthly value each month while `status = active`.
+
+**Project (POC)**
+- Someone on the team reports **cumulative** percent complete for the month via a simple UI screen (`poc_reports`).
+- `revenue_this_month = total_value × (cumulative_pct_this_month − cumulative_pct_last_month)`.
+- Store cumulative, compute the delta. This makes corrections safe: if last month was reported wrong, fixing it self-corrects the next month rather than compounding.
+- Percent must be 0–100 and monotonically non-decreasing unless the user ticks "correction".
+- No POC report for a month = zero recognized revenue for that contract that month, and the month shows in a "missing reports" warning list.
+- Closing a project at status `completed` forces cumulative to 100% and recognizes the remainder.
+
+Contract changes: amendments create a new version row rather than editing history. Already-recognized periods are never rewritten retroactively; the remaining value is re-spread over remaining periods.
+
+The engine must be **idempotent**: re-running it for a closed period produces no duplicate rows and no changes. Recognition rows for a period the user has marked "closed" are locked.
+
+---
+
+## 10. Reports
+
+Per entity, and consolidated (both entities summed, with a column per entity plus total):
+
+1. **Cash flow** — months as columns, categories as rows, inflow/outflow sections, opening and closing balance per month, drill-down from any cell to the underlying `cash_entries`.
+2. **Management P&L** — Receita bruta → deduções → receita líquida → custos diretos → margem bruta → despesas operacionais (grouped) → EBITDA → impostos → resultado líquido. Months as columns. Drill-down to `recognition_entries`.
+3. **Revenue by client** — recognized vs. received, per month.
+4. **Deferred revenue / backlog** — per contract: total value, recognized to date, remaining, cash received, difference.
+5. **Payroll by person** — monthly cost per person.
+6. **Subscriptions** — as described in section 8.
+
+Consolidation note: the two entities are separate legal persons. If one ever invoices the other, that must be flagged as intercompany and eliminated in the consolidated view. Build the `is_intercompany` flag now even if it is unused today.
+
+Every report exports to XLSX and CSV with the same numbers as the screen.
+
+---
+
+## 11. Acceptance tests — write these as automated tests before declaring a phase done
+
+Use these exact numbers.
+
+1. **Deferred revenue.** Client A pays R$50.000 on 10/03/2026 for a 5-month project starting 01/03/2026, POC reported at 20%/month.
+   → Cash flow March: inflow R$50.000. April–July: R$0.
+   → P&L: R$10.000 in each of March, April, May, June, July.
+   → Deferred revenue after March: R$40.000. After July: R$0.
+
+2. **POC correction.** Same contract; February reported 30% cumulative, March reported 25% cumulative with the "correction" flag.
+   → March recognition is −R$2.500 and the running total stays consistent. No retroactive edit to February's row.
+
+3. **Retainer proration.** Retainer of R$6.000/month starting 15/04/2026.
+   → April recognizes R$3.200 (16/30 days), May onward R$6.000.
+
+4. **Card double-count.** A R$1.200 card statement containing three purchases, and a R$1.200 bank debit paying that bill.
+   → Total expenses = R$1.200, not R$2.400. The bank debit appears in cash flow as a transfer, not an expense.
+
+5. **Re-import.** Import the same OFX twice.
+   → Zero new `cash_entries`; all rows flagged duplicate in staging.
+
+6. **Entity isolation.** A user with access only to Entity A queries every endpoint.
+   → No row from Entity B is ever returned. Test at the RLS level, not just the UI.
+
+7. **Consolidation.** Entity A revenue R$100.000, Entity B revenue R$40.000, same month.
+   → Consolidated shows R$140.000, with per-entity columns intact.
+
+8. **Money precision.** Sum 1.000 entries of R$0,01.
+   → Exactly R$10,00. No float drift anywhere in the stack.
+
+---
+
+## 12. Decisions I need to make before you start coding — ask me these
+
+Do not guess. Ask, wait for answers, record them in `docs/DECISIONS.md`.
+
+1. Who reports project % completion, and how often — one person for all projects, or per-project owners?
+2. Are costs also accrued (13º, férias, prepaid annual subscriptions spread over 12 months), or is only revenue on competência and costs stay cash-basis?
+3. Do I need budget vs. actual, or only actuals?
+4. Which banks and cards, exactly? (Determines which OFX/CSV dialects to test against.)
+5. Are there any foreign-currency clients? If yes, which rate and which date?
+6. Do I need to model NFe/NFSe issuance and invoice status, or does the system start at "money moved"?
+7. How many users, and does anyone need read-only access?
+8. Does the "Gabriel Sampaio Jacob" entity mix personal and business spending? If yes, we need a personal/business split flag on expenses.
+9. What is the historical backfill? Do I import 2025 statements, or start fresh from a chosen month?
+10. Should a period be formally "closed" (locked) each month, and who can reopen it?
+
+---
+
+## 13. Non-goals (do not build these)
+
+- Accounting-standard books, SPED, ECD/ECF, or anything an accountant would file
+- Invoice issuance to government systems
+- Direct bank API / Open Finance connections (file upload only, for now)
+- Payment execution — the system never moves money
+- Mobile app
+- Multi-currency reporting (single-currency BRL until stated otherwise)
+
+---
+
+## 14. Working agreement
+
+- Ask before installing any dependency not listed in section 3.
+- No mock data in code paths that reach production. If something is not built yet, render an empty state that says so.
+- Never invent a number. If a value cannot be computed from real data, show a dash and a reason.
+- Every phase ends with: tests passing, `README.md` updated with how to run it, and a commit.
+- If you find a conflict or an impossibility in this spec, stop and tell me instead of working around it silently.
