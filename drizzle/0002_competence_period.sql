@@ -1,0 +1,1 @@
+ALTER TABLE "cash_entries" ADD COLUMN "competence_period" date;

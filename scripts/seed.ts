@@ -58,7 +58,9 @@ const CHART_OF_ACCOUNTS: CategorySeed[] = [
   { code: "6.08", name: "Ticket restaurante", kind: "expense", dreGroup: "pessoal", parent: "6.01" },
   { code: "6.09", name: "Vale transporte", kind: "expense", dreGroup: "pessoal", parent: "6.01" },
   { code: "6.10", name: "Freelancers", kind: "expense", dreGroup: "pessoal", parent: "6.01" },
-  { code: "6.11", name: "Pró-labore", kind: "owner_draw", dreGroup: "pessoal", parent: "6.01" },
+  // Pró-labore is payroll, not a draw: the `DRE Geral` sheet carries it inside Pessoal,
+  // above the line. `owner_draw` is reserved for profit distribution, which is below it.
+  { code: "6.11", name: "Pró-labore", kind: "expense", dreGroup: "pessoal", parent: "6.01" },
 
   // Ferramentas e assinaturas — one line per tool, as the spreadsheet keeps them.
   { code: "7.00", name: "Ferramentas e assinaturas", kind: "expense", dreGroup: "ferramentas" },

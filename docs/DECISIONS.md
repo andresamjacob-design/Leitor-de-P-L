@@ -197,9 +197,65 @@ de reconhecimento, proração, parsers) rodam sem nada disso.
 
 ---
 
-## Parte 5 — Pendências abertas
+## Parte 6 — Decisões tomadas na Fase 2
 
-Não bloqueiam a Fase 1. Precisam de resposta antes da fase indicada.
+Propostas por mim durante a construção. Todas são reversíveis, mas ficam mais caras
+depois da Fase 3, quando o importador começar a gravar em cima delas.
+
+### D24 — Pró-labore é despesa, não retirada
+A conta `6.11 Pró-labore` estava com `kind = owner_draw`, o que a deixaria fora do DRE.
+A planilha `DRE Geral` a carrega **dentro de Pessoal**, acima da linha. Passou a
+`expense`. `owner_draw` fica só para `99.04 Distribuição de lucros`, que é abaixo da
+linha. Consequência prática: pró-labore agora gera competência automática; distribuição
+de lucros, não.
+
+### D25 — O fluxo de caixa só olha conta de dinheiro
+Contas de tipo `bank`, `cash` e `investment` entram; `credit_card` fica de fora. Uma
+compra no cartão não é saída de caixa — é dívida. Somar as duas coisas é exatamente o
+erro que a D-C existe para evitar. A tela diz quais contas entraram e quais ficaram
+de fora, em vez de omitir em silêncio.
+
+### D26 — Transferência tem seção própria e mexe no saldo
+A D-C manda tirar transferência de entrada e de saída. Mas o dinheiro **saiu da conta**,
+então ela continua no saldo final. O relatório tem, nesta ordem: saldo inicial ·
+entradas · saídas · **resultado de caixa** (entradas − saídas) · transferências ·
+**movimento líquido** (com transferências) · saldo final.
+
+`saldo final = saldo inicial + entradas − saídas + transferências líquidas`, e essa
+identidade é testada.
+
+### D27 — Consolidado é só de leitura
+Um lançamento pertence a um CNPJ, e "as duas entidades somadas" não é um CNPJ. Relatório
+funciona consolidado; formulário não — a tela oferece o link para escolher a entidade.
+No consolidado, as linhas são unidas **pelo código** da categoria, senão "Salários"
+apareceria duas vezes, uma por entidade.
+
+### D28 — Lançamento manual usa o mesmo hash de dedup do importador
+`sha256(conta | data | valor | sentido | descrição normalizada)`. Se você digitar um
+movimento que o importador já trouxe, o banco recusa e o formulário pergunta se era
+mesmo uma segunda ocorrência. Marcando "gravar mesmo assim", o hash ganha um sufixo e
+passa. Isso mantém a §7 valendo para dado digitado, não só para dado importado.
+
+### D29 — Lançamento e espelho não são atômicos
+O REST do Supabase não tem transação de várias instruções. Mitigação: o espelho é
+**idempotente** (é derivado inteiro do lançamento, então salvar de novo conserta
+qualquer divergência) e, se o espelho falhar num lançamento novo, o lançamento é
+desfeito em vez de virar órfão. Numa **edição**, se o espelho falhar, o lançamento fica
+salvo e o erro aparece na tela — salvar de novo resolve. A alternativa seria uma função
+plpgsql, que duplicaria a regra de competência em duas linguagens; a regra está testada
+em TypeScript e é melhor que ela exista uma vez só.
+
+### D30 — A competência é uma coluna do lançamento
+`cash_entries.competence_period`, nulável, sempre primeiro dia do mês. Nulo significa
+"o mês da data do movimento". Guardar no lançamento (e não só na linha de competência)
+deixa o motor de espelho derivável e permite, sem migração nova, o rateio em N meses:
+um `cash_entry` → N `recognition_entries`.
+
+---
+
+## Parte 7 — Pendências abertas
+
+Precisam de resposta antes da fase indicada.
 
 | # | Pendência | Bloqueia |
 |---|---|---|
@@ -212,3 +268,5 @@ Não bloqueiam a Fase 1. Precisam de resposta antes da fase indicada.
 | Q7 | **Rateio de pessoas por cliente/squad.** A aba `Colaboradores` aloca cada pessoa a um cliente e a um squad. Isso permite margem por cliente, que é mais do que o "payroll por pessoa" da §10. Quer? | Fase 6 |
 | Q8 | **Pipeline de vendas.** A aba `Vendas e Perdas` é um CRM (cliente, status, responsável, valor). Nenhuma fase do SPEC cobre isso. Fica fora? | — |
 | Q9 | **Arquivo alheio na pasta.** `docs/reference/Cópia de Autorização de saída - Saint Paul 21_08.docx.pdf` é uma autorização de saída escolar, não tem relação com o financeiro. Não abri. Apagar? | — |
+| Q10 | **Saldo de abertura de 01/01/2026.** O seed grava 0,00 e a tela de Contas já permite corrigir à mão. Enquanto o valor real não entrar, todo saldo do fluxo de caixa está deslocado por uma constante. Preciso do saldo da conta corrente Itaú em 01/01/2026. | Fase 2 (uso real) |
+| Q11 | **Nada do caminho de escrita foi executado contra um Postgres.** Sem projeto Supabase (Q6) e sem Docker/PGlite (Q5), o que está testado é a lógica pura: 83 testes cobrindo dinheiro, datas, dedup, espelho de competência e o relatório inteiro. As migrations 0002/0003 nunca rodaram. Isto é o que mais me preocupa hoje. | Fase 3 |

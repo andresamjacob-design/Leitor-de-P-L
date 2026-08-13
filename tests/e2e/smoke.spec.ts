@@ -30,3 +30,20 @@ test("a página está em português do Brasil", async ({ page }) => {
   await page.goto("/login");
   await expect(page.locator("html")).toHaveAttribute("lang", "pt-BR");
 });
+
+/**
+ * Fase 2 added screens that read and write the ledger. Without a session none of them may
+ * answer — the middleware turns them away before any query runs, and RLS would refuse
+ * anyway (DECISIONS D16).
+ */
+for (const path of [
+  "/dd-group/lancamentos",
+  "/dd-group/lancamentos/novo",
+  "/dd-group/contas",
+  "/dd-group/plano-de-contas",
+]) {
+  test(`${path} exige sessão`, async ({ page }) => {
+    await page.goto(path);
+    await expect(page).toHaveURL(/\/login/);
+  });
+}

@@ -8,8 +8,9 @@ gerencial (regime de competência) e reconhecimento de receita, para **DD Group*
 - `docs/DECISIONS.md` — as decisões tomadas, e onde elas contrariam a spec
 - `docs/PLAN.md` — o plano por fase, com checklist e status
 
-**Fase atual: 1 concluída.** Autenticação, entidades, schema, migrations, seed e shell
-vazio. Nenhum relatório calcula nada ainda — isso é a Fase 2 em diante.
+**Fase atual: 2 concluída.** Dá para cadastrar contas e categorias, digitar lançamentos e
+ler o fluxo de caixa mês a mês, com drill-down. Importação de extrato é a Fase 3; o DRE
+gerencial, a Fase 6.
 
 ## Como rodar
 
@@ -46,15 +47,23 @@ SEED_USER_EMAIL=voce@empresa.com npm run db:seed
 ## Como o código está organizado
 
 ```
-src/lib/money.ts        centavos inteiros em bigint — nenhum float toca dinheiro
-src/lib/dates.ts        datas como YYYY-MM-DD, sem objeto Date no domínio
-src/lib/tax-id.ts       CPF/CNPJ normalizado, para casar com o extrato
-src/lib/db/schema.ts    fonte única do schema; toda mudança vira migration
-src/lib/entities.ts     resolução de /[entidade]/... e do escopo consolidado
-src/lib/supabase/       clientes que sempre carregam o JWT do usuário
-drizzle/                migrations versionadas, incluindo RLS e auditoria
-scripts/seed.ts         seed idempotente
+src/lib/money.ts            centavos inteiros em bigint — nenhum float toca dinheiro
+src/lib/dates.ts            datas como YYYY-MM-DD, sem objeto Date no domínio
+src/lib/tax-id.ts           CPF/CNPJ normalizado, para casar com o extrato
+src/lib/dedup.ts            o hash que impede o mesmo movimento duas vezes
+src/lib/cash-flow.ts        o relatório de caixa, função pura, sem banco
+src/lib/recognition/mirror.ts  quando um custo de caixa vira competência (D2a/D2b)
+src/lib/ledger-types.ts     tipos e rótulos que servidor e cliente compartilham
+src/lib/data/               leitura e escrita via Supabase, sempre com o JWT do usuário
+src/lib/db/schema.ts        fonte única do schema; toda mudança vira migration
+src/lib/entities.ts         resolução de /[entidade]/... e do escopo consolidado
+src/lib/supabase/           clientes que sempre carregam o JWT do usuário
+drizzle/                    migrations versionadas, incluindo RLS e auditoria
+scripts/seed.ts             seed idempotente
 ```
+
+O que é cálculo mora em função pura e é testado sem banco; o que é acesso mora em
+`src/lib/data/` e passa por RLS. Nenhuma tela faz conta.
 
 Três regras que valem para o código inteiro:
 
@@ -63,7 +72,7 @@ Três regras que valem para o código inteiro:
 2. **Toda query do app roda com o JWT do usuário.** Não existe cliente com service role.
    O RLS é a fronteira real entre as entidades, não a interface.
 3. **Nada de dado falso.** Tela sem dado mostra estado vazio dizendo o que falta e em
-   qual fase é construída.
+   qual fase é construída. Relatório com ressalva mostra a ressalva.
 
 ## Dois razões, nunca um
 
@@ -75,11 +84,34 @@ e **não fecham entre si mês a mês** — isso é o comportamento correto, não
 - O relatório de **receita diferida** é a ponte entre os dois, e é o número que denuncia
   erro de cálculo.
 
-## O que ainda falta para a Fase 1 fechar de verdade
+Salvar um custo grava nos dois: o lançamento no caixa, e o espelho na competência do mês
+em que ele aconteceu. Quando os dois meses discordam — salário de janeiro pago em
+fevereiro, compra no cartão paga depois — o campo **Competência** do lançamento é o que
+separa um do outro. Receita nunca espelha: ela vem do contrato, na Fase 5.
+
+## O cartão de crédito
+
+O caso que mais dá errado em planilha, e o motivo do desenho:
+
+- a compra entra na conta do cartão, na data da compra → aparece no **DRE de fevereiro**;
+- o débito da fatura entra na conta corrente, na data do pagamento → aparece no **caixa de
+  março**;
+- o fluxo de caixa **ignora contas de cartão**, senão os mesmos R$ 1.200 seriam contados
+  como R$ 2.400.
+
+Isso está no teste `src/lib/scenarios.test.ts`, que roda os dois razões lado a lado.
+
+## O que ainda falta
 
 - **Saldo de abertura das contas.** O seed grava 0,00 porque o extrato disponível é de
-  julho/2026 e o backfill começa em janeiro. Precisa do saldo real de 01/01/2026.
-- **Teste de RLS automatizado** (teste 6 da §11). Está pendente da decisão Q5 em
-  `docs/DECISIONS.md`: sem Docker nesta máquina, a opção recomendada é PGlite.
+  julho/2026 e o backfill começa em janeiro. Dá para corrigir na tela de Contas — mas
+  precisa do saldo real de 01/01/2026, e enquanto ele não vier todo saldo do fluxo de
+  caixa está deslocado por uma constante.
+- **Nada do caminho de escrita rodou contra um Postgres.** Sem projeto Supabase e sem
+  Docker, o que está verificado é a lógica pura: 83 testes de dinheiro, datas, dedup,
+  espelho de competência e do relatório inteiro. As migrations `0002` e `0003` nunca
+  foram aplicadas.
+- **Teste de RLS automatizado** (teste 6 da §11), pendente da Q5 em `docs/DECISIONS.md`.
 - **Projeto Supabase.** Sem URL e chave, o app sobe e mostra a tela de "não configurado",
   mas ninguém entra.
+- **Segunda entidade.** Nada da `GABRIEL SAMPAIO JACOB LTDA - ME` chegou (Q2).

@@ -449,6 +449,14 @@ export const cashEntries = pgTable(
       .notNull()
       .references(() => accounts.id, { onDelete: "restrict" }),
     occurredOn: date("occurred_on").notNull(),
+    /**
+     * Competência override (D2b). Null means "the month of `occurred_on`", which is the
+     * common case. It is set when the two regimes disagree — a salary paid in February
+     * for January, a card bill paid in March for February's purchases.
+     *
+     * Always the first day of a month, like `recognition_entries.period`.
+     */
+    competencePeriod: date("competence_period"),
     amount: money("amount").notNull(),
     direction: entryDirection("direction").notNull(),
     description: text("description").notNull(),

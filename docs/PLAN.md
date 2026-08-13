@@ -13,7 +13,7 @@ mudou.
 | Fase | Escopo | Status |
 |---|---|---|
 | 1 | Auth, entidades, schema, migrations, seed, shell vazio | ✅ construída — falta o teste de RLS (Q5) e o projeto Supabase (Q6) |
-| 2 | CRUD manual de lançamentos + plano de contas + fluxo de caixa | ⬜ |
+| 2 | CRUD manual de lançamentos + plano de contas + fluxo de caixa | ✅ construída — nenhuma escrita rodou contra um Postgres de verdade (Q11) |
 | 3 | Importação de extrato: XLSX/CSV + PDF de fatura, dedup, tela de revisão | ⬜ |
 | 4 | Categorização: motor de regras determinístico + aprendizado de regra | ⬜ |
 | 5 | Clientes, contratos, NFs, cronogramas de reconhecimento, POC | ⬜ |
@@ -122,19 +122,28 @@ Os arquivos em `docs/reference/` foram lidos antes deste plano. Achados que impo
 
 **Pronto quando:** eu digito lançamentos à mão e o fluxo de caixa sai correto.
 
-- [ ] CRUD de `categories` com `dre_group` e hierarquia (`parent_id`)
-- [ ] CRUD de `accounts` com saldo de abertura
-- [ ] CRUD de `cash_entries`, com edição liberada e trilha de auditoria (D-A)
-- [ ] Espelho automático para `recognition_entries` ao salvar custo (D2a)
-- [ ] Campo de override de competência no lançamento (D2b)
-- [ ] Pareamento de transferências (`transfer_pairs`), D14b
-- [ ] Relatório de fluxo de caixa: meses em coluna, categorias em linha, seções de
+- [x] CRUD de `categories` com `dre_group` e hierarquia (`parent_id`) — desativa em vez
+      de apagar, porque apagar mudaria a classificação de lançamento já feito
+- [x] CRUD de `accounts` com saldo de abertura, mostrando o saldo atual de cada conta
+- [x] CRUD de `cash_entries`, com edição liberada e trilha de auditoria na própria tela
+      do lançamento (D-A)
+- [x] Espelho automático para `recognition_entries` ao salvar custo (D2a) — idempotente,
+      e nunca sobrescreve linha marcada `manually_edited`
+- [x] Campo de override de competência no lançamento (D2b), como coluna
+      `cash_entries.competence_period` (D30, migrations 0002 e 0003)
+- [x] Pareamento de transferências (`transfer_pairs`), D14b — escolher a conta de destino
+      cria a contrapartida e pareia as duas pontas
+- [x] Relatório de fluxo de caixa: meses em coluna, categorias em linha, seções de
       entrada e saída, saldo de abertura e fechamento por mês
-- [ ] Drill-down de qualquer célula para os `cash_entries` que a compõem
-- [ ] Transferências em seção própria, sem somar em entrada nem saída (D-C)
-- [ ] Seed da segunda entidade — **depende da Q2**
-- [ ] Testes: fluxo de caixa de um mês fechado à mão; saldo de fechamento = abertura +
-      entradas − saídas
+- [x] Drill-down de qualquer célula para os `cash_entries` que a compõem
+- [x] Transferências em seção própria, sem somar em entrada nem saída (D-C, D26)
+- [ ] Seed da segunda entidade — **depende da Q2**, nada chegou
+- [x] Testes: fluxo de caixa de um mês fechado à mão; saldo de fechamento = abertura +
+      entradas − saídas; teste 4 da §11 reescrito, atravessando os dois razões
+- [ ] Executar as migrations 0002/0003 e o caminho de escrita contra um Postgres —
+      **depende da Q5/Q6** (Q11)
+
+**Decisões novas nesta fase:** D24 a D30 no `DECISIONS.md`.
 
 ---
 
