@@ -251,6 +251,12 @@ em TypeScript e é melhor que ela exista uma vez só.
 deixa o motor de espelho derivável e permite, sem migração nova, o rateio em N meses:
 um `cash_entry` → N `recognition_entries`.
 
+### D31 — O seed preenche saldo de abertura, nunca sobrescreve
+O saldo de 01/01/2026 da conta corrente (R$ 510.204,78) está no seed. Rodar o seed de
+novo só preenche um saldo que ainda esteja zerado — um valor corrigido na tela de Contas
+é preservado. Sobrescrever moveria em silêncio todos os saldos de fechamento do
+relatório.
+
 ---
 
 ## Parte 7 — Pendências abertas
@@ -268,5 +274,5 @@ Precisam de resposta antes da fase indicada.
 | Q7 | **Rateio de pessoas por cliente/squad.** A aba `Colaboradores` aloca cada pessoa a um cliente e a um squad. Isso permite margem por cliente, que é mais do que o "payroll por pessoa" da §10. Quer? | Fase 6 |
 | Q8 | **Pipeline de vendas.** A aba `Vendas e Perdas` é um CRM (cliente, status, responsável, valor). Nenhuma fase do SPEC cobre isso. Fica fora? | — |
 | Q9 | **Arquivo alheio na pasta.** `docs/reference/Cópia de Autorização de saída - Saint Paul 21_08.docx.pdf` é uma autorização de saída escolar, não tem relação com o financeiro. Não abri. Apagar? | — |
-| Q10 | **Saldo de abertura de 01/01/2026.** O seed grava 0,00 e a tela de Contas já permite corrigir à mão. Enquanto o valor real não entrar, todo saldo do fluxo de caixa está deslocado por uma constante. Preciso do saldo da conta corrente Itaú em 01/01/2026. | Fase 2 (uso real) |
+| ~~Q10~~ | ~~**Saldo de abertura de 01/01/2026.**~~ **Respondido em 13/08/2026:** a conta corrente Itaú tinha **R$ 510.204,78** em 01/01/2026. Está no seed. A dívida do cartão Itaucard na mesma data continua desconhecida e segue em 0,00. | — |
 | Q11 | **Nada do caminho de escrita foi executado contra um Postgres.** Sem projeto Supabase (Q6) e sem Docker/PGlite (Q5), o que está testado é a lógica pura: 83 testes cobrindo dinheiro, datas, dedup, espelho de competência e o relatório inteiro. As migrations 0002/0003 nunca rodaram. Isto é o que mais me preocupa hoje. | Fase 3 |

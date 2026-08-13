@@ -103,10 +103,9 @@ Isso está no teste `src/lib/scenarios.test.ts`, que roda os dois razões lado a
 
 ## O que ainda falta
 
-- **Saldo de abertura das contas.** O seed grava 0,00 porque o extrato disponível é de
-  julho/2026 e o backfill começa em janeiro. Dá para corrigir na tela de Contas — mas
-  precisa do saldo real de 01/01/2026, e enquanto ele não vier todo saldo do fluxo de
-  caixa está deslocado por uma constante.
+- **Saldo de abertura do cartão.** A conta corrente já tem o saldo real de 01/01/2026
+  (R$ 510.204,78, no seed). A dívida do Itaucard na mesma data ainda é desconhecida e
+  segue em 0,00 — dá para corrigir na tela de Contas quando o valor aparecer.
 - **Nada do caminho de escrita rodou contra um Postgres.** Sem projeto Supabase e sem
   Docker, o que está verificado é a lógica pura: 83 testes de dinheiro, datas, dedup,
   espelho de competência e do relatório inteiro. As migrations `0002` e `0003` nunca

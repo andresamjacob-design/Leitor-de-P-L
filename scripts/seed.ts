@@ -5,10 +5,12 @@
  * `docs/reference/`, and a chart of accounts lifted line by line from the `DRE Geral`
  * sheet so the P&L in Fase 6 can reproduce the spreadsheet the company already uses.
  *
- * One thing is deliberately NOT here: opening balances. The statement on hand is from
- * July 2026 and the backfill starts in January (DECISIONS D9), so the January opening
- * balance is not knowable from any file I have. It seeds as 0,00 and must be set before
- * the cash flow in Fase 2 means anything. SPEC §14: never invent a number.
+ * The Itaú opening balance came from Andre directly (it is not in any file here — the
+ * statement on hand is from July 2026 and the backfill starts in January, D9). The card's
+ * opening balance is still unknown and stays at 0,00 rather than being invented (§14).
+ *
+ * The seed only ever *fills* an opening balance that is still zero. A balance someone
+ * corrected on the Contas screen is never overwritten by re-running this.
  *
  *   DATABASE_URL=... npm run db:seed
  *   DATABASE_URL=... SEED_USER_EMAIL=voce@empresa.com npm run db:seed
@@ -18,6 +20,7 @@ import { drizzle } from "drizzle-orm/postgres-js";
 import { and, eq, sql } from "drizzle-orm";
 import postgres from "postgres";
 import { accounts, categories, entities, userEntities } from "../src/lib/db/schema.ts";
+import { formatBRL, parseMoney, toNumeric, type Cents } from "../src/lib/money.ts";
 
 type CategorySeed = {
   code: string;
@@ -142,24 +145,37 @@ const ENTITIES = [
 ] as const;
 
 /** Only DD Group's accounts are known from the files in `docs/reference/`. */
-const ACCOUNTS = [
+const ACCOUNTS: {
+  entitySlug: string;
+  name: string;
+  type: "bank" | "credit_card" | "cash" | "investment";
+  institution: string | null;
+  branch: string | null;
+  number: string | null;
+  lastDigits: string | null;
+  openingBalance: Cents | null;
+}[] = [
   {
     entitySlug: "dd-group",
     name: "Itaú — conta corrente",
-    type: "bank" as const,
+    type: "bank",
     institution: "Itaú Unibanco",
     branch: "0561",
     number: "0098873-4",
     lastDigits: "8873",
+    // Saldo real em 01/01/2026, informado pelo Andre em 13/08/2026.
+    openingBalance: parseMoney("510.204,78"),
   },
   {
     entitySlug: "dd-group",
     name: "Itaucard",
-    type: "credit_card" as const,
+    type: "credit_card",
     institution: "Itaú Unibanco",
     branch: null,
     number: null,
     lastDigits: "4460",
+    // A dívida do cartão em 01/01/2026 não veio em nenhum arquivo. Fica zero até vir.
+    openingBalance: null,
   },
 ];
 
@@ -228,14 +244,27 @@ async function main() {
       const entityId = entityIds.get(account.entitySlug);
       if (!entityId) continue;
 
+      const opening = account.openingBalance ?? 0n;
+
       const existing = await db
-        .select({ id: accounts.id })
+        .select({ id: accounts.id, openingBalance: accounts.openingBalance })
         .from(accounts)
         .where(and(eq(accounts.entityId, entityId), eq(accounts.name, account.name)))
         .limit(1);
 
-      if (existing.length > 0) {
-        console.log(`conta     ${account.name} (já existia)`);
+      const found = existing[0];
+      if (found) {
+        // Only fill a balance nobody has set. Overwriting one that was corrected on the
+        // Contas screen would silently move every closing balance in the report.
+        if (Number(found.openingBalance) === 0 && opening !== 0n) {
+          await db
+            .update(accounts)
+            .set({ openingBalance: toNumeric(opening) })
+            .where(eq(accounts.id, found.id));
+          console.log(`conta     ${account.name} — abertura preenchida: ${formatBRL(opening)}`);
+        } else {
+          console.log(`conta     ${account.name} (já existia, abertura preservada)`);
+        }
         continue;
       }
 
@@ -247,10 +276,13 @@ async function main() {
         branch: account.branch,
         number: account.number,
         lastDigits: account.lastDigits,
-        openingBalance: "0",
+        openingBalance: toNumeric(opening),
         openingDate: OPENING_DATE,
       });
-      console.log(`conta     ${account.name} — saldo de abertura 0,00, precisa ser corrigido`);
+      console.log(
+        `conta     ${account.name} — abertura ${formatBRL(opening)}` +
+          (opening === 0n ? " (desconhecida, precisa ser corrigida)" : ""),
+      );
     }
 
     // Link a user to both entities, when one is named and already exists in Supabase Auth.

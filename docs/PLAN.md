@@ -97,9 +97,9 @@ Os arquivos em `docs/reference/` foram lidos antes deste plano. Achados que impo
 ### Seed
 - [x] `DD GROUP` — Dynamics Data Consulting Tecnologia LTDA, CNPJ 50.050.390/0001-82
 - [x] `GABRIEL SAMPAIO JACOB LTDA - ME`, CNPJ 45.207.742/0001-20
-- [x] Conta Itaú do DD GROUP: ag 0561, c/c 0098873-4 — **saldo de abertura gravado como
-      0,00; o valor real de 01/01/2026 ainda não existe em nenhum arquivo recebido**
-- [x] Cartão Itaucard final 4460
+- [x] Conta Itaú do DD GROUP: ag 0561, c/c 0098873-4 — saldo de abertura de 01/01/2026:
+      **R$ 510.204,78** (informado em 13/08/2026, Q10 respondida)
+- [x] Cartão Itaucard final 4460 — dívida em 01/01/2026 ainda desconhecida, segue 0,00
 - [x] Plano de contas derivado da aba `DRE Geral` (receita, impostos, custos diretos,
       custos operacionais, com `dre_group` na ordem da planilha)
 
