@@ -1,0 +1,28 @@
+import { describe, expect, it } from "vitest";
+import { formatTaxId, isSameTaxId, normalizeTaxId } from "./tax-id";
+
+describe("tax ids", () => {
+  it("normalises to digits", () => {
+    expect(normalizeTaxId("50.050.390/0001-82")).toBe("50050390000182");
+    expect(normalizeTaxId("50050390000182")).toBe("50050390000182");
+  });
+
+  it("formats CNPJ and CPF", () => {
+    expect(formatTaxId("50050390000182")).toBe("50.050.390/0001-82");
+    expect(formatTaxId("45207742000120")).toBe("45.207.742/0001-20");
+    expect(formatTaxId("12345678909")).toBe("123.456.789-09");
+    expect(formatTaxId(null)).toBe("—");
+  });
+
+  it("leaves an unrecognised length untouched rather than mangling it", () => {
+    expect(formatTaxId("123")).toBe("123");
+  });
+
+  it("matches a statement CNPJ against a stored one", () => {
+    // Left side as it arrives in the Itaú XLSX, right side as stored.
+    expect(isSameTaxId("06.278.750/0001-06", "06278750000106")).toBe(true);
+    expect(isSameTaxId("06.278.750/0001-06", "41661994000174")).toBe(false);
+    expect(isSameTaxId(null, "06278750000106")).toBe(false);
+    expect(isSameTaxId("", "")).toBe(false);
+  });
+});
