@@ -169,9 +169,29 @@ const ACCOUNTS: {
      * O Andre informou 510.204,78, que é a **posição total** em 01/01/2026: a conta
      * corrente mais o CDB resgatado em 07/01/2026 (367.735,49). 142.469,28 + 367.735,49
      * = 510.204,77. Usar 510.204,78 aqui contaria o resgate duas vezes e deixaria todo
-     * saldo de 2026 alto em ~R$ 367 mil.
+     * saldo de 2026 alto em ~R$ 367 mil. O CDB é a conta abaixo (Q12).
      */
     openingBalance: parseMoney("142.469,28"),
+  },
+  {
+    /**
+     * O CDB, como conta própria (Q12). Aplicação e resgate são transferências entre esta
+     * conta e a corrente, então o fluxo de caixa mostra a posição total sem contar o
+     * dinheiro duas vezes.
+     *
+     * Ressalva: o rendimento fica dentro do CDB e só aparece no resgate, então entre um
+     * resgate e outro este saldo fica levemente defasado. É por isso que o valor abaixo
+     * é o do resgate de 07/01/2026 — o saldo exato de 01/01 seria alguns reais menor, e
+     * inventar a diferença seria pior do que herdá-la.
+     */
+    entitySlug: "dd-group",
+    name: "Itaú — CDB DI",
+    type: "investment",
+    institution: "Itaú Unibanco",
+    branch: "0561",
+    number: null,
+    lastDigits: null,
+    openingBalance: parseMoney("367.735,49"),
   },
   {
     /**

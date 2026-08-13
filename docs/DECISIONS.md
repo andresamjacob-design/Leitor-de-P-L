@@ -251,6 +251,25 @@ em TypeScript e é melhor que ela exista uma vez só.
 deixa o motor de espelho derivável e permite, sem migração nova, o rateio em N meses:
 um `cash_entry` → N `recognition_entries`.
 
+### D32 — O CDB é uma conta de aplicação (respondendo à Q12)
+Conta `Itaú — CDB DI`, tipo `investment`, abertura R$ 367.735,49 em 01/01/2026.
+Aplicação e resgate são transferências entre ela e a conta corrente, pareadas pelo D14b
+e classificadas em `99.03`. O fluxo de caixa passa a mostrar a **posição total de
+caixa** — as duas contas somam R$ 510.204,77 na abertura, contra os R$ 510.204,78
+informados. O centavo de diferença é herdado, não corrigido: o valor usado é o do
+resgate de 07/01, que já embute alguns dias de rendimento, então o saldo exato de 01/01
+seria alguns reais **menor**. Inventar o número certo seria pior do que carregar a
+diferença à vista.
+
+Consequência conhecida: entre um resgate e outro, o saldo do CDB fica defasado, porque
+o rendimento fica dentro dele e só aparece quando é resgatado. A conta corrente continua
+batendo com o banco ao centavo, que é o que importa para conciliação.
+
+### D33 — Banco 301 fica fora (respondendo à Q14)
+A conta `Banco 301, ag 0001, c/c 3111117-6` está encerrada. O extrato dela (jan–out/2025)
+fica em `docs/reference/` como histórico e **não** entra no sistema. A D4 ("só Itaú")
+segue valendo, agora confirmada em vez de suposta.
+
 ### D31 — O seed preenche saldo de abertura, nunca sobrescreve
 O saldo de 01/01/2026 da conta corrente (R$ 510.204,78) está no seed. Rodar o seed de
 novo só preenche um saldo que ainda esteja zerado — um valor corrigido na tela de Contas
@@ -273,7 +292,7 @@ informados são conta corrente **mais** o CDB resgatado em 07/01/2026:
 
 Gravar 510.204,78 na conta corrente contaria o resgate duas vezes e deixaria todo saldo
 de 2026 alto em ~R$ 367 mil. O seed usa **142.469,28**, que é o número do próprio banco.
-Ver Q12: o CDB vira conta própria ou não.
+O CDB virou conta própria (D32).
 
 ### A2 — São duas contas de cartão, e "4460" nunca foi uma delas
 As faturas trazem por dentro a conta `5336.XXXX.XXXX.5780`, com sete cartões
@@ -324,7 +343,7 @@ pela posição.
   de 2025.
 - **Um terceiro banco:** `Extrato_Financeiro — DYNAMICS DATA` é do **Banco 301, agência
   0001, conta 3111117-6**, de 01/01/2025 a 07/10/2025 — saldo inicial R$ 45.999,99,
-  entradas R$ 398.776,65, saídas R$ 444.776,64. Contraria a D4 ("só Itaú"). Ver Q14.
+  entradas R$ 398.776,65, saídas R$ 444.776,64. **Conta encerrada — fica fora** (D33).
 
 ---
 
@@ -344,8 +363,8 @@ Precisam de resposta antes da fase indicada.
 | Q8 | **Pipeline de vendas.** A aba `Vendas e Perdas` é um CRM (cliente, status, responsável, valor). Nenhuma fase do SPEC cobre isso. Fica fora? | — |
 | Q9 | **Arquivo alheio na pasta.** `docs/reference/Cópia de Autorização de saída - Saint Paul 21_08.docx.pdf` é uma autorização de saída escolar, não tem relação com o financeiro. Não abri. Apagar? | — |
 | ~~Q10~~ | ~~**Saldo de abertura de 01/01/2026.**~~ **Respondido em 13/08/2026:** a conta corrente Itaú tinha **R$ 510.204,78** em 01/01/2026. Está no seed. A dívida do cartão Itaucard na mesma data continua desconhecida e segue em 0,00. | — |
-| Q12 | **O CDB vira conta própria?** Em 01/01/2026 havia R$ 367.735,49 aplicados, resgatados em 07/01. Em 2026 houve mais três aplicações (50 mil, 100 mil, 300 mil). Modelar como conta `investment` mostra a posição total de caixa e pareia os resgates; não modelar deixa a conta corrente batendo exatamente com o banco e o CDB invisível. Ver A1. | Fase 3 |
+| ~~Q12~~ | ~~**O CDB vira conta própria?**~~ **Respondido em 13/08/2026:** sim, conta de aplicação separada. Ver D32. | — |
 | Q13 | **Reexportar três extratos.** `Janeiro ate março`, `abril até junho` e `julho` são PDFs impressos pelo app do Itaú e não têm texto recuperável (A5). Preciso deles em XLSX/CSV. | Fase 3 |
-| Q14 | **Banco 301, conta 3111117-6.** Apareceu um extrato dessa conta (DD Group, jan–out/2025). É conta ativa da empresa? Entra no sistema? A D4 dizia "só Itaú". Ver A8. | Fase 3 |
+| ~~Q14~~ | ~~**Banco 301, conta 3111117-6.**~~ **Respondido em 13/08/2026:** conta encerrada, fica fora. Ver D33. | — |
 | Q15 | **Fatura 8299 de 05/06/2026** (R$ 830,97) não está na pasta, e faltam as de set–dez/2025 dessa conta. | Fase 3 |
 | Q11 | **Nada do caminho de escrita foi executado contra um Postgres.** Sem projeto Supabase (Q6) e sem Docker/PGlite (Q5), o que está testado é a lógica pura: 83 testes cobrindo dinheiro, datas, dedup, espelho de competência e o relatório inteiro. As migrations 0002/0003 nunca rodaram. Isto é o que mais me preocupa hoje. | Fase 3 |
