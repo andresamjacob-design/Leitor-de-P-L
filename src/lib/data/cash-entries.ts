@@ -191,6 +191,12 @@ export type CashEntryInput = {
   counterpartAccountId: string | null;
   /** Set by the user to confirm a deliberate repeat of an identical movement. */
   allowDuplicate: boolean;
+  /** Set when the entry came from an approved import, so it can be traced back. */
+  importId?: string | null;
+  counterpartyName?: string | null;
+  counterpartyTaxId?: string | null;
+  installmentCurrent?: number | null;
+  installmentTotal?: number | null;
 };
 
 export class DuplicateEntryError extends Error {
@@ -247,6 +253,11 @@ function toRow(input: CashEntryInput, dedup: string) {
     vendor: input.vendor,
     is_intercompany: input.isIntercompany,
     dedup_hash: dedup,
+    import_id: input.importId ?? null,
+    counterparty_name: input.counterpartyName ?? null,
+    counterparty_tax_id: input.counterpartyTaxId ?? null,
+    installment_current: input.installmentCurrent ?? null,
+    installment_total: input.installmentTotal ?? null,
   };
 }
 

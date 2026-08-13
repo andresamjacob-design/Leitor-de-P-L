@@ -47,3 +47,8 @@ for (const path of [
     await expect(page).toHaveURL(/\/login/);
   });
 }
+
+test("a tela de importações exige sessão", async ({ page }) => {
+  await page.goto("/dd-group/importacoes");
+  await expect(page).toHaveURL(/\/login/);
+});

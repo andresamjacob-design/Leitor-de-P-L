@@ -14,7 +14,7 @@ mudou.
 |---|---|---|
 | 1 | Auth, entidades, schema, migrations, seed, shell vazio | ✅ construída — falta o teste de RLS (Q5) e o projeto Supabase (Q6) |
 | 2 | CRUD manual de lançamentos + plano de contas + fluxo de caixa | ✅ construída — nenhuma escrita rodou contra um Postgres de verdade (Q11) |
-| 3 | Importação de extrato: XLSX/CSV + PDF de fatura, dedup, tela de revisão | ⬜ |
+| 3 | Importação de extrato: XLSX/CSV + PDF de fatura, dedup, tela de revisão | ✅ construída — parsers validados contra 34 arquivos reais; escrita ainda não rodou contra Postgres (Q11) |
 | 4 | Categorização: motor de regras determinístico + aprendizado de regra | ⬜ |
 | 5 | Clientes, contratos, NFs, cronogramas de reconhecimento, POC | ⬜ |
 | 6 | P&L gerencial por entidade + consolidado | ⬜ |
@@ -97,9 +97,12 @@ Os arquivos em `docs/reference/` foram lidos antes deste plano. Achados que impo
 ### Seed
 - [x] `DD GROUP` — Dynamics Data Consulting Tecnologia LTDA, CNPJ 50.050.390/0001-82
 - [x] `GABRIEL SAMPAIO JACOB LTDA - ME`, CNPJ 45.207.742/0001-20
-- [x] Conta Itaú do DD GROUP: ag 0561, c/c 0098873-4 — saldo de abertura de 01/01/2026:
-      **R$ 510.204,78** (informado em 13/08/2026, Q10 respondida)
-- [x] Cartão Itaucard final 4460 — dívida em 01/01/2026 ainda desconhecida, segue 0,00
+- [x] Conta Itaú do DD GROUP: ag 0561, c/c 0098873-4 — abertura de 01/01/2026
+      **R$ 142.469,28**, o número do próprio extrato (A1)
+- [x] CDB DI como conta de aplicação, abertura **R$ 367.735,49** (D32). As duas somam a
+      posição de R$ 510.204,77 que o Andre informou
+- [x] Duas contas de cartão: `Itaucard Empresas — final 5780` e `Itaucard — final 8299`
+      (A2). Dívida de 01/01/2026 ainda desconhecida nas duas, segue 0,00
 - [x] Plano de contas derivado da aba `DRE Geral` (receita, impostos, custos diretos,
       custos operacionais, com `dre_group` na ordem da planilha)
 
@@ -156,29 +159,35 @@ Os arquivos em `docs/reference/` foram lidos antes deste plano. Achados que impo
 > a fatura é de duas colunas, o layout do XLSX muda entre exportações, e o pagamento de
 > fatura casa com a fatura pelo valor exato em 14 de 14 casos.
 
-- [ ] Parser XLSX do extrato Itaú, casando **as colunas pelo cabeçalho** e não pela
+- [x] Leitor de xlsx próprio — o `exceljs` autorizado falha em 3 de 3 extratos do Itaú
+      (D34)
+- [x] Parser XLSX do extrato Itaú, casando **as colunas pelo cabeçalho** e não pela
       posição (A7), com descarte das linhas de saldo
-- [ ] Parser CSV com UI de mapeamento de colunas, salvo como template por conta
-- [ ] Tratamento de `1.234,56`, prefixo `R$`, sufixo `D`/`C`, colunas separadas de
+- [x] Descartar a varredura da aplicação automática, que não é movimento de dinheiro
+      (D35) — é o que faz os quatro extratos reais fecharem todo dia
+- [x] Parser CSV pelo mesmo casamento por cabeçalho
+- [ ] UI de mapeamento de colunas salva como template por conta — **adiada** (D39):
+      nenhum arquivo recebido precisa dela
+- [x] Tratamento de `1.234,56`, prefixo `R$`, sufixo `D`/`C`, colunas separadas de
       débito e crédito
-- [ ] Parser do PDF da fatura Itaucard, trabalhando por **coordenadas** — a fatura é de
-      duas colunas e a extração linear intercala as duas (A6)
-- [ ] Ler conta, cartão e período **de dentro do PDF**; ignorar o nome do arquivo (A3)
-- [ ] **Trava de segurança:** a soma das compras extraídas do PDF precisa bater exato
-      com o total impresso; não bateu, recusa a importação e explica (D-B)
-- [ ] Ignorar o bloco "Compras parceladas — próximas faturas": são parcelas futuras,
-      não lançamentos do período
-- [ ] Parear o débito `BUSINESS ...` da conta corrente com a fatura pelo valor exato,
-      criando o `transfer_pair` do D14b (A4)
-- [ ] Captura de `installment_current`/`installment_total` do parcelado
-- [ ] Tudo entra em `staged_transactions`; nada chega em `cash_entries` sem clique
+- [x] Parser do PDF da fatura por **coordenadas**, com detecção de coluna pela
+      distribuição de posições (D38)
+- [x] Ler conta, cartão e período **de dentro do PDF**; ignorar o nome do arquivo (A3)
+- [x] **Trava de segurança:** a soma das compras precisa bater exato com o total
+      impresso; não bateu, recusa e explica (D-B, D37)
+- [x] Ignorar o bloco "Compras parceladas — próximas faturas"
+- [ ] Parear o débito `BUSINESS ...` da conta corrente com a fatura pelo valor exato
+      (A4) — o pareamento manual da Fase 2 já cobre; o automático fica para a Fase 4
+- [x] Captura de `installment_current`/`installment_total` do parcelado
+- [x] Tudo entra em `staged_transactions`; nada chega em `cash_entries` sem clique
       humano de aprovação
-- [ ] `dedup_hash = sha256(account_id | occurred_on | amount | descrição normalizada)`,
-      mais dedup por `external_id` quando existir
-- [ ] Tela de revisão com aprovar/rejeitar em lote
-- [ ] Conferência de saldo importado vs. saldo de fechamento do extrato, com aviso
-- [ ] Testes: reimportar o mesmo arquivo gera zero `cash_entries` novos e marca tudo
-      como duplicata (teste 5 da §11); teste 4 reescrito (D-C)
+- [x] `dedup_hash = sha256(conta | data | valor | sentido | descrição normalizada)`
+- [x] Tela de revisão com aprovar/rejeitar em lote e categoria por linha
+- [x] Conferência de saldo importado vs. saldo declarado, com aviso (D37)
+- [x] Recusar o mesmo arquivo duas vezes, pelo hash do conteúdo
+- [x] Testes: 45 testes novos de parser, mais `npm run verify:import`, que roda os
+      importadores sobre os arquivos reais — **34 de 34 conferem**
+- [ ] Teste 5 da §11 (reimportar não cria nada) só é executável contra um Postgres (Q11)
 
 ---
 

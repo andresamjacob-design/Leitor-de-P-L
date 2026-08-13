@@ -270,6 +270,67 @@ A conta `Banco 301, ag 0001, c/c 3111117-6` está encerrada. O extrato dela (jan
 fica em `docs/reference/` como histórico e **não** entra no sistema. A D4 ("só Itaú")
 segue valendo, agora confirmada em vez de suposta.
 
+### D34 — Leitor de xlsx próprio, porque o `exceljs` não lê os arquivos
+O `exceljs` estava autorizado (D23) e **falha em 3 de 3 extratos do Itaú**: o gerador do
+banco escreve `<coreProperties>` com um `lastModifiedBy` sem o prefixo `cp:`, e a
+biblioteca estoura com `Unexpected xml node in parseOpen`. Só abriu a planilha exportada
+do Google Sheets. Uma biblioteca que não lê os arquivos que o sistema existe para
+importar não vale a dependência.
+→ `src/lib/import/xlsx.ts`: zip com `node:zlib`, SpreadsheetML na mão, só o necessário
+(strings compartilhadas, texto embutido, números, serial de data). Testado contra um
+xlsx montado no próprio teste, e rodado contra os arquivos reais pelo
+`npm run verify:import`. O `exceljs` foi desinstalado; o `unpdf` ficou.
+
+### D35 — A varredura da aplicação automática não é movimento
+A conta corrente é varrida todo dia para uma aplicação automática, então fecha com
+R$ 1,00 e o dinheiro aparece em `SALDO APLIC. AUT.`. O extrato traz três saldos:
+
+    SALDO TOTAL DISPONÍVEL DIA = SALDO MOVIMENTAÇÃO CONTA + SALDO APLIC. AUT.
+
+O saldo que responde "quanto a empresa tem" é o **total**, e é contra ele que a
+importação confere. As linhas `APL APLIC AUT MAIS` e `RES APLIC AUT MAIS` são o mesmo
+dinheiro trocando de prateleira dentro do mesmo saldo e **não viram lançamento** —
+lançá-las dobraria o fluxo de caixa. Já `REND PAGO APLIC AUT MAIS` é rendimento de
+verdade e entra.
+
+Isso é diferente do CDB (D32), que é aplicação deliberada, em conta própria, com
+transferência pareada.
+
+Com essa regra os quatro extratos reais fecham **todo dia**: 175, 99, 13 e 9 dias
+conferidos, zero divergências.
+
+### D36 — `SALDO EM CONTA CORRENTE` não é ponto de conferência
+É o saldo no instante da exportação, não o fechamento do dia: já embute rendimento
+creditado depois do último movimento, e diferia por R$ 5,25 e R$ 4,82 nos arquivos reais.
+Fica registrado, mas a conferência usa só `SALDO TOTAL DISPONÍVEL DIA`.
+
+### D37 — Extrato avisa, fatura recusa
+Assimetria proposital. Um extrato que não fecha ainda é o registro do próprio banco: a
+importação segue com o aviso de quais dias divergem. Uma fatura que não bate com o
+`Total dos lançamentos atuais` impresso significa que a **leitura das colunas errou**, e
+uma leitura errada não pode virar lançamento — a importação é recusada (D-B).
+
+### D38 — Colunas do PDF pela distribuição de posições
+A fatura tem duas colunas e três layouts diferentes entre as contas 5780 e 8384. Detectar
+coluna por onde começam as datas falha quando a coluna da direita só tem texto corrido —
+e aí `Encargos cobrados nesta fatura`, impresso ao lado das compras, fecha a seção de
+lançamentos no meio. Detectar por agrupamento encadeado falha ao contrário: a coluna de
+valores fica a 172pt das datas e vira "coluna", arrancando o valor de cada linha.
+→ Picos do histograma de posições de início de texto, com separação mínima de **190pt**,
+que fica entre o maior falso positivo observado (172pt, a coluna de valores) e a menor
+separação real (198pt).
+→ E o valor de cada linha é escolhido pelo `VALOR EM R$` do cabeçalho da tabela, não pelo
+último número da linha.
+
+**Resultado:** as 28 faturas reais — 2 contas, 4 layouts, 2025 e 2026 — batem ao centavo
+com o total que cada uma imprime.
+
+### D39 — O mapeamento de colunas de CSV ficou de fora
+A §7 pede uma tela de mapeamento de colunas salva como template por conta. Todo arquivo
+real recebido é xlsx com cabeçalho que o parser já entende, e o CSV passa pelo mesmo
+casamento por cabeçalho. Uma tela de mapeamento sem nada para mapear seria adivinhação.
+Entra quando aparecer um arquivo que precise dela.
+
 ### D31 — O seed preenche saldo de abertura, nunca sobrescreve
 O saldo de 01/01/2026 da conta corrente (R$ 510.204,78) está no seed. Rodar o seed de
 novo só preenche um saldo que ainda esteja zerado — um valor corrigido na tela de Contas
