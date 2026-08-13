@@ -151,13 +151,25 @@ Os arquivos em `docs/reference/` foram lidos antes deste plano. Achados que impo
 
 **Pronto quando:** eu importo um extrato real e aprovo ele para o ledger.
 
-- [ ] Parser XLSX do extrato Itaú, com descarte das linhas de saldo
+> Os arquivos recebidos em 13/08/2026 mudaram bastante esta fase. Ver a Parte 8 do
+> `DECISIONS.md` (achados A1 a A8). Em resumo: o nome do arquivo de fatura não vale nada,
+> a fatura é de duas colunas, o layout do XLSX muda entre exportações, e o pagamento de
+> fatura casa com a fatura pelo valor exato em 14 de 14 casos.
+
+- [ ] Parser XLSX do extrato Itaú, casando **as colunas pelo cabeçalho** e não pela
+      posição (A7), com descarte das linhas de saldo
 - [ ] Parser CSV com UI de mapeamento de colunas, salvo como template por conta
 - [ ] Tratamento de `1.234,56`, prefixo `R$`, sufixo `D`/`C`, colunas separadas de
       débito e crédito
-- [ ] Parser do PDF da fatura Itaucard via `unpdf`
+- [ ] Parser do PDF da fatura Itaucard, trabalhando por **coordenadas** — a fatura é de
+      duas colunas e a extração linear intercala as duas (A6)
+- [ ] Ler conta, cartão e período **de dentro do PDF**; ignorar o nome do arquivo (A3)
 - [ ] **Trava de segurança:** a soma das compras extraídas do PDF precisa bater exato
       com o total impresso; não bateu, recusa a importação e explica (D-B)
+- [ ] Ignorar o bloco "Compras parceladas — próximas faturas": são parcelas futuras,
+      não lançamentos do período
+- [ ] Parear o débito `BUSINESS ...` da conta corrente com a fatura pelo valor exato,
+      criando o `transfer_pair` do D14b (A4)
 - [ ] Captura de `installment_current`/`installment_total` do parcelado
 - [ ] Tudo entra em `staged_transactions`; nada chega em `cash_entries` sem clique
       humano de aprovação

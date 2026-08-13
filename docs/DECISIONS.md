@@ -259,6 +259,75 @@ relatório.
 
 ---
 
+## Parte 8 — Achados dos arquivos do banco (13/08/2026)
+
+31 arquivos distintos em `docs/reference/` (40 no disco, 9 são cópias byte a byte). Lidos
+com o PDFKit do macOS e com um leitor de xlsx da biblioteca padrão do Python — nenhuma
+dependência nova. O que eles mudam:
+
+### A1 — O saldo de 01/01/2026 informado é a posição total, não a conta corrente
+O extrato de 2026 abre com `31/12/2025 SALDO ANTERIOR 142.469,28`. Os R$ 510.204,78
+informados são conta corrente **mais** o CDB resgatado em 07/01/2026:
+
+    142.469,28 + 367.735,49 = 510.204,77   (1 centavo do informado)
+
+Gravar 510.204,78 na conta corrente contaria o resgate duas vezes e deixaria todo saldo
+de 2026 alto em ~R$ 367 mil. O seed usa **142.469,28**, que é o número do próprio banco.
+Ver Q12: o CDB vira conta própria ou não.
+
+### A2 — São duas contas de cartão, e "4460" nunca foi uma delas
+As faturas trazem por dentro a conta `5336.XXXX.XXXX.5780`, com sete cartões
+(2227, 4200, 4460, 4740, 6256, 8993, 0063). 4460 é um cartão dentro dela, não a conta.
+Existe ainda uma segunda conta de cartão, **8299**, separada. O seed passou a ter as
+duas: `Itaucard Empresas — final 5780` e `Itaucard — final 8299`.
+
+### A3 — O nome do arquivo de fatura não vale nada
+`Itaucard_4460_fatura_062026.pdf` tem vencimento **05/01/2026**;
+`Itaucard_4460_fatura_032026.pdf`, **05/07/2026**. Arquivos com nomes de cartões
+diferentes são o mesmo PDF byte a byte. **Conta, cartão e período têm de sair de dentro
+do PDF**, nunca do nome. O importador da Fase 3 deve ignorar o nome do arquivo por
+completo.
+
+### A4 — O pagamento de fatura casa com a fatura pelo valor exato
+Na conta corrente, `BUSINESS 7502-5632` é a conta 5780 e `BUSINESS 4005-1044` é a 8299.
+Em 14 de 14 casos entre janeiro e julho de 2026 o débito bate **exatamente** com o
+`Total desta fatura` impresso no PDF. É um pareamento determinístico, sem heurística
+nenhuma — e é o que liga o `transfer_pair` do D14b à fatura.
+
+Também é o que revela buraco: em 05/06/2026 há um débito de R$ 830,97 da conta 8299 sem
+a fatura correspondente na pasta.
+
+### A5 — Três PDFs são ilegíveis por máquina
+`Janeiro ate março_pdf (1).pdf`, `abril até junho_pdf.pdf` e `julho_pdf (2).pdf` foram
+impressos pelo app do Itaú (`Creator: aplicativoitau Helper`). A fonte embutida é um
+subconjunto **sem tabela `cmap` e sem `post`**, e o `ToUnicode` só mapeia dígitos,
+espaço, ponto, vírgula e dois-pontos. Só 33% dos caracteres têm Unicode: **toda letra
+está perdida**, e mesmo os números saem quebrados. Não há como recuperar sem OCR.
+→ Precisam ser reexportados como XLSX/CSV pelo internet banking. Ver Q13.
+
+### A6 — A fatura é de duas colunas e o texto sai intercalado
+A extração linear mistura a coluna da esquerda com a da direita na mesma linha
+(`19/01 Uber ... 07/01 POSTO DE SER-CT`). O parser da Fase 3 tem de trabalhar com as
+**coordenadas** de cada fragmento, não com linhas. Isso torna a trava do D-B ainda mais
+necessária: se a soma não bater com o total impresso, a leitura das colunas errou.
+
+### A7 — O layout do extrato XLSX muda entre exportações
+`6 (1).xlsx` tem uma coluna `Ag/origem` a mais, empurrando `Razão Social`, `CPF/CNPJ`,
+`Valor` e `Saldo` uma posição. O parser tem de casar as colunas **pelo cabeçalho**, não
+pela posição.
+
+### A8 — Cobertura do que chegou
+- **Conta corrente Itaú:** 2025 inteiro (664 linhas) e 2026 de 01/01 a 03/08, em cinco
+  arquivos com sobreposição. O dedup por hash da §7 é o que resolve a sobreposição.
+- **Faturas da conta 5780:** 05/09/2025 a 05/08/2026, doze faturas, sem buraco.
+- **Faturas da conta 8299:** seis, faltando 05/06/2026 (R$ 830,97) e o segundo semestre
+  de 2025.
+- **Um terceiro banco:** `Extrato_Financeiro — DYNAMICS DATA` é do **Banco 301, agência
+  0001, conta 3111117-6**, de 01/01/2025 a 07/10/2025 — saldo inicial R$ 45.999,99,
+  entradas R$ 398.776,65, saídas R$ 444.776,64. Contraria a D4 ("só Itaú"). Ver Q14.
+
+---
+
 ## Parte 7 — Pendências abertas
 
 Precisam de resposta antes da fase indicada.
@@ -275,4 +344,8 @@ Precisam de resposta antes da fase indicada.
 | Q8 | **Pipeline de vendas.** A aba `Vendas e Perdas` é um CRM (cliente, status, responsável, valor). Nenhuma fase do SPEC cobre isso. Fica fora? | — |
 | Q9 | **Arquivo alheio na pasta.** `docs/reference/Cópia de Autorização de saída - Saint Paul 21_08.docx.pdf` é uma autorização de saída escolar, não tem relação com o financeiro. Não abri. Apagar? | — |
 | ~~Q10~~ | ~~**Saldo de abertura de 01/01/2026.**~~ **Respondido em 13/08/2026:** a conta corrente Itaú tinha **R$ 510.204,78** em 01/01/2026. Está no seed. A dívida do cartão Itaucard na mesma data continua desconhecida e segue em 0,00. | — |
+| Q12 | **O CDB vira conta própria?** Em 01/01/2026 havia R$ 367.735,49 aplicados, resgatados em 07/01. Em 2026 houve mais três aplicações (50 mil, 100 mil, 300 mil). Modelar como conta `investment` mostra a posição total de caixa e pareia os resgates; não modelar deixa a conta corrente batendo exatamente com o banco e o CDB invisível. Ver A1. | Fase 3 |
+| Q13 | **Reexportar três extratos.** `Janeiro ate março`, `abril até junho` e `julho` são PDFs impressos pelo app do Itaú e não têm texto recuperável (A5). Preciso deles em XLSX/CSV. | Fase 3 |
+| Q14 | **Banco 301, conta 3111117-6.** Apareceu um extrato dessa conta (DD Group, jan–out/2025). É conta ativa da empresa? Entra no sistema? A D4 dizia "só Itaú". Ver A8. | Fase 3 |
+| Q15 | **Fatura 8299 de 05/06/2026** (R$ 830,97) não está na pasta, e faltam as de set–dez/2025 dessa conta. | Fase 3 |
 | Q11 | **Nada do caminho de escrita foi executado contra um Postgres.** Sem projeto Supabase (Q6) e sem Docker/PGlite (Q5), o que está testado é a lógica pura: 83 testes cobrindo dinheiro, datas, dedup, espelho de competência e o relatório inteiro. As migrations 0002/0003 nunca rodaram. Isto é o que mais me preocupa hoje. | Fase 3 |

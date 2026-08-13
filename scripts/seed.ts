@@ -163,18 +163,41 @@ const ACCOUNTS: {
     branch: "0561",
     number: "0098873-4",
     lastDigits: "8873",
-    // Saldo real em 01/01/2026, informado pelo Andre em 13/08/2026.
-    openingBalance: parseMoney("510.204,78"),
+    /**
+     * O próprio extrato de 2026 abre com `31/12/2025 SALDO ANTERIOR 142.469,28`.
+     *
+     * O Andre informou 510.204,78, que é a **posição total** em 01/01/2026: a conta
+     * corrente mais o CDB resgatado em 07/01/2026 (367.735,49). 142.469,28 + 367.735,49
+     * = 510.204,77. Usar 510.204,78 aqui contaria o resgate duas vezes e deixaria todo
+     * saldo de 2026 alto em ~R$ 367 mil.
+     */
+    openingBalance: parseMoney("142.469,28"),
   },
   {
+    /**
+     * A fatura chama esta conta de `5336.XXXX.XXXX.5780`; 4460 é só um dos cartões
+     * dentro dela (os outros: 2227, 4200, 4740, 6256, 8993, 0063). Na conta corrente ela
+     * aparece como `BUSINESS 7502-5632`.
+     */
     entitySlug: "dd-group",
-    name: "Itaucard",
+    name: "Itaucard Empresas — final 5780",
+    type: "credit_card",
+    institution: "Itaú Unibanco",
+    branch: null,
+    number: "5336.XXXX.XXXX.5780",
+    lastDigits: "5780",
+    // A dívida em 01/01/2026 não veio em nenhum arquivo. Fica zero até vir.
+    openingBalance: null,
+  },
+  {
+    /** Segunda conta de cartão. Na conta corrente aparece como `BUSINESS 4005-1044`. */
+    entitySlug: "dd-group",
+    name: "Itaucard — final 8299",
     type: "credit_card",
     institution: "Itaú Unibanco",
     branch: null,
     number: null,
-    lastDigits: "4460",
-    // A dívida do cartão em 01/01/2026 não veio em nenhum arquivo. Fica zero até vir.
+    lastDigits: "8299",
     openingBalance: null,
   },
 ];
