@@ -8,9 +8,10 @@ gerencial (regime de competência) e reconhecimento de receita, para **DD Group*
 - `docs/DECISIONS.md` — as decisões tomadas, e onde elas contrariam a spec
 - `docs/PLAN.md` — o plano por fase, com checklist e status
 
-**Fase atual: 3 concluída.** Dá para cadastrar contas e categorias, importar o extrato do
-Itaú e a fatura do cartão, revisar linha a linha e aprovar para o ledger, e ler o fluxo de
-caixa mês a mês com drill-down. Categorização automática é a Fase 4; o DRE gerencial, a
+**Fase atual: 4 concluída.** Dá para cadastrar contas e categorias, importar o extrato do
+Itaú e a fatura do cartão, deixar o sistema categorizar sozinho o que ele reconhece, ler o
+fluxo de caixa mês a mês com drill-down e ver quanto a empresa paga de assinatura. O
+próximo passo são contratos e reconhecimento de receita (Fase 5); o DRE gerencial, a
 Fase 6.
 
 ## Como rodar
@@ -54,6 +55,7 @@ src/lib/dates.ts            datas como YYYY-MM-DD, sem objeto Date no domínio
 src/lib/tax-id.ts           CPF/CNPJ normalizado, para casar com o extrato
 src/lib/dedup.ts            o hash que impede o mesmo movimento duas vezes
 src/lib/import/             leitores de arquivo e parsers, todos puros e testáveis
+src/lib/categorize/         o motor de categorização e a detecção de assinaturas
 src/lib/cash-flow.ts        o relatório de caixa, função pura, sem banco
 src/lib/recognition/mirror.ts  quando um custo de caixa vira competência (D2a/D2b)
 src/lib/ledger-types.ts     tipos e rótulos que servidor e cliente compartilham
@@ -129,15 +131,45 @@ por outro lado, só avisa em quais dias — ele continua sendo o registro do ban
 (que nunca entram no git). Hoje: **34 de 34 arquivos conferem** — os 4 extratos fecham
 o saldo em todos os 296 dias com saldo declarado, e as 28 faturas batem ao centavo.
 
+## Categorização
+
+Determinística e explicável. **Nenhuma IA** — isso é a Fase 7, e ela nunca vai escrever
+numa tabela de ledger (SPEC §9). Toda sugestão vem com o motivo escrito e uma confiança;
+abaixo de 0,8 ela aparece mas não vem marcada.
+
+A ordem da decisão:
+
+1. regra amarrada ao **CNPJ** da contraparte;
+2. regra por **texto ou faixa de valor**, por prioridade;
+3. o que foi feito da última vez com esse **mesmo CNPJ**;
+4. o que foi feito da última vez com essa **mesma descrição**;
+5. **nome de pessoa** cadastrada aparecendo na descrição.
+
+**Identidade ganha de texto** porque o extrato traz o CNPJ, e nesta empresa a Salesforce é
+cliente e fornecedora ao mesmo tempo — casar por nome jogaria receita e custo no mesmo
+balde. **Regra ganha de histórico** porque a regra é como se corrige um erro que o
+histórico repetiria para sempre.
+
+O que o motor não reconhece fica sem categoria, e não com um chute. A varredura em lote só
+toca em lançamento sem categoria — nada que você já decidiu é reescrito.
+
+## Assinaturas
+
+Ninguém mantém a lista do que a empresa paga todo mês; ela está espalhada por um ano de
+faturas. A tela reconstrói: mesmo fornecedor, intervalo parecido, valor parecido, três
+vezes ou mais. Uma cobrança sem repetição há dois ciclos entra como **encerrada** e sai do
+total — o Google Workspace apareceu duas vezes nos arquivos reais porque o fornecedor
+mudou a descrição, e somar as duas inflaria o custo mensal em quase o dobro.
+
 ## O que ainda falta
 
 - **Saldo de abertura dos cartões.** A conta corrente abre em R$ 142.469,28 e o CDB em
   R$ 367.735,49, que somam a posição de 01/01/2026. A dívida das duas contas de cartão na
   mesma data ainda é desconhecida e segue em 0,00 — dá para corrigir na tela de Contas.
 - **Nada do caminho de escrita rodou contra um Postgres.** Sem projeto Supabase e sem
-  Docker, o que está verificado é a lógica pura (128 testes) e os importadores contra os
-  arquivos reais. As migrations `0002` e `0003` nunca foram aplicadas, e a aprovação de
-  uma importação nunca gravou de verdade.
+  Docker, o que está verificado é a lógica pura (175 testes) e os importadores contra os
+  arquivos reais. As migrations `0002` e `0003` nunca foram aplicadas; a aprovação de uma
+  importação e a varredura de categorização nunca gravaram de verdade.
 - **Três extratos ilegíveis.** `Janeiro ate março`, `abril até junho` e `julho` foram
   impressos pelo app do Itaú e não têm texto recuperável. Precisam ser reexportados em
   xlsx/csv pelo internet banking.

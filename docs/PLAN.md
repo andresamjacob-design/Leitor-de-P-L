@@ -15,7 +15,7 @@ mudou.
 | 1 | Auth, entidades, schema, migrations, seed, shell vazio | ✅ construída — falta o teste de RLS (Q5) e o projeto Supabase (Q6) |
 | 2 | CRUD manual de lançamentos + plano de contas + fluxo de caixa | ✅ construída — nenhuma escrita rodou contra um Postgres de verdade (Q11) |
 | 3 | Importação de extrato: XLSX/CSV + PDF de fatura, dedup, tela de revisão | ✅ construída — parsers validados contra 34 arquivos reais; escrita ainda não rodou contra Postgres (Q11) |
-| 4 | Categorização: motor de regras determinístico + aprendizado de regra | ⬜ |
+| 4 | Categorização: motor de regras determinístico + aprendizado de regra | ✅ construída — nada rodou contra Postgres (Q11) |
 | 5 | Clientes, contratos, NFs, cronogramas de reconhecimento, POC | ⬜ |
 | 6 | P&L gerencial por entidade + consolidado | ⬜ |
 | 7 | Camada de IA: sugestões e extração de contrato em PDF | ⬜ |
@@ -195,19 +195,31 @@ Os arquivos em `docs/reference/` foram lidos antes deste plano. Achados que impo
 
 **Pronto quando:** transação repetida se auto-categoriza sem IA.
 
-- [ ] Camada 1: match exato por `external_id` ou descrição já vista → reusa a última
-      categorização
-- [ ] **Match por CNPJ**: o extrato traz `CPF/CNPJ`; casar com `clients.tax_id` antes de
-      qualquer regra textual
-- [ ] Camada 2: motor de `categorization_rules` por prioridade
-      (`contains`/`regex`/`exact`/`amount_range`)
-- [ ] "Criar regra a partir deste lançamento", pré-preenchida com o fragmento
-      normalizado da descrição
-- [ ] Contador de acerto por regra (`hit_count`)
-- [ ] Match de salário contra `people` por fragmento de nome
-- [ ] Detecção de recorrência (mesmo fornecedor normalizado, ±5 dias, valor parecido,
-      3+ ocorrências) → tela de Assinaturas com custo mensal, anualizado e última cobrança
-- [ ] Testes: conjunto de descrições reais do extrato de julho/2026 categorizando certo
+> A ordem das camadas mudou em relação ao esboço acima — ver **D40**. Regra explícita
+> passa na frente do histórico, e identidade (CNPJ) na frente de texto.
+
+- [x] Motor determinístico com cinco camadas, puro e explicável: toda sugestão vem com o
+      motivo em português e uma confiança
+- [x] **Match por CNPJ** antes de qualquer regra textual — é o que separa a Salesforce
+      cliente da Salesforce fornecedora
+- [x] Reuso da última categorização, por CNPJ e por descrição normalizada
+- [x] Motor de `categorization_rules` por prioridade
+      (`contains`/`regex`/`exact`/`amount_range`), com escopo opcional por conta e por
+      faixa de valor
+- [x] "Criar regra a partir deste lançamento", já preenchida — com CNPJ vira regra de
+      identidade (`*`), sem CNPJ vira o trecho da descrição sem o que muda todo mês
+- [x] Contador de acerto por regra (`hit_count`)
+- [x] Match de salário contra `people`, exigindo dois pedaços do nome, com confiança
+      abaixo de 0,8 para não vir pré-selecionado
+- [x] Sugestão automática nas linhas de uma importação, logo depois do staging
+- [x] Varredura em lote do que está sem categoria — só sem categoria, e pelo caminho
+      normal de escrita, para o espelho de competência ser criado (D41)
+- [x] Detecção de recorrência → tela de Assinaturas com custo mensal, anualizado, última
+      cobrança e marcação de encerrada (D42)
+- [x] Testes: 47 testes de categorização, incluindo descrições reais de fatura
+- [x] `npm run verify:import` também reconstrói as assinaturas dos arquivos reais —
+      **9 encontradas, R$ 5.279,84 por mês**
+- [ ] `external_id` não é usado: os arquivos do Itaú não trazem um (D44)
 
 ---
 

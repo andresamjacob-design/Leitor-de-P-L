@@ -15,6 +15,7 @@ import {
   stageImport,
   type ImportFormat,
 } from "@/lib/data/imports";
+import { suggestForImport } from "@/lib/data/categorize";
 import { readXlsx } from "@/lib/import/xlsx";
 import { parseCsv } from "@/lib/import/csv";
 import { parseItauStatement, reconcileStatement } from "@/lib/import/itau-statement";
@@ -172,6 +173,16 @@ export async function uploadImportAction(
     });
 
     importId = staged.id;
+
+    // Suggestions run right after staging, so the review screen opens with the obvious
+    // lines already filled in. They are suggestions: nothing is approved by this.
+    const suggested = await suggestForImport(entity.id, accountId, staged.id);
+    if (suggested.suggestions.size > 0) {
+      notices.push(
+        `${suggested.suggestions.size} linha${suggested.suggestions.size === 1 ? "" : "s"} ` +
+          `com categoria sugerida; ${suggested.undecided} sem sugestão.`,
+      );
+    }
     if (staged.duplicates > 0) {
       notices.push(
         `${staged.duplicates} linha${staged.duplicates === 1 ? "" : "s"} já ` +

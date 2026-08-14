@@ -20,6 +20,8 @@ import { readXlsx } from "@/lib/import/xlsx";
 import { parseItauStatement, reconcileStatement } from "@/lib/import/itau-statement";
 import { readPdfPages } from "@/lib/import/pdf";
 import { parseItauCardInvoice, reconcileCardInvoice } from "@/lib/import/itau-card";
+import { detectRecurring, totalMonthly } from "@/lib/categorize/recurrence";
+import type { RecurrenceCandidate } from "@/lib/categorize/recurrence";
 import { formatMoney } from "@/lib/money";
 
 const directory = process.argv[2] ?? "docs/reference";
@@ -43,6 +45,7 @@ async function main(): Promise<void> {
   }
 
   const seen = new Map<string, string>();
+  const charges: RecurrenceCandidate[] = [];
   let checked = 0;
   let failed = 0;
   let duplicates = 0;
@@ -116,6 +119,22 @@ async function main(): Promise<void> {
     if (previous !== undefined) duplicates += 1;
     else seen.set(identity, hash);
 
+    // Only invoices that reconcile feed the recurrence pass — a misread file would
+    // invent subscriptions that do not exist.
+    if (result.ok && previous === undefined) {
+      for (const [index, transaction] of parse.transactions.entries()) {
+        if (transaction.direction !== "out") continue;
+        charges.push({
+          id: `${identity}-${index}`,
+          description: transaction.description,
+          occurredOn: transaction.occurredOn,
+          amount: transaction.amount,
+          categoryId: null,
+          accountId: parse.source.accountLastDigits ?? "?",
+        });
+      }
+    }
+
     console.log(
       `  ${result.ok ? GREEN + "OK   " : RED + "FALHA"}${RESET} ${pad(name, 46)}` +
         ` ${String(parse.transactions.length).padStart(4)} lanç` +
@@ -129,6 +148,27 @@ async function main(): Promise<void> {
           ` extraído ${formatMoney(result.actual)}, diferença ${formatMoney(result.difference)}`,
       );
     }
+  }
+
+  // ---- Recurrences --------------------------------------------------------
+  const recurrences = detectRecurring(charges);
+  if (recurrences.length > 0) {
+    console.log(`\nAssinaturas reconstruídas de ${charges.length} compras`);
+    for (const recurrence of recurrences.slice(0, 20)) {
+      console.log(
+        `  ${pad(recurrence.label, 34)} ${recurrence.cadence.padEnd(7)}` +
+          ` ${String(recurrence.occurrences).padStart(2)}x` +
+          ` ${DIM}última ${recurrence.lastCharge}${RESET}` +
+          (recurrence.active ? "     " : ` ${DIM}encerrada${RESET}`) +
+          `  ${formatMoney(recurrence.monthlyCost).padStart(11)}/mês` +
+          `  ${DIM}${formatMoney(recurrence.annualCost).padStart(11)}/ano${RESET}`,
+      );
+    }
+    console.log(
+      `  ${recurrences.filter((item) => item.active).length} ativas de ${recurrences.length}` +
+        ` · ${formatMoney(totalMonthly(recurrences))} por mês` +
+        ` · ${formatMoney(totalMonthly(recurrences) * 12n)} por ano`,
+    );
   }
 
   console.log(

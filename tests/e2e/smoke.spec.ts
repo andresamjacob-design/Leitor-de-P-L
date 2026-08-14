@@ -52,3 +52,10 @@ test("a tela de importações exige sessão", async ({ page }) => {
   await page.goto("/dd-group/importacoes");
   await expect(page).toHaveURL(/\/login/);
 });
+
+for (const path of ["/dd-group/regras", "/dd-group/regras/nova", "/dd-group/assinaturas"]) {
+  test(`${path} exige sessão`, async ({ page }) => {
+    await page.goto(path);
+    await expect(page).toHaveURL(/\/login/);
+  });
+}

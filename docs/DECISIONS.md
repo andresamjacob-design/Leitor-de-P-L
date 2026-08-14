@@ -331,6 +331,58 @@ real recebido é xlsx com cabeçalho que o parser já entende, e o CSV passa pel
 casamento por cabeçalho. Uma tela de mapeamento sem nada para mapear seria adivinhação.
 Entra quando aparecer um arquivo que precise dela.
 
+## Parte 9 — Decisões da Fase 4
+
+### D40 — A ordem da decisão: identidade antes de texto, explícito antes de aprendido
+O PLAN esboçava "Camada 1: descrição já vista → reusa a última categorização" e as regras
+depois. Inverti, e a ordem final é:
+
+1. regra amarrada ao **CNPJ** da contraparte;
+2. regra por **texto ou faixa de valor**, por prioridade;
+3. o que foi feito da última vez com esse **mesmo CNPJ**;
+4. o que foi feito da última vez com essa **mesma descrição**;
+5. **nome de pessoa** cadastrada aparecendo na descrição.
+
+Dois motivos.
+
+**Identidade ganha de texto.** O extrato traz o CNPJ da contraparte, que diz *quem* pagou
+ou recebeu. Uma descrição diz só como uma string se parece — e nesta empresa `SALESFORCE`
+é cliente e fornecedor ao mesmo tempo (receita de R$ 363.548 e custo de R$ 58.380). Casar
+por nome jogaria receita e custo no mesmo balde.
+
+**Explícito ganha de aprendido.** Uma regra é como se corrige um erro. Se o histórico
+passasse na frente, um lançamento categorizado errado se repetiria para sempre e a única
+saída seria caçar o original.
+
+Se você preferir o contrário, é uma linha de código — mas prefiro que a regra que você
+escreveu valha mais do que uma decisão antiga que talvez tenha sido um engano.
+
+### D41 — Categorizar em lote não reescreve o que já foi decidido
+A varredura só toca em lançamento **sem categoria**, e só acima de 0,8 de confiança. Um
+sistema automático que revisa decisões humanas é um sistema em que ninguém confia.
+
+E ela grava pelo caminho normal de escrita, nunca direto na coluna: dar categoria a um
+custo é o que cria a linha de competência (D2a). Um `UPDATE` direto deixaria o DRE cego
+para toda despesa que a varredura tocasse.
+
+### D42 — Assinatura sem cobrança há dois ciclos entra como encerrada
+Rodando sobre as faturas reais, o Google Workspace aparece **duas vezes**: o fornecedor
+mudou a descrição em fevereiro. Somar as duas inflava o custo mensal de R$ 5.279 para
+R$ 10.075. Uma recorrência sem cobrança há dois intervalos é marcada como encerrada e sai
+do total — ou ela parou, ou o nome mudou, e nos dois casos somá-la mente.
+
+### D43 — O valor típico de uma assinatura é uma cobrança que existiu
+A mediana de um número par de cobranças devolve a menor das duas do meio, não a média
+delas. "Quanto isso custa normalmente" deve ser um valor que foi cobrado de verdade, não
+um meio-termo que nunca apareceu em fatura nenhuma.
+
+### D44 — `external_id` não é usado, porque os arquivos não têm
+O PLAN previa dedup e match por `external_id`. Nem o extrato nem a fatura do Itaú trazem
+identificador estável de transação. A coluna continua no schema; o casamento é por CNPJ e
+por descrição normalizada, que é o que os arquivos oferecem.
+
+---
+
 ### D31 — O seed preenche saldo de abertura, nunca sobrescreve
 O saldo de 01/01/2026 da conta corrente (R$ 510.204,78) está no seed. Rodar o seed de
 novo só preenche um saldo que ainda esteja zerado — um valor corrigido na tela de Contas

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/page-header";
 import { Table, TableScroll, Td, Th } from "@/components/ui/table";
@@ -142,6 +143,20 @@ export default async function EditEntryPage({
           </ul>
         )}
       </section>
+
+      {entry.categoryId ? (
+        <section className="mt-10">
+          <Link
+            href={`/${slug}/regras/nova?de=${entry.id}`}
+            className="text-sm text-accent hover:underline"
+          >
+            Criar uma regra a partir deste lançamento
+          </Link>
+          <p className="mt-1 text-xs text-muted">
+            Para que o próximo lançamento parecido caia nesta mesma categoria sozinho.
+          </p>
+        </section>
+      ) : null}
 
       <section className="mt-10">
         <DeleteEntry slug={slug} id={entry.id} pairedNotice={pair?.toCashEntryId != null} />
