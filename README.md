@@ -68,6 +68,7 @@ SEED_USER_EMAIL=voce@empresa.com npm run db:seed
 | `npm run db:migrate` | aplica as migrations pendentes |
 | `npm run db:seed` | popula entidades, plano de contas e contas |
 | `npm run verify:import` | roda os importadores sobre os arquivos reais de `docs/reference/` |
+| `npm run verify:rls` | confere o isolamento entre entidades no banco, numa transação revertida |
 
 ## Como o código está organizado
 
@@ -299,9 +300,9 @@ registro.
 - **Três extratos ilegíveis.** `Janeiro ate março`, `abril até junho` e `julho` foram
   impressos pelo app do Itaú e não têm texto recuperável. Precisam ser reexportados em
   xlsx/csv pelo internet banking.
-- **Teste de RLS automatizado** (teste 6 da §11), pendente da Q5 em `docs/DECISIONS.md`.
-- **Projeto Supabase.** Sem URL e chave, o app sobe e mostra a tela de "não configurado",
-  mas ninguém entra.
+- **O caminho de escrita do app ainda não foi exercitado.** As migrations rodaram, o seed
+  rodou e o RLS foi confirmado — mas aprovar uma importação, gravar competência,
+  reconhecer contrato e gravar POC nunca aconteceram de verdade. Só o uso fecha isso.
 - **Segunda entidade.** Nada da `GABRIEL SAMPAIO JACOB LTDA - ME` chegou (Q2) — sem ela o
   consolidado tem uma coluna só.
 - **A API da Anthropic nunca foi chamada de verdade** (Q18). Todo o caminho de IA está

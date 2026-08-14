@@ -331,6 +331,34 @@ real recebido é xlsx com cabeçalho que o parser já entende, e o CSV passa pel
 casamento por cabeçalho. Uma tela de mapeamento sem nada para mapear seria adivinhação.
 Entra quando aparecer um arquivo que precise dela.
 
+## Parte 14 — O banco de verdade (14/08/2026)
+
+### D75 — O teste de RLS roda no projeto real, numa transação revertida
+A Q5 listava PGlite, Docker ou um projeto de teste. Nenhuma foi necessária: o RLS lê
+`auth.uid()`, que o Supabase deriva de `request.jwt.claims`, e esse ajuste pode ser feito
+na própria conexão — que é exatamente o que uma sessão faz.
+
+`scripts/verify-rls.ts` cria um usuário sintético com acesso a uma entidade só, insere
+dado nas duas, confere que nada da outra aparece nem aceita escrita, e **reverte tudo**.
+Rodar contra o banco de produção é seguro por construção. Zero dependência nova.
+
+**Resultado:** 7 de 7 verificações passam. O teste 6 da §11 estava aberto desde a Fase 1.
+
+Uma sutileza que a primeira versão errou: em Postgres, um comando que falha aborta a
+transação inteira. A violação proposital de RLS precisa de um `savepoint`, senão as
+verificações seguintes simplesmente não rodam — e o script termina "verde" tendo
+conferido menos do que diz.
+
+### D76 — A conexão é pelo session pooler, não pela direta
+A Supabase moveu `db.<ref>.supabase.co` para **IPv6-only**. O registro AAAA existe, mas o
+`getaddrinfo` do macOS devolve `ENOTFOUND`, então `drizzle-kit` e o seed não conectam. O
+`.env.example` agora traz o formato do session pooler, que é IPv4.
+
+A região do projeto (`sa-east-1`) foi descoberta sondando os poolers: as outras regiões
+respondem "tenant não encontrado", e só a certa chega a reclamar da senha.
+
+---
+
 ## Parte 13 — Decisões da Fase 8
 
 ### D68 — Escritor de XLSX próprio, com entradas sem compressão
@@ -702,8 +730,8 @@ Precisam de resposta antes da fase indicada.
 | Q2 | **Segunda entidade.** Não chegou nenhuma planilha nem extrato da `GABRIEL SAMPAIO JACOB LTDA - ME`. O SPEC fala em três planilhas; chegou uma. | Fase 2 |
 | ~~Q3~~ | ~~**Férias.**~~ **Respondido em 14/08/2026:** sem provisão. A D2c fica confirmada e a aba `DRE Geral` é a que vale. Ver D59. | — |
 | Q4 | **Metas.** D3 diz "só realizado", mas a planilha tem meta de receita (R$ 7.000.000) e meta de OPBB (36%). Quer isso na tela ou fica fora? | Fase 8 |
-| Q5 | **Onde rodam os testes de RLS.** Sem Docker, as opções são: (a) `@electric-sql/pglite` — Postgres real em WASM, roda no Vitest, sem Docker, precisa de autorização de dependência; (b) instalar Docker Desktop; (c) um projeto Supabase de teste na nuvem. Recomendo (a). | Fase 1 (fechamento) |
-| Q6 | **Projeto Supabase.** Preciso da URL e das chaves de um projeto Supabase para o login funcionar de ponta a ponta. | Fase 1 (fechamento) |
+| ~~Q5~~ | ~~**Onde rodam os testes de RLS.**~~ **Resolvido em 14/08/2026:** rodam contra o próprio projeto Supabase, numa transação revertida — sem Docker e sem dependência nova. `npm run verify:rls`. Ver D75. | — |
+| ~~Q6~~ | ~~**Projeto Supabase.**~~ **Resolvido em 14/08/2026:** projeto criado, migrations aplicadas, seed rodado e usuário vinculado às duas entidades. | — |
 | ~~Q7~~ | ~~**Rateio de pessoas por cliente/squad.**~~ **Respondido em 14/08/2026:** sim, margem por cliente. Entra na Fase 8. Ver D60. | — |
 | Q8 | **Pipeline de vendas.** A aba `Vendas e Perdas` é um CRM (cliente, status, responsável, valor). Nenhuma fase do SPEC cobre isso. Fica fora? | — |
 | Q9 | **Arquivo alheio na pasta.** `docs/reference/Cópia de Autorização de saída - Saint Paul 21_08.docx.pdf` é uma autorização de saída escolar, não tem relação com o financeiro. Não abri. Apagar? | — |
@@ -715,4 +743,4 @@ Precisam de resposta antes da fase indicada.
 | Q18 | **A API da Anthropic nunca foi chamada de verdade.** Todo o caminho de IA está testado com o modelo mockado; sem `ANTHROPIC_API_KEY` nenhuma chamada real aconteceu. O formato da resposta e a qualidade das sugestões só se conhecem rodando. | uso real |
 | Q17 | **Guardar o arquivo do contrato no Supabase Storage?** Hoje a extração lê o arquivo e o descarta, ficando só o rascunho e os trechos. Guardar o original ajuda numa auditoria futura, mas precisa de bucket, policy e de um projeto Supabase para testar. Ver D67. | Fase 8 |
 | Q16 | **Importar os contratos de 2026 da aba `DRE Geral`?** A aba tem o valor espalhado por mês, mas não início, fim, método nem se o valor é mensal ou total — tudo isso teria de ser inferido do formato de cobrança. Prefere cadastrar à mão a partir dela, ou definimos as regras de inferência? Ver D51. | Fase 6 |
-| Q11 | **Nada do caminho de escrita foi executado contra um Postgres.** Sem projeto Supabase (Q6) e sem Docker/PGlite (Q5), o que está testado é a lógica pura: 303 testes cobrindo dinheiro, datas, dedup, parsers, categorização, reconhecimento, DRE e exports. As migrations 0002/0003 nunca rodaram, e nenhuma escrita — aprovar importação, gravar espelho de competência, reconhecer contrato, gravar POC — jamais tocou um Postgres. Isto é o que mais me preocupa hoje. | agora |
+| Q11 | **O caminho de escrita do app ainda não foi exercitado.** Em 14/08/2026 as quatro migrations foram aplicadas, o seed rodou e o isolamento de RLS foi confirmado — mas aprovar uma importação, gravar espelho de competência, reconhecer contrato e gravar POC continuam sem nunca ter rodado de verdade. Só o uso real fecha isto. | uso real |

@@ -12,7 +12,7 @@ mudou.
 
 | Fase | Escopo | Status |
 |---|---|---|
-| 1 | Auth, entidades, schema, migrations, seed, shell vazio | ✅ construída — falta o teste de RLS (Q5) e o projeto Supabase (Q6) |
+| 1 | Auth, entidades, schema, migrations, seed, shell vazio | ✅ construída e **verificada contra o Postgres real** em 14/08/2026 |
 | 2 | CRUD manual de lançamentos + plano de contas + fluxo de caixa | ✅ construída — nenhuma escrita rodou contra um Postgres de verdade (Q11) |
 | 3 | Importação de extrato: XLSX/CSV + PDF de fatura, dedup, tela de revisão | ✅ construída — parsers validados contra 34 arquivos reais; escrita ainda não rodou contra Postgres (Q11) |
 | 4 | Categorização: motor de regras determinístico + aprendizado de regra | ✅ construída — nada rodou contra Postgres (Q11) |
@@ -114,8 +114,8 @@ Os arquivos em `docs/reference/` foram lidos antes deste plano. Achados que impo
 ### Testes desta fase
 - [x] Precisão de dinheiro: somar 1.000 lançamentos de R$ 0,01 dá exatamente R$ 10,00
       (teste 8 da §11)
-- [ ] Isolamento de entidade no nível do RLS, com usuário sintético restrito a uma
-      entidade (teste 6 da §11) — **depende da Q5 do `DECISIONS.md`**
+- [x] Isolamento de entidade no nível do RLS, com usuário sintético restrito a uma
+      entidade (teste 6 da §11) — `npm run verify:rls`, 7 de 7 verificações (D75)
 - [x] E2E: visitante anônimo nunca alcança uma entidade; o login responde
 - [ ] E2E do caminho completo (login → troca de entidade) — depende da Q6
 
