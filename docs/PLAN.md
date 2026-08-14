@@ -19,7 +19,7 @@ mudou.
 | 5 | Clientes, contratos, NFs, cronogramas de reconhecimento, POC | ✅ construída — sem o importador da `DRE Geral` (D51/Q16); nada rodou contra Postgres (Q11) |
 | 6 | P&L gerencial por entidade + consolidado | ✅ construída — Q1, Q3 e Q7 continuam abertas; nada rodou contra Postgres (Q11) |
 | 7 | Camada de IA: sugestões e extração de contrato em PDF | ✅ construída — sem Storage (D67/Q17); nunca chamou a API de verdade (Q18) |
-| 8 | Dashboards, exports (XLSX/CSV), tela de audit log | ⬜ |
+| 8 | Dashboards, exports (XLSX/CSV), tela de audit log | ✅ construída — Q4 (metas) segue aberta; nada rodou contra Postgres (Q11) |
 
 ---
 
@@ -301,10 +301,14 @@ Os arquivos em `docs/reference/` foram lidos antes deste plano. Achados que impo
 
 **Pronto quando:** eu exporto qualquer coisa que eu consiga ver.
 
-- [ ] Export XLSX e CSV de todo relatório, com os mesmos números da tela
-- [ ] Dashboard com os indicadores que a planilha já acompanha (receita do mês, OPBB,
-      margem) — depende da Q4 para as metas
-- [ ] **Margem por cliente**: receita do cliente menos o custo das pessoas alocadas nele,
-      usando `people.client_id` (D60, respondendo à Q7)
-- [ ] Tela de audit log com filtro por tabela, ator e período
-- [ ] Diff antes/depois legível em cada linha do audit log
+- [x] Escritor de XLSX próprio, sem dependência, com CRC validado por leitor independente
+      (D68); e CSV em ponto e vírgula com vírgula decimal, que é o que o Excel brasileiro
+      abre sem assistente
+- [x] Export XLSX e CSV de sete relatórios, **chamando o mesmo carregador da tela** para o
+      arquivo não discordar da página (D69)
+- [x] Dashboard com receita do mês, EBITDA e margem, caixa, a reconhecer e assinaturas —
+      só realizado (D73), cada cartão linkando para a tela que explica o número
+- [x] **Margem por cliente**, bruta e assumidamente sem rateio de overhead (D72)
+- [x] Tela de audit log com filtro por tabela, ator e período
+- [x] Diff antes/depois legível, com dinheiro formatado e uuid encurtado (D74)
+- [ ] Metas de receita e de OPBB — **depende da Q4**, que segue aberta

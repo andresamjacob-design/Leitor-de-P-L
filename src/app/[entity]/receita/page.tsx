@@ -2,6 +2,7 @@ import { Fragment } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { EmptyState } from "@/components/empty-state";
+import { ExportLinks } from "@/components/export-links";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
@@ -132,6 +133,10 @@ export default async function RevenuePage({
         title="Receita"
         description="Reconhecida contra recebida, e o que ainda falta reconhecer dos contratos."
       />
+
+      <div className="mb-6 flex justify-end">
+        <ExportLinks slug={slug} report="receita" from={from.slice(0, 7)} to={to.slice(0, 7)} />
+      </div>
 
       <form method="get" className="mb-6 flex flex-wrap items-end gap-3">
         <Field label="De" htmlFor="de">

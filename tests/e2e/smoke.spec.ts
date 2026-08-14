@@ -84,3 +84,10 @@ test("a tela de leitura de contrato exige sessão", async ({ page }) => {
   await page.goto("/dd-group/contratos/extrair");
   await expect(page).toHaveURL(/\/login/);
 });
+
+for (const path of ["/dd-group/auditoria", "/dd-group/margem", "/dd-group/export/dre"]) {
+  test(`${path} exige sessão`, async ({ page }) => {
+    await page.goto(path);
+    await expect(page).toHaveURL(/\/login/);
+  });
+}

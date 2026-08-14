@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { EmptyState } from "@/components/empty-state";
+import { ExportLinks } from "@/components/export-links";
 import { PageHeader } from "@/components/page-header";
 import { Table, TableScroll, Td, Th } from "@/components/ui/table";
 import { listAccounts } from "@/lib/data/accounts";
@@ -53,6 +54,10 @@ export default async function SubscriptionsPage({
         title="Assinaturas"
         description="O que é cobrado de novo todo mês, reconstruído dos lançamentos — ninguém precisa manter esta lista."
       />
+
+      <div className="mb-6 flex justify-end">
+        <ExportLinks slug={slug} report="assinaturas" />
+      </div>
 
       {recurrences.length === 0 ? (
         <EmptyState title="Nenhuma cobrança recorrente encontrada">

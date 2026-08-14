@@ -8,11 +8,12 @@ gerencial (regime de competência) e reconhecimento de receita, para **DD Group*
 - `docs/DECISIONS.md` — as decisões tomadas, e onde elas contrariam a spec
 - `docs/PLAN.md` — o plano por fase, com checklist e status
 
-**Fase atual: 7 concluída.** O sistema faz o ciclo inteiro: importar extrato e fatura,
-categorizar sozinho o que reconhece, lançar contratos e reconhecer receita por
-competência, e ler tanto o fluxo de caixa quanto o DRE gerencial — por entidade ou
-consolidado. A IA entrou como camada opcional que só reduz digitação. Falta a Fase 8:
-dashboards, exports e a tela de auditoria.
+**As oito fases do SPEC estão construídas.** Importar extrato e fatura, categorizar
+sozinho o que reconhece, lançar contratos e reconhecer receita por competência, ler o
+fluxo de caixa e o DRE gerencial por entidade ou consolidado, baixar qualquer relatório em
+XLSX ou CSV, e ver a auditoria de tudo que mudou.
+
+**Nada disso rodou contra um Postgres ainda** — veja "O que ainda falta".
 
 ## Como rodar
 
@@ -57,6 +58,7 @@ src/lib/dedup.ts            o hash que impede o mesmo movimento duas vezes
 src/lib/import/             leitores de arquivo e parsers, todos puros e testáveis
 src/lib/categorize/         o motor de categorização e a detecção de assinaturas
 src/lib/ai/                 a única porta para um LLM, e a validação do que ele devolve
+src/lib/export/             escritor de XLSX e CSV, e o desenho de cada relatório
 src/lib/cash-flow.ts        o relatório de caixa, função pura, sem banco
 src/lib/pl.ts               o DRE e a consolidação, também sem banco
 src/lib/recognition/mirror.ts  quando um custo de caixa vira competência (D2a/D2b)
@@ -236,13 +238,37 @@ aparecendo na tela. Sugestão abaixo de 80% de confiança aparece, mas não vem 
 
 E um contrato em rascunho não reconhece um centavo até alguém confirmá-lo.
 
+## Exports
+
+Todo relatório baixa em **XLSX** e **CSV**, com os mesmos números da tela — o exportador
+chama o mesmo carregador que a página, em vez de recalcular por conta própria.
+
+O XLSX é escrito aqui, sem biblioteca, pelo mesmo motivo do leitor: a que estava
+autorizada não abre os arquivos que este sistema importa. Dinheiro sai como número, não
+texto, para a planilha conseguir somar. O CSV usa ponto e vírgula com vírgula decimal e
+BOM, que é o que o Excel brasileiro abre sem assistente.
+
+Um CSV é uma tabela só: relatório com mais de uma aba exporta a primeira e põe o nome dela
+no arquivo, para ninguém achar que o resto se perdeu.
+
+## Auditoria
+
+Nada neste sistema trava (D-A). É o registro de auditoria que torna isso seguro: toda
+alteração em lançamento, competência, contrato e regra fica gravada com o antes e o
+depois, **escrita por gatilho no banco** — a aplicação não tem como escrever nem apagar
+uma linha dali.
+
+A tela filtra por tabela, autor e período, e traduz o valor bruto: dinheiro formatado,
+booleano em sim/não, uuid encurtado. Um registro completo e ilegível é o mesmo que não ter
+registro.
+
 ## O que ainda falta
 
 - **Saldo de abertura dos cartões.** A conta corrente abre em R$ 142.469,28 e o CDB em
   R$ 367.735,49, que somam a posição de 01/01/2026. A dívida das duas contas de cartão na
   mesma data ainda é desconhecida e segue em 0,00 — dá para corrigir na tela de Contas.
 - **Nada do caminho de escrita rodou contra um Postgres.** Sem projeto Supabase e sem
-  Docker, o que está verificado é a lógica pura (286 testes) e os importadores contra os
+  Docker, o que está verificado é a lógica pura (303 testes) e os importadores contra os
   arquivos reais. As migrations `0002` e `0003` nunca foram aplicadas; aprovar uma
   importação, varrer categorias e reconhecer receita nunca gravaram de verdade.
 - **Os contratos de 2026 ainda não estão cadastrados.** O importador da aba `DRE Geral`

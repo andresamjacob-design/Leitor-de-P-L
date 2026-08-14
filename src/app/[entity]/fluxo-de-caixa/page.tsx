@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { EmptyState } from "@/components/empty-state";
+import { ExportLinks } from "@/components/export-links";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
@@ -145,6 +146,15 @@ export default async function CashFlowPage({
         title="Fluxo de caixa"
         description="Regime de caixa: a data real do dinheiro. Não fecha com o DRE, e não deveria."
       />
+
+      <div className="mb-6 flex justify-end">
+        <ExportLinks
+          slug={slug}
+          report="fluxo-de-caixa"
+          from={from.slice(0, 7)}
+          to={toMonth.slice(0, 7)}
+        />
+      </div>
 
       {rangeForm}
 

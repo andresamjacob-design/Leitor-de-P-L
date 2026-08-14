@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { EmptyState } from "@/components/empty-state";
+import { ExportLinks } from "@/components/export-links";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select } from "@/components/ui/field";
@@ -74,6 +75,10 @@ export default async function RecognitionPage({
         title="Competência"
         description="As linhas que formam o DRE. Receita vem de contrato; custo, do espelho do caixa."
       />
+
+      <div className="mb-6 flex justify-end">
+        <ExportLinks slug={slug} report="competencia" from={from.slice(0, 7)} to={to.slice(0, 7)} />
+      </div>
 
       <form method="get" className="mb-6 flex flex-wrap items-end gap-3">
         <input type="hidden" name="categorias" value={search.categorias ?? ""} />

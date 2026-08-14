@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { EmptyState } from "@/components/empty-state";
+import { ExportLinks } from "@/components/export-links";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
@@ -51,6 +52,10 @@ export default async function PlPage({
     return (
       <>
         <PageHeader title="DRE gerencial" description="Regime de competência." />
+
+      <div className="mb-6 flex justify-end">
+        <ExportLinks slug={slug} report="dre" from={from.slice(0, 7)} to={to.slice(0, 7)} />
+      </div>
         {rangeForm}
         <EmptyState title="Intervalo inválido">
           O mês final vem antes do inicial. Ajuste o filtro e tente de novo.

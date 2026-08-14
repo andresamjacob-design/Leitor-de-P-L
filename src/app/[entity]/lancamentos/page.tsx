@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { EmptyState } from "@/components/empty-state";
+import { ExportLinks } from "@/components/export-links";
 import { PageHeader } from "@/components/page-header";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Field, Input, Select } from "@/components/ui/field";
@@ -89,6 +90,10 @@ export default async function EntriesPage({
         title="Lançamentos"
         description="Regime de caixa: o dia em que o dinheiro se moveu de verdade."
       />
+
+      <div className="mb-6 flex justify-end">
+        <ExportLinks slug={slug} report="lancamentos" />
+      </div>
 
       <form method="get" className="mb-6 grid gap-3 sm:grid-cols-3 lg:grid-cols-6">
         <Field label="De" htmlFor="de">

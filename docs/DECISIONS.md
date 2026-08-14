@@ -331,6 +331,54 @@ real recebido é xlsx com cabeçalho que o parser já entende, e o CSV passa pel
 casamento por cabeçalho. Uma tela de mapeamento sem nada para mapear seria adivinhação.
 Entra quando aparecer um arquivo que precise dela.
 
+## Parte 13 — Decisões da Fase 8
+
+### D68 — Escritor de XLSX próprio, com entradas sem compressão
+Mesma razão do leitor (D34): a biblioteca autorizada não abre os arquivos que este sistema
+importa. O escritor usa `node:zlib` só para o CRC32 e grava as entradas **stored**, sem
+deflate — o Excel aceita, os arquivos são pequenos, e some uma classe inteira de bug de um
+escritor que existe para fazer número viajar intacto.
+
+Dinheiro sai como **número**, não texto, para a planilha conseguir somar. O teste faz o
+caminho de volta pelo próprio leitor, e o `zipfile` do Python confirma o CRC de todas as
+entradas.
+
+### D69 — O export chama o mesmo carregador da tela
+Nenhum exportador recalcula nada: `buildReport` chama `loadCashFlow`, `loadPl` e os
+mesmos `list*` das páginas, e só reformata. Recomputar com filtros ligeiramente diferentes
+é exatamente como um export começa a discordar da tela de onde veio (§10).
+
+### D70 — CSV exporta a primeira aba, e diz qual
+Um CSV é uma tabela só. Relatório com mais de uma aba (DRE, Receita) exporta a primeira e
+**põe o nome dela no arquivo**, para ninguém achar que o resto se perdeu. Quem quer tudo
+baixa o XLSX.
+
+### D71 — A rota de export repete a checagem de sessão
+Um route handler não tem layout acima dele, então a verificação que protege toda página
+não vale ali. O proxy já barra tráfego anônimo e o RLS não devolveria nada, mas a rota
+confere o usuário mesmo assim — foi um teste E2E que mostrou o buraco.
+
+### D72 — Margem por cliente é bruta, e a tela diz isso
+Receita reconhecida do cliente menos o custo das pessoas alocadas a ele (`people.client_id`).
+**Nada de overhead é rateado**: aluguel, ferramentas e contabilidade não são divididos
+entre clientes por uma regra que ninguém combinou. Um número com rateio inventado dentro
+parece mais preciso e é menos verdadeiro.
+
+A tela informa quanto de folha é de gente sem cliente alocado, para o total não passar por
+completo.
+
+### D73 — O dashboard só mostra realizado
+Sem meta e sem orçamento, conforme a D3. Todo cartão é um link para a tela que explica o
+número — um painel cujos números não se abrem é um painel em que ninguém confia. A Q4
+(metas de receita e de OPBB da planilha) continua aberta e não foi antecipada.
+
+### D74 — A auditoria traduz o valor bruto
+O gatilho grava valor de coluna: `amount` chega como `"60000.00"` e chave estrangeira como
+uuid. A tela formata dinheiro, resolve booleano e encurta uuid. Um registro tecnicamente
+completo e ilegível é o mesmo que não ter registro.
+
+---
+
 ## Parte 12 — Decisões da Fase 7
 
 ### D61 — A IA fala por `fetch`, sem SDK
