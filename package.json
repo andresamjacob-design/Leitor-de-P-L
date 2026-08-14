@@ -22,7 +22,9 @@
     "verify:import": "vite-node --config vitest.config.ts scripts/verify-import.ts",
     "verify:rls": "vite-node --config vitest.config.ts scripts/verify-rls.ts",
     "propose:rules": "vite-node --config vitest.config.ts scripts/propose-rules.ts",
-    "inspect:staged": "vite-node --config vitest.config.ts scripts/inspect-staged.ts"
+    "inspect:staged": "vite-node --config vitest.config.ts scripts/inspect-staged.ts",
+    "propose:parties": "vite-node --config vitest.config.ts scripts/propose-parties.ts",
+    "preview:categorize": "vite-node --config vitest.config.ts scripts/preview-categorize.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.4",
