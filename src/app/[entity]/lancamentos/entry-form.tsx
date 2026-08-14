@@ -12,18 +12,21 @@ import { EMPTY_FORM_STATE } from "@/lib/form";
 import type { CashEntry } from "@/lib/data/cash-entries";
 import type { Account } from "@/lib/data/accounts";
 import type { Category } from "@/lib/data/categories";
+import type { Contract } from "@/lib/data/contracts";
 
 export function EntryForm({
   slug,
   entry,
   accounts,
   categories,
+  contracts,
   counterpartAccountId,
 }: {
   slug: string;
   entry: CashEntry | null;
   accounts: Account[];
   categories: Category[];
+  contracts: Contract[];
   counterpartAccountId: string | null;
 }) {
   const [state, action, pending] = useActionState(saveCashEntryAction, EMPTY_FORM_STATE);
@@ -176,6 +179,21 @@ export function EntryForm({
 
         <Field label="Fornecedor" htmlFor="vendor" hint="Opcional. Ajuda a categorizar depois.">
           <Input id="vendor" name="vendor" defaultValue={kept("vendor", entry?.vendor ?? "")} />
+        </Field>
+
+        <Field
+          label="Contrato"
+          htmlFor="contractId"
+          hint="Amarrar o recebimento ao contrato é o que preenche a coluna “recebido” da conciliação."
+        >
+          <Select id="contractId" name="contractId" defaultValue={kept("contractId", entry?.contractId ?? "")}>
+            <option value="">— nenhum —</option>
+            {contracts.map((contract) => (
+              <option key={contract.id} value={contract.id}>
+                {contract.name}
+              </option>
+            ))}
+          </Select>
         </Field>
       </div>
 

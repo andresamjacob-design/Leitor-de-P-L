@@ -59,3 +59,16 @@ for (const path of ["/dd-group/regras", "/dd-group/regras/nova", "/dd-group/assi
     await expect(page).toHaveURL(/\/login/);
   });
 }
+
+for (const path of [
+  "/dd-group/contratos",
+  "/dd-group/contratos/novo",
+  "/dd-group/clientes",
+  "/dd-group/notas-fiscais",
+  "/dd-group/pessoas",
+]) {
+  test(`${path} exige sessão`, async ({ page }) => {
+    await page.goto(path);
+    await expect(page).toHaveURL(/\/login/);
+  });
+}

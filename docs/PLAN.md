@@ -16,7 +16,7 @@ mudou.
 | 2 | CRUD manual de lançamentos + plano de contas + fluxo de caixa | ✅ construída — nenhuma escrita rodou contra um Postgres de verdade (Q11) |
 | 3 | Importação de extrato: XLSX/CSV + PDF de fatura, dedup, tela de revisão | ✅ construída — parsers validados contra 34 arquivos reais; escrita ainda não rodou contra Postgres (Q11) |
 | 4 | Categorização: motor de regras determinístico + aprendizado de regra | ✅ construída — nada rodou contra Postgres (Q11) |
-| 5 | Clientes, contratos, NFs, cronogramas de reconhecimento, POC | ⬜ |
+| 5 | Clientes, contratos, NFs, cronogramas de reconhecimento, POC | ✅ construída — sem o importador da `DRE Geral` (D51/Q16); nada rodou contra Postgres (Q11) |
 | 6 | P&L gerencial por entidade + consolidado | ⬜ |
 | 7 | Camada de IA: sugestões e extração de contrato em PDF | ⬜ |
 | 8 | Dashboards, exports (XLSX/CSV), tela de audit log | ⬜ |
@@ -227,21 +227,26 @@ Os arquivos em `docs/reference/` foram lidos antes deste plano. Achados que impo
 
 **Pronto quando:** eu crio um contrato e vejo o cronograma de reconhecimento.
 
-- [ ] CRUD de `clients` e `people` (com `vinculo`, `cargo`, `squad`, gestor — a aba
-      `Colaboradores` tem tudo isso)
-- [ ] CRUD de `contracts` com `retainer`/`project` e versionamento por aditivo (D13)
-- [ ] CRUD de `invoices` (NF), com `service_period` definindo a competência (D6)
-- [ ] Conciliação NF ↔ recebimento ↔ reconhecimento
-- [ ] Motor de reconhecimento, idempotente, que não sobrescreve linha editada à mão
-- [ ] Linha reta para retainer, com proração por dias corridos e toggle de "mês cheio"
-      (D14f)
-- [ ] Retainer sem data de fim reconhece enquanto `status = active`
-- [ ] Tela de POC: lista todos os projetos abertos para uma pessoa preencher em lote (D1)
-- [ ] POC cumulativo com delta calculado; flag de correção permite queda
-- [ ] Mês sem POC = zero reconhecido + entra na lista de "relatórios faltando"
-- [ ] Fechar projeto como `completed` força 100% e reconhece o resto
-- [ ] Importador do `DRE Geral` para semear contratos e cronogramas de 2026
-- [ ] Testes: testes 1 e 2 reescrito (D-E) e 3 da §11
+- [x] CRUD de `clients` e `people` (com vínculo, cargo, squad, gestor), com validação de
+      dígito de CPF/CNPJ na digitação (D50)
+- [x] CRUD de `contracts` com `retainer`/`project` e versionamento por aditivo (D13)
+- [x] CRUD de `invoices` (NF), com `service_period` definindo a competência (D6) — e a NF
+      **não** gera reconhecimento, senão a receita entraria duas vezes (D45)
+- [x] Conciliação reconhecido ↔ faturado ↔ recebido, mês a mês, na tela do contrato
+- [x] Motor de reconhecimento puro e idempotente, que nunca sobrescreve linha editada à
+      mão e remove o que deixou de sustentar (D49)
+- [x] Linha reta para retainer, com proração por dias corridos e toggle de "mês cheio"
+      (D14f, D47)
+- [x] Retainer sem data de fim reconhece enquanto `status = active`
+- [x] Tela de POC em lote: todos os projetos abertos numa tela só (D1)
+- [x] POC cumulativo com delta calculado; flag de correção permite queda
+- [x] Mês sem POC = zero reconhecido + aparece na lista de relatórios faltando
+- [x] Fechar projeto como `completed` reconhece o saldo que faltava
+- [x] Receita diferida por contrato, com "Receita a faturar" quando fica negativa (D14a)
+- [ ] Importador do `DRE Geral` — **não construído** (D51): a aba não tem os campos que um
+      contrato precisa, e inferi-los geraria cronograma errado em silêncio. Ver Q16
+- [x] Testes: **testes 1, 2 (reescrito pela D-E) e 3 da §11**, com os números exatos da
+      spec, mais 49 testes de motor e percentual
 
 ---
 

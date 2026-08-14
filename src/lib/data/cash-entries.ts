@@ -35,6 +35,9 @@ export type CashEntry = {
   categoryId: string | null;
   clientId: string | null;
   personId: string | null;
+  /** Set when the movement is the money side of a contract — a receipt against it. */
+  contractId: string | null;
+  invoiceId: string | null;
   vendor: string | null;
   counterpartyName: string | null;
   counterpartyTaxId: string | null;
@@ -56,6 +59,8 @@ type CashEntryRow = {
   category_id: string | null;
   client_id: string | null;
   person_id: string | null;
+  contract_id: string | null;
+  invoice_id: string | null;
   vendor: string | null;
   counterparty_name: string | null;
   counterparty_tax_id: string | null;
@@ -66,8 +71,8 @@ type CashEntryRow = {
 };
 
 const COLUMNS = `id, entity_id, account_id, occurred_on, competence_period, amount, direction,
-  description, category_id, client_id, person_id, vendor, counterparty_name,
-  counterparty_tax_id, is_intercompany, import_id, created_at, updated_at`;
+  description, category_id, client_id, person_id, contract_id, invoice_id, vendor,
+  counterparty_name, counterparty_tax_id, is_intercompany, import_id, created_at, updated_at`;
 
 function toEntry(row: CashEntryRow): CashEntry {
   return {
@@ -82,6 +87,8 @@ function toEntry(row: CashEntryRow): CashEntry {
     categoryId: row.category_id,
     clientId: row.client_id,
     personId: row.person_id,
+    contractId: row.contract_id,
+    invoiceId: row.invoice_id,
     vendor: row.vendor,
     counterpartyName: row.counterparty_name,
     counterpartyTaxId: row.counterparty_tax_id,
@@ -185,6 +192,8 @@ export type CashEntryInput = {
   categoryId: string | null;
   clientId: string | null;
   personId: string | null;
+  contractId?: string | null;
+  invoiceId?: string | null;
   vendor: string | null;
   isIntercompany: boolean;
   /** Only meaningful for a transfer category: the account the money lands in (D14b). */
@@ -250,6 +259,8 @@ function toRow(input: CashEntryInput, dedup: string) {
     category_id: input.categoryId,
     client_id: input.clientId,
     person_id: input.personId,
+    contract_id: input.contractId ?? null,
+    invoice_id: input.invoiceId ?? null,
     vendor: input.vendor,
     is_intercompany: input.isIntercompany,
     dedup_hash: dedup,

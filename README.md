@@ -8,11 +8,11 @@ gerencial (regime de competência) e reconhecimento de receita, para **DD Group*
 - `docs/DECISIONS.md` — as decisões tomadas, e onde elas contrariam a spec
 - `docs/PLAN.md` — o plano por fase, com checklist e status
 
-**Fase atual: 4 concluída.** Dá para cadastrar contas e categorias, importar o extrato do
-Itaú e a fatura do cartão, deixar o sistema categorizar sozinho o que ele reconhece, ler o
-fluxo de caixa mês a mês com drill-down e ver quanto a empresa paga de assinatura. O
-próximo passo são contratos e reconhecimento de receita (Fase 5); o DRE gerencial, a
-Fase 6.
+**Fase atual: 5 concluída.** Dá para cadastrar contas e categorias, importar o extrato do
+Itaú e a fatura do cartão, deixar o sistema categorizar sozinho o que reconhece, ler o
+fluxo de caixa mês a mês, ver quanto a empresa paga de assinatura, e cadastrar clientes,
+contratos e notas fiscais com a receita sendo reconhecida por competência. O que falta é
+juntar tudo num DRE gerencial (Fase 6).
 
 ## Como rodar
 
@@ -58,6 +58,7 @@ src/lib/import/             leitores de arquivo e parsers, todos puros e testáv
 src/lib/categorize/         o motor de categorização e a detecção de assinaturas
 src/lib/cash-flow.ts        o relatório de caixa, função pura, sem banco
 src/lib/recognition/mirror.ts  quando um custo de caixa vira competência (D2a/D2b)
+src/lib/recognition/engine.ts  quando a receita de um contrato é considerada ganha
 src/lib/ledger-types.ts     tipos e rótulos que servidor e cliente compartilham
 src/lib/data/               leitura e escrita via Supabase, sempre com o JWT do usuário
 src/lib/db/schema.ts        fonte única do schema; toda mudança vira migration
@@ -161,15 +162,42 @@ vezes ou mais. Uma cobrança sem repetição há dois ciclos entra como **encerr
 total — o Google Workspace apareceu duas vezes nos arquivos reais porque o fornecedor
 mudou a descrição, e somar as duas inflaria o custo mensal em quase o dobro.
 
+## Reconhecimento de receita
+
+O caixa diz quando o dinheiro chegou. O reconhecimento diz quando ele foi **ganho** — e a
+distância entre os dois é a receita diferida, o número que denuncia erro em qualquer um
+dos lados.
+
+- **Suporte contínuo:** linha reta, com o primeiro e o último mês prorrateados pelos dias
+  corridos. Um retainer de R$ 6.000 começando em 15/04 reconhece R$ 3.200 em abril (16 de
+  30 dias) e R$ 6.000 daí em diante.
+- **Projeto:** alguém reporta o **percentual acumulado** do mês, e o motor calcula a
+  diferença. Guardar o acumulado é o que faz uma correção se resolver no mês seguinte em
+  vez de se acumular: reportar 30% e depois 25% com a marca de correção reconhece
+  −R$ 2.500, sem tocar no mês já fechado.
+- **Mês sem reporte** reconhece zero e entra na lista de relatórios faltando.
+- **Encerrar o projeto** reconhece o saldo que faltava.
+
+O motor é idempotente: rodar de novo não duplica nada. E **nunca sobrescreve uma linha que
+alguém editou à mão** — ela é preservada e contada à parte.
+
+A nota fiscal **não** cria receita. O reconhecimento vem do contrato; a NF entra como a
+coluna "faturado" da conciliação, ao lado de "reconhecido" e "recebido". Se a NF também
+gerasse competência, a mesma receita entraria duas vezes.
+
 ## O que ainda falta
 
 - **Saldo de abertura dos cartões.** A conta corrente abre em R$ 142.469,28 e o CDB em
   R$ 367.735,49, que somam a posição de 01/01/2026. A dívida das duas contas de cartão na
   mesma data ainda é desconhecida e segue em 0,00 — dá para corrigir na tela de Contas.
 - **Nada do caminho de escrita rodou contra um Postgres.** Sem projeto Supabase e sem
-  Docker, o que está verificado é a lógica pura (175 testes) e os importadores contra os
-  arquivos reais. As migrations `0002` e `0003` nunca foram aplicadas; a aprovação de uma
-  importação e a varredura de categorização nunca gravaram de verdade.
+  Docker, o que está verificado é a lógica pura (220 testes) e os importadores contra os
+  arquivos reais. As migrations `0002` e `0003` nunca foram aplicadas; aprovar uma
+  importação, varrer categorias e reconhecer receita nunca gravaram de verdade.
+- **Os contratos de 2026 ainda não estão cadastrados.** O importador da aba `DRE Geral`
+  não foi construído de propósito: a planilha tem o valor espalhado por mês, mas não
+  início, fim nem método de reconhecimento, e inferir esses campos geraria cronograma
+  errado em silêncio. Ver Q16 em `docs/DECISIONS.md`.
 - **Três extratos ilegíveis.** `Janeiro ate março`, `abril até junho` e `julho` foram
   impressos pelo app do Itaú e não têm texto recuperável. Precisam ser reexportados em
   xlsx/csv pelo internet banking.

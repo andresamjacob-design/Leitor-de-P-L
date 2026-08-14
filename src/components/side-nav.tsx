@@ -9,11 +9,20 @@ export function SideNav({ slug }: { slug: string }) {
   const pathname = usePathname();
   const base = `/${slug}`;
 
+  // The longest matching item wins, so `/contratos/poc` lights up "Reportar avanço" and
+  // not also "Contratos" — a nested screen has exactly one place in the menu.
+  const current = NAV_ITEMS.reduce<string | null>((best, item) => {
+    const href = `${base}${item.href}`;
+    const matches = item.href === "" ? pathname === base : pathname.startsWith(href);
+    if (!matches) return best;
+    return best === null || href.length > best.length ? href : best;
+  }, null);
+
   return (
     <nav aria-label="Seções" className="flex flex-col gap-0.5">
       {NAV_ITEMS.map((item) => {
         const href = `${base}${item.href}`;
-        const active = item.href === "" ? pathname === base : pathname.startsWith(href);
+        const active = href === current;
 
         return (
           <Link

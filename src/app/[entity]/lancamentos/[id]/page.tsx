@@ -6,6 +6,7 @@ import { EntryForm } from "../entry-form";
 import { DeleteEntry } from "../delete-entry";
 import { listAccounts } from "@/lib/data/accounts";
 import { listCategories } from "@/lib/data/categories";
+import { listContracts } from "@/lib/data/contracts";
 import { getCashEntry, getTransferPair } from "@/lib/data/cash-entries";
 import { listRecognitionForCashEntry } from "@/lib/data/recognition";
 import { changedFields, listAuditFor } from "@/lib/data/audit";
@@ -45,9 +46,10 @@ export default async function EditEntryPage({
   const entry = await getCashEntry(id);
   if (!entry) notFound();
 
-  const [accounts, categories, pair, recognitions, audit] = await Promise.all([
+  const [accounts, categories, contracts, pair, recognitions, audit] = await Promise.all([
     listAccounts([entry.entityId], { includeInactive: true }),
     listCategories([entry.entityId], { includeInactive: true }),
+    listContracts([entry.entityId]),
     getTransferPair(entry.id),
     listRecognitionForCashEntry(entry.id),
     listAuditFor("cash_entries", entry.id),
@@ -67,6 +69,7 @@ export default async function EditEntryPage({
         entry={entry}
         accounts={accounts}
         categories={categories}
+        contracts={contracts}
         counterpartAccountId={pair?.toAccountId ?? null}
       />
 

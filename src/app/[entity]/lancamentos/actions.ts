@@ -44,6 +44,7 @@ function readEntry(data: FormData): CashEntryInput {
     categoryId: readOptionalId(data, "categoryId"),
     clientId: readOptionalId(data, "clientId"),
     personId: readOptionalId(data, "personId"),
+    contractId: readOptionalId(data, "contractId"),
     vendor: readOptionalText(data, "vendor"),
     isIntercompany: readBoolean(data, "isIntercompany"),
     counterpartAccountId: readOptionalId(data, "counterpartAccountId"),

@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/page-header";
 import { EntryForm } from "../entry-form";
 import { listAccounts } from "@/lib/data/accounts";
 import { listCategories } from "@/lib/data/categories";
+import { listContracts } from "@/lib/data/contracts";
 import { resolveScope } from "@/lib/entities";
 
 export default async function NewEntryPage({
@@ -27,9 +28,10 @@ export default async function NewEntryPage({
     );
   }
 
-  const [accounts, categories] = await Promise.all([
+  const [accounts, categories, contracts] = await Promise.all([
     listAccounts([scope.entity.id]),
     listCategories([scope.entity.id]),
+    listContracts([scope.entity.id]),
   ]);
 
   if (accounts.length === 0) {
@@ -51,6 +53,7 @@ export default async function NewEntryPage({
         entry={null}
         accounts={accounts}
         categories={categories}
+        contracts={contracts}
         counterpartAccountId={null}
       />
     </>

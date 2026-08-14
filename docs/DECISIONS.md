@@ -331,6 +331,65 @@ real recebido é xlsx com cabeçalho que o parser já entende, e o CSV passa pel
 casamento por cabeçalho. Uma tela de mapeamento sem nada para mapear seria adivinhação.
 Entra quando aparecer um arquivo que precise dela.
 
+## Parte 10 — Decisões da Fase 5
+
+### D45 — A NF não cria receita; o contrato cria
+A D6 diz que a NF define a competência, e isso continua valendo — mas se a NF **também**
+gerasse linha de reconhecimento, a mesma receita entraria duas vezes: uma pelo motor do
+contrato e outra pela nota.
+
+→ O reconhecimento vem sempre do contrato. A NF entra como a coluna **faturado** da
+conciliação, ao lado de **reconhecido** (quando foi ganho) e **recebido** (quando o
+dinheiro entrou). As três medem coisas diferentes e não têm obrigação de bater mês a mês;
+é a diferença entre elas que vale olhar.
+
+Consequência: receita sem contrato não é reconhecida. Se aparecer, o caminho é criar o
+contrato — mesmo que de uma linha só — ou lançar a competência à mão.
+
+### D46 — A conta de receita sai do código, não de uma coluna nova
+`contracts` não tem coluna de categoria. Em vez de uma migração, o motor resolve pelo
+código do plano de contas: **3.01** para suporte contínuo, **3.02** para projeto — os dois
+já semeados da aba `DRE Geral`. Se a conta não existir na entidade, o motor recusa e diz
+qual criar, em vez de reconhecer numa categoria errada.
+
+### D47 — "Mês cheio" significa meses iguais
+Distribuir um valor total com a proração desligada divide em partes **iguais**, não
+proporcionais ao tamanho do mês. Ponderar por dias faria janeiro valer mais que fevereiro
+sem que ninguém tivesse contratado isso. Com a proração ligada, o peso é o número de dias
+que o contrato cobre — que é o que o teste 3 da §11 exige.
+
+### D48 — Percentual é inteiro, como dinheiro
+`Percent` é um `bigint` em **milipercentual** (100% = `100_000n`), guardando as três casas
+que `numeric(6,3)` permite. Pelo mesmo motivo do dinheiro: um delta de POC multiplicado
+pelo valor do contrato é exatamente onde um float perderia centavo.
+
+### D49 — O motor remove o que deixou de sustentar
+Se o prazo encurta ou um reporte de POC some, as linhas que o motor tinha escrito para
+aqueles meses são apagadas. Deixá-las no DRE seria pior: números que ninguém mais consegue
+explicar. **Linha marcada como editada à mão nunca é tocada** — nem atualizada, nem
+removida; ela é contada e reportada (D-A).
+
+### D50 — CNPJ se valida na digitação, nunca no casamento
+`isValidTaxId` confere os dígitos de CPF e CNPJ nos formulários de cliente e de pessoa: um
+dígito trocado ligaria silenciosamente o dinheiro de outra empresa a este cliente. No
+**casamento** com o extrato nada é validado — um CNPJ que falha na conta ainda é o que o
+banco mandou, e recusá-lo perderia o movimento.
+
+### D51 — O importador da planilha `DRE Geral` ficou de fora
+O PLAN previa semear os contratos de 2026 a partir da aba `DRE Geral`. Não foi construído.
+
+A aba tem uma coluna por mês com o valor já espalhado, e não os campos que um contrato
+precisa — início, fim, método de reconhecimento, se o valor é mensal ou total. Importar
+isso significaria **inferir** cada um desses campos a partir do formato de cobrança
+(`Mensal`/`Kickoff`/`1 NF`/`Ciclo`), e um contrato inferido errado gera cronograma errado
+em silêncio, que é o oposto do que este sistema deve fazer.
+
+O caminho honesto é cadastrar os contratos a partir da planilha com uma pessoa decidindo
+cada campo, ou definirmos juntos as regras de inferência antes de eu escrever o importador.
+Ver Q16.
+
+---
+
 ## Parte 9 — Decisões da Fase 4
 
 ### D40 — A ordem da decisão: identidade antes de texto, explícito antes de aprendido
@@ -480,4 +539,5 @@ Precisam de resposta antes da fase indicada.
 | Q13 | **Reexportar três extratos.** `Janeiro ate março`, `abril até junho` e `julho` são PDFs impressos pelo app do Itaú e não têm texto recuperável (A5). Preciso deles em XLSX/CSV. | Fase 3 |
 | ~~Q14~~ | ~~**Banco 301, conta 3111117-6.**~~ **Respondido em 13/08/2026:** conta encerrada, fica fora. Ver D33. | — |
 | Q15 | **Fatura 8299 de 05/06/2026** (R$ 830,97) não está na pasta, e faltam as de set–dez/2025 dessa conta. | Fase 3 |
+| Q16 | **Importar os contratos de 2026 da aba `DRE Geral`?** A aba tem o valor espalhado por mês, mas não início, fim, método nem se o valor é mensal ou total — tudo isso teria de ser inferido do formato de cobrança. Prefere cadastrar à mão a partir dela, ou definimos as regras de inferência? Ver D51. | Fase 6 |
 | Q11 | **Nada do caminho de escrita foi executado contra um Postgres.** Sem projeto Supabase (Q6) e sem Docker/PGlite (Q5), o que está testado é a lógica pura: 83 testes cobrindo dinheiro, datas, dedup, espelho de competência e o relatório inteiro. As migrations 0002/0003 nunca rodaram. Isto é o que mais me preocupa hoje. | Fase 3 |
