@@ -370,6 +370,31 @@ manual) e marcação do que foi editado à mão. É onde se responde "de onde ve
 
 ---
 
+### D58 — Imposto é o que foi pago (respondendo à Q1)
+A **D14c fica confirmada**: o DRE mostra imposto quando ele sai do banco e é
+categorizado, sem cálculo de alíquota. A planilha calculava 17% + ISS 3,4% com ajuste
+manual, e esse caminho fica de fora.
+
+Consequência conhecida e aceita: o mês em que a receita foi ganha pode não carregar o
+imposto dela, e a margem daquele mês sai otimista. Quem lê o DRE precisa saber disso — a
+alternativa exigiria as alíquotas exatas e uma explicação para o ajuste manual de janeiro,
+que ninguém tem hoje.
+
+### D59 — Férias não são provisionadas (respondendo à Q3)
+A **D2c fica confirmada**: férias entram no DRE quando são pagas. Entre as duas abas que
+discordavam, vale a `DRE Geral` (R$ 0 na linha), não a `Colaboradores` (R$ 204.032,56 no
+ano). Sem tabela `accruals`.
+
+Consequência: o mês do pagamento leva a despesa inteira, e a margem oscila. É uma escolha,
+não um esquecimento.
+
+### D60 — Margem por cliente entra na Fase 8 (respondendo à Q7)
+O campo `people.client_id` já existe e a tela de Pessoas já o preenche. O relatório de
+margem por cliente — receita do cliente menos o custo das pessoas alocadas nele — é
+trabalho da Fase 8, junto com os dashboards.
+
+---
+
 ## Parte 10 — Decisões da Fase 5
 
 ### D45 — A NF não cria receita; o contrato cria
@@ -564,13 +589,13 @@ Precisam de resposta antes da fase indicada.
 
 | # | Pendência | Bloqueia |
 |---|---|---|
-| Q1 | **Impostos.** D14c diz "só o que veio no extrato", mas a planilha calcula imposto como alíquota sobre a receita (`Imposto Total` 17% + `ISS` 3,4%, com ajuste manual — jan: receita 398.891,56 → imposto 77.667,59, que não é 17% exatos). Qual dos dois vale? | Fase 6 |
+| ~~Q1~~ | ~~**Impostos.**~~ **Respondido em 14/08/2026:** vale o que foi pago. A D14c fica confirmada. Ver D58. | — |
 | Q2 | **Segunda entidade.** Não chegou nenhuma planilha nem extrato da `GABRIEL SAMPAIO JACOB LTDA - ME`. O SPEC fala em três planilhas; chegou uma. | Fase 2 |
-| Q3 | **Férias.** D2c diz "sem provisão", mas a aba `Colaboradores` provisiona férias a 1/12 + 1/36 ao mês (R$ 204.032,56 no ano) — e a aba `DRE Geral` mostra R$ 0 na linha de férias. As duas abas discordam entre si. Qual vale? | Fase 6 |
+| ~~Q3~~ | ~~**Férias.**~~ **Respondido em 14/08/2026:** sem provisão. A D2c fica confirmada e a aba `DRE Geral` é a que vale. Ver D59. | — |
 | Q4 | **Metas.** D3 diz "só realizado", mas a planilha tem meta de receita (R$ 7.000.000) e meta de OPBB (36%). Quer isso na tela ou fica fora? | Fase 8 |
 | Q5 | **Onde rodam os testes de RLS.** Sem Docker, as opções são: (a) `@electric-sql/pglite` — Postgres real em WASM, roda no Vitest, sem Docker, precisa de autorização de dependência; (b) instalar Docker Desktop; (c) um projeto Supabase de teste na nuvem. Recomendo (a). | Fase 1 (fechamento) |
 | Q6 | **Projeto Supabase.** Preciso da URL e das chaves de um projeto Supabase para o login funcionar de ponta a ponta. | Fase 1 (fechamento) |
-| Q7 | **Rateio de pessoas por cliente/squad.** A aba `Colaboradores` aloca cada pessoa a um cliente e a um squad. Isso permite margem por cliente, que é mais do que o "payroll por pessoa" da §10. Quer? | Fase 6 |
+| ~~Q7~~ | ~~**Rateio de pessoas por cliente/squad.**~~ **Respondido em 14/08/2026:** sim, margem por cliente. Entra na Fase 8. Ver D60. | — |
 | Q8 | **Pipeline de vendas.** A aba `Vendas e Perdas` é um CRM (cliente, status, responsável, valor). Nenhuma fase do SPEC cobre isso. Fica fora? | — |
 | Q9 | **Arquivo alheio na pasta.** `docs/reference/Cópia de Autorização de saída - Saint Paul 21_08.docx.pdf` é uma autorização de saída escolar, não tem relação com o financeiro. Não abri. Apagar? | — |
 | ~~Q10~~ | ~~**Saldo de abertura de 01/01/2026.**~~ **Respondido em 13/08/2026:** a conta corrente Itaú tinha **R$ 510.204,78** em 01/01/2026. Está no seed. A dívida do cartão Itaucard na mesma data continua desconhecida e segue em 0,00. | — |

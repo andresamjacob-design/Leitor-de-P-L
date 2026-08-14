@@ -264,8 +264,8 @@ Os arquivos em `docs/reference/` foram lidos antes deste plano. Achados que impo
 - [x] Receita diferida por contrato, com "Receita a faturar" em coluna própria (D14a)
 - [x] Folha por pessoa, dizendo quanto de custo ainda não tem pessoa amarrada (D56)
 - [x] Os dois razões lado a lado, com o aviso de que não é para bater (D52)
-- [ ] Q1 (impostos), Q3 (férias) e Q7 (rateio por cliente) — **continuam abertas**. O DRE
-      hoje segue a D14c: imposto é só o que veio no extrato, sem cálculo de alíquota
+- [x] Q1, Q3 e Q7 respondidas em 14/08/2026: imposto é o que foi pago (D58), férias não
+      são provisionadas (D59) e margem por cliente entra na Fase 8 (D60)
 - [x] Testes: **§11.7 (consolidação) e §11.8 (precisão)** no DRE, mais 19 testes de
       montagem, eliminação e ordem das linhas. Os testes 1 e 3 já estavam cobertos no
       motor de reconhecimento (Fase 5)
@@ -295,5 +295,7 @@ Os arquivos em `docs/reference/` foram lidos antes deste plano. Achados que impo
 - [ ] Export XLSX e CSV de todo relatório, com os mesmos números da tela
 - [ ] Dashboard com os indicadores que a planilha já acompanha (receita do mês, OPBB,
       margem) — depende da Q4 para as metas
+- [ ] **Margem por cliente**: receita do cliente menos o custo das pessoas alocadas nele,
+      usando `people.client_id` (D60, respondendo à Q7)
 - [ ] Tela de audit log com filtro por tabela, ator e período
 - [ ] Diff antes/depois legível em cada linha do audit log
