@@ -16,6 +16,7 @@ function rule(overrides: Partial<Rule> = {}): Rule {
     matchType: "contains",
     pattern: "uber",
     counterpartyTaxId: null,
+    direction: null,
     amountMin: null,
     amountMax: null,
     accountId: null,
@@ -241,6 +242,35 @@ describe("matchPerson", () => {
       { id: "longo", name: "Ana Paula Ribeiro" },
     ];
     expect(matchPerson(people, "PIX ANA PAULA RIBEIRO")?.id).toBe("longo");
+  });
+});
+
+describe("direção", () => {
+  // The real case: `CICLO` is an agency this company pays *and* a client that pays it.
+  // A rule written for the expense used to swallow five receipts on the January statement.
+  it("não deixa uma regra de despesa pegar uma entrada", () => {
+    const despesa = rule({ pattern: "ciclo", direction: "out", categoryId: "agencia" });
+
+    const pagamento = suggestCategory(
+      subject({ description: "PIX ENVIADO CICLO ASSESSORIA", direction: "out" }),
+      { ...EMPTY, rules: [despesa] },
+    );
+    const recebimento = suggestCategory(
+      subject({ description: "RECEBIMENTOS CICLO - ASSESSORI", direction: "in" }),
+      { ...EMPTY, rules: [despesa] },
+    );
+
+    expect(pagamento?.categoryId).toBe("agencia");
+    expect(recebimento).toBeNull();
+  });
+
+  it("sem sentido definido, a regra continua valendo para os dois", () => {
+    const qualquer = rule({ pattern: "ciclo", direction: null, categoryId: "agencia" });
+    const recebimento = suggestCategory(
+      subject({ description: "RECEBIMENTOS CICLO", direction: "in" }),
+      { ...EMPTY, rules: [qualquer] },
+    );
+    expect(recebimento?.categoryId).toBe("agencia");
   });
 });
 

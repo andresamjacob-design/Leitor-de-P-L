@@ -11,7 +11,7 @@ import { normalizeTaxId } from "@/lib/tax-id";
 import type { MatchType, Rule, HistoryEntry, Person } from "@/lib/categorize/types";
 
 const COLUMNS =
-  "id, priority, match_type, pattern, counterparty_tax_id, amount_min, amount_max, account_id, category_id, client_id, person_id, active, hit_count";
+  "id, priority, match_type, pattern, counterparty_tax_id, direction, amount_min, amount_max, account_id, category_id, client_id, person_id, active, hit_count";
 
 type RuleRow = {
   id: string;
@@ -19,6 +19,7 @@ type RuleRow = {
   match_type: MatchType;
   pattern: string;
   counterparty_tax_id: string | null;
+  direction: "in" | "out" | null;
   amount_min: string | null;
   amount_max: string | null;
   account_id: string | null;
@@ -36,6 +37,7 @@ function toRule(row: RuleRow): Rule {
     matchType: row.match_type,
     pattern: row.pattern,
     counterpartyTaxId: row.counterparty_tax_id,
+    direction: row.direction,
     amountMin: row.amount_min === null ? null : fromNumeric(row.amount_min),
     amountMax: row.amount_max === null ? null : fromNumeric(row.amount_max),
     accountId: row.account_id,
@@ -78,6 +80,7 @@ export type RuleInput = {
   matchType: MatchType;
   pattern: string;
   counterpartyTaxId: string | null;
+  direction: "in" | "out" | null;
   amountMin: Cents | null;
   amountMax: Cents | null;
   accountId: string | null;
@@ -95,6 +98,7 @@ function toRow(input: RuleInput) {
     counterparty_tax_id: input.counterpartyTaxId
       ? normalizeTaxId(input.counterpartyTaxId)
       : null,
+    direction: input.direction,
     amount_min: input.amountMin === null ? null : toNumeric(input.amountMin),
     amount_max: input.amountMax === null ? null : toNumeric(input.amountMax),
     account_id: input.accountId,

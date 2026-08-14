@@ -20,6 +20,14 @@ export type Rule = {
   pattern: string;
   /** Digits only. When set, the rule only applies to that counterparty. */
   counterpartyTaxId: string | null;
+  /**
+   * When set, the rule only applies to movements in that direction.
+   *
+   * An expense rule that fires on money coming in is not a small annoyance: `CICLO`
+   * matched five receipts from a client whose name matches an agency the company pays,
+   * turning revenue into cost. Found on the first real statement.
+   */
+  direction: EntryDirection | null;
   amountMin: Cents | null;
   amountMax: Cents | null;
   /** When set, the rule only applies to movements of that account. */

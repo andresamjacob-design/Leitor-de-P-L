@@ -87,6 +87,7 @@ function matchesPattern(rule: Rule, subject: Subject): boolean {
 
 function applies(rule: Rule, subject: Subject): boolean {
   if (!rule.active) return false;
+  if (rule.direction !== null && rule.direction !== subject.direction) return false;
   if (rule.accountId !== null && rule.accountId !== subject.accountId) return false;
   if (!withinAmount(rule, subject.amount)) return false;
 

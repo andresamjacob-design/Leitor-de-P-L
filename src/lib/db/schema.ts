@@ -581,6 +581,14 @@ export const categorizationRules = pgTable(
     priority: integer("priority").notNull().default(100),
     matchType: matchType("match_type").notNull(),
     pattern: text("pattern").notNull(),
+    /**
+     * When set, the rule only applies to movements in that direction.
+     *
+     * Without it an expense rule fires on money coming in: `CICLO` matched five receipts
+     * from a client that shares its name with an agency the company pays. Found on the
+     * first real statement.
+     */
+    direction: entryDirection("direction"),
     /** A CNPJ match beats any text match — the statement gives it to us for free. */
     counterpartyTaxId: text("counterparty_tax_id"),
     amountMin: money("amount_min"),
