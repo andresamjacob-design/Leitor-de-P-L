@@ -101,8 +101,8 @@ O pedido em aberto era:
 > "a partir dos dados que tem na planilha do fluxo de caixa que eu havia colocado no
 > projeto, tente auto selecionar as categorias de cada gasto"
 
-Está construído, testado e commitado. **Nada foi gravado no banco além da migration** —
-aplicar as regras continua sendo decisão do usuário.
+Está construído, testado, commitado e **aplicado no banco**: 54 partes, 50 regras por
+documento e 44 de texto, cobrindo 221 das 426 linhas (51,9%). Veja a §4.1.
 
 ### 3.1 A checagem que faltava, respondida
 
@@ -161,28 +161,46 @@ O que sobrou de fora, e por quê:
 
 ## 4. Próximos passos
 
-### 4.1 A decisão que está na mesa
+### 4.1 Aplicado — falta clicar em “Categorizar”
 
-Os dois scripts estão prontos e ensaiados. **Falta o usuário mandar gravar:**
+O usuário mandou gravar, e está gravado: **54 partes cadastradas, 50 regras por documento
+e 44 regras de texto.** A cobertura medida com o motor de verdade é
 
-```
-npm run propose:parties -- --ensaio    # confere o ensaio de novo, se quiser
-npm run propose:parties -- --aplicar   # 54 partes, 50 regras por documento
-npm run propose:rules   -- --aplicar   # 10 regras de texto
-npm run preview:categorize             # a cobertura combinada, medida
-```
+**221 de 426 linhas, 51,9%** — 161 por `rule_tax_id` e 60 por `rule_text`, sem nenhuma
+sobreposição entre as duas fontes.
 
-A cobertura combinada dos dois só é medida depois de aplicar, e de propósito: somar 161 e
-60 daria errado, porque uma linha pode ser reivindicada pelo documento e pelo texto ao
-mesmo tempo, e o motor aplica só uma. Aplicar é reversível — uma regra produz sugestão e
-não aprova nada sozinha, e nada disso encosta em tabela de razão.
+| Linhas | Conta | |
+|---|---|---|
+| 90 | 6.10 | Freelancers |
+| 41 | 3.02 | Receita — Projeto |
+| 30 | 3.01 | Receita — Suporte contínuo |
+| 21 | 4.01 | Impostos sobre a receita |
+| 14 | 99.02 | Pagamento de fatura de cartão |
+| 9 | 8.01 | Contabilidade |
+| 5 | 11.01 | Tarifas bancárias |
+| 4 | 99.03 | Aplicação e resgate automático |
+| 3 | 11.02 | IOF |
+| 3 | 7.08 | Tarefy |
+| 1 | 8.03 | Agência |
 
-Três coisas para olhar antes, todas visíveis na saída do `propose:parties`:
+Aquela única linha em Agência é o caso Ciclo depois da correção: das cinco que a regra
+pegava, quatro eram receita e foram barradas pelo sentido.
 
-- o ⚠ de `GM Promo` → `VAI DE PROMO`;
-- se Ricardo Custodio, Gabriel Sampaio Jacob e Leonardo Sanches são mesmo colaboradores —
-  na planilha o nome deles está na coluna errada, e o segundo é o nome da outra entidade;
-- se "Anna Pasolini" e `PASOLINI ENGENHARIA` são a mesma pessoa (5 linhas).
+**As `staged_transactions` continuam com zero sugestão gravada, e isso é de propósito.**
+Escrever `suggested_*` é trabalho do botão **“Categorizar”** na tela de Regras, que passa
+pelo Supabase com o JWT do usuário e respeita a RLS. Os scripts daqui usam a conexão
+direta, que passa por cima dela — gravar sugestão por ali contrariaria a D16, que diz que
+a RLS é a fronteira de verdade. Então: abrir a tela de Regras e clicar em Categorizar.
+
+Três casamentos que valem um olho na tela, todos visíveis em `npm run propose:parties`:
+
+- `GM Promo` → `VAI DE PROMO` saiu marcado com ⚠ sentido invertido — 1 linha, provável
+  falso positivo, e a regra foi criada;
+- Ricardo Custodio, Gabriel Sampaio Jacob e Leonardo Sanches **não** viraram regra: na
+  planilha o nome deles está na coluna *Cliente* com `COLABORADOR` vazio. São 27 linhas,
+  e o segundo é o nome da outra entidade, então pode ser transferência (Q2);
+- "Anna Pasolini" e `PASOLINI ENGENHARIA` (5 linhas) — a empresa só carrega o sobrenome,
+  e o casamento exige todos os tokens, então ficou de fora.
 
 **Não chutar** duas coisas, que seguem valendo:
 
