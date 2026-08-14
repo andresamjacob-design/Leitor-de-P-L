@@ -27,6 +27,21 @@ npm run db:seed                # entidades, plano de contas e contas do Itaú
 npm run dev
 ```
 
+As três variáveis vêm do painel do Supabase:
+
+| Variável | Onde |
+|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | Project Settings › API › Project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Project Settings › API › `anon` / `public` |
+| `DATABASE_URL` | Project Settings › Database › Connection string › URI |
+
+**Não existe chave `service_role` neste projeto, e é de propósito** (D16): toda query roda
+com o JWT do usuário, e é isso que faz o RLS ser a fronteira real entre as entidades. Uma
+chave que ignora o RLS no `.env` é uma chave que um dia alguém usa.
+
+Nenhum comando pede segredo na linha de comando: `db:migrate` e `db:seed` leem o
+`.env.local` sozinhos, para a senha do banco não acabar no histórico do shell.
+
 Para conseguir entrar, o seu usuário precisa existir no Supabase Auth e ter uma linha em
 `user_entities` — não existe auto-cadastro. Convide o e-mail pelo painel do Supabase
 (Authentication › Users › Invite) e depois rode:

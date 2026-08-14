@@ -18,7 +18,7 @@
     "check": "npm run typecheck && npm run lint && npm run test",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "db:seed": "node scripts/seed.ts",
+    "db:seed": "node --env-file-if-exists=.env.local scripts/seed.ts",
     "verify:import": "vite-node --config vitest.config.ts scripts/verify-import.ts"
   },
   "dependencies": {
