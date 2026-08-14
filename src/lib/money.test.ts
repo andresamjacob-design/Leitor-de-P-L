@@ -146,3 +146,40 @@ describe("allocate", () => {
     expect(() => allocate(100n, [0n, 0n])).toThrow();
   });
 });
+
+describe("valor inteiro sem separador (o bug do primeiro import real)", () => {
+  // O PostgREST serializa numeric como número JSON: `800.00` chega como `800`, sem ponto.
+  // Antes desta correção, "800" com separador declarado virava R$ 80,80 — 327 das 426
+  // linhas do primeiro extrato importado saíram erradas.
+  it("lê inteiro quando o separador declarado não aparece", () => {
+    expect(parseMoney("800", { decimalSeparator: "." })).toBe(80000n);
+    expect(parseMoney("-800", { decimalSeparator: "." })).toBe(-80000n);
+    expect(parseMoney("32500", { decimalSeparator: "." })).toBe(3250000n);
+    expect(parseMoney("0", { decimalSeparator: "." })).toBe(0n);
+  });
+
+  it("vale também para o separador vírgula", () => {
+    expect(parseMoney("1234", { decimalSeparator: "," })).toBe(123400n);
+  });
+
+  it("com separador declarado, o outro símbolo é milhar", () => {
+    expect(parseMoney("1,234", { decimalSeparator: "." })).toBe(123400n);
+    expect(parseMoney("1.234", { decimalSeparator: "," })).toBe(123400n);
+  });
+
+  it("fromNumeric aguenta o que o banco devolve nas duas formas", () => {
+    expect(fromNumeric("800.00")).toBe(80000n);
+    expect(fromNumeric(800)).toBe(80000n);
+    expect(fromNumeric(-800)).toBe(-80000n);
+    expect(fromNumeric("-1234.56")).toBe(-123456n);
+    expect(fromNumeric(1234.5)).toBe(123450n);
+  });
+
+  it("ida e volta pelo banco preserva o centavo", () => {
+    for (const cents of [0n, 1n, 80000n, -80000n, 3250000n, 36773549n, 14246928n]) {
+      // Como string (postgres.js) e como número (PostgREST).
+      expect(fromNumeric(toNumeric(cents))).toBe(cents);
+      expect(fromNumeric(Number(toNumeric(cents)))).toBe(cents);
+    }
+  });
+});

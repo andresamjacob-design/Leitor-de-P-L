@@ -148,11 +148,19 @@ export function parseMoney(input: string, options: ParseOptions = {}): Cents {
   let integerPart: string;
   let fractionPart: string;
 
-  if (separator === null) {
+  // A declared separator that is not in the string means there is no fractional part at
+  // all. Without this branch `lastIndexOf` returns −1, `slice(0, -1)` silently drops the
+  // last digit, and `"800"` parses as R$ 80,80.
+  //
+  // That is not hypothetical: PostgREST serialises `numeric` as a JSON **number**, so
+  // `800.00` arrives as `800` with no dot. The first real import mangled 327 of 426 rows
+  // this way, and no test caught it because postgres.js hands back `"800.00"` as a string.
+  const at = separator === null ? -1 : text.lastIndexOf(separator);
+
+  if (at < 0) {
     integerPart = text.replace(/[.,]/g, "");
     fractionPart = "";
   } else {
-    const at = text.lastIndexOf(separator);
     integerPart = text.slice(0, at).replace(/[.,]/g, "");
     fractionPart = text.slice(at + 1).replace(/[.,]/g, "");
   }

@@ -33,7 +33,26 @@ export type DedupSubject = {
   amount: Cents;
   direction: EntryDirection;
   description: string;
-  /** Distinguishes a deliberate repeat of an otherwise identical movement. */
+  /**
+   * Who the money went to or came from.
+   *
+   * Without this, a payroll run is destroyed: the Itaú statement writes `PIX ENVIADO` in
+   * the description and puts the person in a separate column, so four payments of
+   * R$ 4.000 on the same day to four different people hash identically — and three of
+   * them would be marked as duplicates and never reach the ledger. Found on the first
+   * real import; 29 groups were affected.
+   *
+   * Prefer the tax id, which is stable; fall back to the name.
+   */
+  counterparty?: string | null;
+  /**
+   * Which occurrence of an otherwise identical movement this is, counting from zero.
+   *
+   * Two genuinely identical lines can appear in one statement — the same supplier paid
+   * twice for the same amount on the same day. They are different movements, and the
+   * index is what keeps them apart while still letting a re-import of the same file match
+   * them one for one.
+   */
   suffix?: number;
 };
 
@@ -45,7 +64,11 @@ export function dedupHash(subject: DedupSubject): string {
     subject.direction,
     normalizeDescription(subject.description),
   ];
-  if (subject.suffix !== undefined && subject.suffix > 0) parts.push(String(subject.suffix));
+
+  const counterparty = subject.counterparty?.trim();
+  if (counterparty) parts.push(normalizeDescription(counterparty));
+
+  if (subject.suffix !== undefined && subject.suffix > 0) parts.push(`#${subject.suffix}`);
 
   return createHash("sha256").update(parts.join("|")).digest("hex");
 }

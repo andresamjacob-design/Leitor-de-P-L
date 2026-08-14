@@ -20,6 +20,7 @@ import {
 } from "@/lib/data/cash-entries";
 import type { Category } from "@/lib/data/categories";
 import type { ParsedTransaction } from "@/lib/import/types";
+import { chunk, HASH_BATCH, UUID_BATCH } from "@/lib/data/batching";
 
 export type ImportFormat = "ofx" | "csv" | "xlsx" | "pdf";
 export type ImportStatus = "parsing" | "reviewing" | "approved" | "discarded" | "failed";
@@ -200,7 +201,9 @@ export async function findImportByHash(
     .select(IMPORT_COLUMNS)
     .eq("entity_id", entityId)
     .eq("file_hash", fileHash)
-    .neq("status", "discarded")
+    // A discarded or failed import must not block re-importing the same file: the first
+    // one left nothing usable behind, and refusing the retry would strand the user.
+    .not("status", "in", "(discarded,failed)")
     .limit(1)
     .maybeSingle();
 
@@ -249,28 +252,55 @@ export async function stageImport(input: StageInput): Promise<{ id: string; dupl
   if (error) throw new Error(`não foi possível registrar a importação: ${error.message}`);
   const importId = (data as { id: string }).id;
 
-  // Anything already in the ledger under the same hash is marked before a human sees it,
-  // so re-importing an overlapping period is a non-event (SPEC §11.5).
-  const hashes = input.transactions.map((transaction) =>
-    dedupHash({
+  try {
+    return await stageRows(supabase, importId, input);
+  } catch (cause) {
+    // The import row already exists. Leaving it as `reviewing` with no lines would look
+    // like an empty statement *and* block re-importing the file — mark what it is.
+    await supabase
+      .from("statement_imports")
+      .update({
+        status: "failed",
+        error: cause instanceof Error ? cause.message.slice(0, 500) : "erro desconhecido",
+      })
+      .eq("id", importId);
+    throw cause;
+  }
+}
+
+async function stageRows(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  importId: string,
+  input: StageInput,
+): Promise<{ id: string; duplicates: number }> {
+
+  // Each line gets the hash it will carry into the ledger. Two identical lines in the
+  // same file are two movements, not a duplicate, so each repeat takes the next
+  // occurrence index — and a re-import of the same file reproduces the same indexes and
+  // matches them one for one (SPEC §11.5).
+  const occurrences = new Map<string, number>();
+  const hashes = input.transactions.map((transaction) => {
+    const subject = {
       accountId: input.accountId,
       occurredOn: transaction.occurredOn,
       amount: transaction.amount,
       direction: transaction.direction,
       description: transaction.description,
-    }),
-  );
+      counterparty: transaction.counterpartyTaxId ?? transaction.counterpartyName,
+    };
+    const key = dedupHash(subject);
+    const index = occurrences.get(key) ?? 0;
+    occurrences.set(key, index + 1);
+    return dedupHash({ ...subject, suffix: index });
+  });
 
+  // Only what is already in the ledger counts as a duplicate.
   const existing = await existingHashes(input.entityId, hashes);
-  const seen = new Set<string>();
   let duplicates = 0;
 
   const rows = input.transactions.map((transaction, index) => {
     const hash = hashes[index] as string;
-    // A hash repeated inside the same file is also a duplicate — the second occurrence
-    // could never be inserted anyway, because the unique index would refuse it.
-    const isDuplicate = existing.has(hash) || seen.has(hash);
-    seen.add(hash);
+    const isDuplicate = existing.has(hash);
     if (isDuplicate) duplicates += 1;
 
     return {
@@ -298,10 +328,7 @@ export async function stageImport(input: StageInput): Promise<{ id: string; dupl
     const { error: insertError } = await supabase
       .from("staged_transactions")
       .insert(rows.slice(start, start + 500));
-    if (insertError) {
-      await supabase.from("statement_imports").update({ status: "failed", error: insertError.message }).eq("id", importId);
-      throw new Error(`não foi possível gravar as linhas: ${insertError.message}`);
-    }
+    if (insertError) throw new Error(`não foi possível gravar as linhas: ${insertError.message}`);
   }
 
   return { id: importId, duplicates };
@@ -312,14 +339,21 @@ async function existingHashes(entityId: string, hashes: string[]): Promise<Set<s
   if (hashes.length === 0) return found;
 
   const supabase = await createClient();
-  for (let start = 0; start < hashes.length; start += 300) {
+  for (const batch of chunk(hashes, HASH_BATCH)) {
     const { data, error } = await supabase
       .from("cash_entries")
       .select("dedup_hash")
       .eq("entity_id", entityId)
-      .in("dedup_hash", hashes.slice(start, start + 300));
+      .in("dedup_hash", batch);
 
-    if (error) throw new Error(`não foi possível conferir duplicatas: ${error.message}`);
+    if (error) {
+      throw new Error(
+        `não foi possível conferir duplicatas: ${error.message}` +
+          (error.message.includes("fetch failed")
+            ? " (a consulta não chegou ao banco — verifique a conexão)"
+            : ""),
+      );
+    }
     for (const row of data as { dedup_hash: string }[]) found.add(row.dedup_hash);
   }
   return found;
@@ -375,6 +409,9 @@ export async function approveStaged(
       counterpartyTaxId: row.counterpartyTaxId,
       installmentCurrent: row.installmentCurrent,
       installmentTotal: row.installmentTotal,
+      // The ledger stores exactly the hash that was staged. Recomputing it here would
+      // drop the occurrence index and a re-import would stop recognising the row.
+      dedupHash: row.dedupHash,
     };
 
     try {
@@ -401,12 +438,15 @@ export async function approveStaged(
 export async function rejectStaged(importId: string, stagedIds: string[]): Promise<number> {
   if (stagedIds.length === 0) return 0;
   const supabase = await createClient();
-  const { error } = await supabase
-    .from("staged_transactions")
-    .update({ status: "rejected" })
-    .in("id", stagedIds);
 
-  if (error) throw new Error(`não foi possível rejeitar as linhas: ${error.message}`);
+  // Rejecting a whole import means hundreds of ids in one filter — same URL limit.
+  for (const batch of chunk(stagedIds, UUID_BATCH)) {
+    const { error } = await supabase
+      .from("staged_transactions")
+      .update({ status: "rejected" })
+      .in("id", batch);
+    if (error) throw new Error(`não foi possível rejeitar as linhas: ${error.message}`);
+  }
   await refreshImportStatus(importId);
   return stagedIds.length;
 }

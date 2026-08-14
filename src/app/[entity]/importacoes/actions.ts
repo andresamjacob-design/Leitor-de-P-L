@@ -147,8 +147,12 @@ export async function uploadImportAction(
         }
       }
 
-      const lastBalance = statement.declaredBalances[statement.declaredBalances.length - 1];
-      closingBalance = lastBalance?.balance ?? null;
+      // The closing balance is the one with the latest date, not the last in file order:
+      // the Itaú export lists movements newest-first, so the final row is January's.
+      const closing = statement.declaredBalances.reduce<
+        (typeof statement.declaredBalances)[number] | null
+      >((latest, candidate) => (latest === null || candidate.date > latest.date ? candidate : latest), null);
+      closingBalance = closing?.balance ?? null;
       parse = statement;
     }
 

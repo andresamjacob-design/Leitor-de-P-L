@@ -48,3 +48,59 @@ describe("dedupHash", () => {
     expect(dedupHash({ ...base, suffix: 0 })).toBe(dedupHash(base));
   });
 });
+
+describe("contraparte no hash", () => {
+  // O caso que o primeiro import real revelou: a descrição do extrato é só
+  // "PIX ENVIADO" e a pessoa vem noutra coluna. Sem a contraparte, uma folha de
+  // pagamento inteira colidia num hash só.
+  const folha = { ...base, description: "PIX ENVIADO", amount: parseMoney("4.000,00") };
+
+  it("pagamentos iguais para pessoas diferentes têm hashes diferentes", () => {
+    const a = dedupHash({ ...folha, counterparty: "GABRIEL SOARES DA SILVA" });
+    const b = dedupHash({ ...folha, counterparty: "LUCAS DE OLIVEIRA FARIA" });
+    expect(a).not.toBe(b);
+  });
+
+  it("a mesma contraparte escrita com ruído continua a mesma", () => {
+    expect(dedupHash({ ...folha, counterparty: "  josé  da  silva " })).toBe(
+      dedupHash({ ...folha, counterparty: "JOSE DA SILVA" }),
+    );
+  });
+
+  it("sem contraparte, o hash é o de antes", () => {
+    expect(dedupHash({ ...folha, counterparty: null })).toBe(dedupHash(folha));
+    expect(dedupHash({ ...folha, counterparty: "" })).toBe(dedupHash(folha));
+  });
+});
+
+describe("ocorrência dentro do mesmo arquivo", () => {
+  it("duas linhas idênticas de verdade são movimentos diferentes", () => {
+    expect(dedupHash({ ...base, suffix: 0 })).not.toBe(dedupHash({ ...base, suffix: 1 }));
+  });
+
+  it("a primeira ocorrência tem o mesmo hash de quem não passa índice", () => {
+    expect(dedupHash({ ...base, suffix: 0 })).toBe(dedupHash(base));
+  });
+
+  it("reimportar o mesmo arquivo reproduz exatamente os mesmos hashes", () => {
+    const arquivo = [
+      { ...base, counterparty: "ACME" },
+      { ...base, counterparty: "ACME" },
+      { ...base, counterparty: "OUTRA" },
+    ];
+
+    const hashesDe = (linhas: typeof arquivo) => {
+      const contagem = new Map<string, number>();
+      return linhas.map((linha) => {
+        const chave = dedupHash(linha);
+        const indice = contagem.get(chave) ?? 0;
+        contagem.set(chave, indice + 1);
+        return dedupHash({ ...linha, suffix: indice });
+      });
+    };
+
+    const primeira = hashesDe(arquivo);
+    expect(hashesDe(arquivo)).toEqual(primeira);
+    expect(new Set(primeira).size).toBe(3);
+  });
+});

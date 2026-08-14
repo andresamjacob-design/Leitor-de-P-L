@@ -9,6 +9,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import type { CategoryKind } from "@/lib/ledger-types";
+import { chunk, UUID_BATCH } from "@/lib/data/batching";
 
 export type Category = {
   id: string;
@@ -128,16 +129,18 @@ export async function countEntriesByCategory(
   if (categoryIds.length === 0) return counts;
 
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("cash_entries")
-    .select("category_id")
-    .in("category_id", categoryIds);
+  for (const batch of chunk(categoryIds, UUID_BATCH)) {
+    const { data, error } = await supabase
+      .from("cash_entries")
+      .select("category_id")
+      .in("category_id", batch);
 
-  if (error) throw new Error(`não foi possível contar os lançamentos: ${error.message}`);
+    if (error) throw new Error(`não foi possível contar os lançamentos: ${error.message}`);
 
-  for (const row of data as { category_id: string | null }[]) {
-    if (!row.category_id) continue;
-    counts.set(row.category_id, (counts.get(row.category_id) ?? 0) + 1);
+    for (const row of data as { category_id: string | null }[]) {
+      if (!row.category_id) continue;
+      counts.set(row.category_id, (counts.get(row.category_id) ?? 0) + 1);
+    }
   }
   return counts;
 }

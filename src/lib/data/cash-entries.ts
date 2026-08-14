@@ -200,6 +200,11 @@ export type CashEntryInput = {
   counterpartAccountId: string | null;
   /** Set by the user to confirm a deliberate repeat of an identical movement. */
   allowDuplicate: boolean;
+  /**
+   * The hash to store, when the caller already computed one — an approved import passes
+   * the hash its staged row carried, so a re-import of the same file still matches it.
+   */
+  dedupHash?: string;
   /** Set when the entry came from an approved import, so it can be traced back. */
   importId?: string | null;
   counterpartyName?: string | null;
@@ -223,12 +228,15 @@ function isUniqueViolation(message: string): boolean {
 }
 
 async function hashFor(input: CashEntryInput, existingId: string | null): Promise<string> {
+  if (input.dedupHash) return input.dedupHash;
+
   const base = {
     accountId: input.accountId,
     occurredOn: input.occurredOn,
     amount: input.amount,
     direction: input.direction,
     description: input.description,
+    counterparty: input.counterpartyTaxId ?? input.counterpartyName,
   };
   if (!input.allowDuplicate) return dedupHash(base);
 

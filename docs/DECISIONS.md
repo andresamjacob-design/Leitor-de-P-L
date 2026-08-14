@@ -359,6 +359,68 @@ respondem "tenant não encontrado", e só a certa chega a reclamar da senha.
 
 ---
 
+## Parte 15 — O que o primeiro import real quebrou (14/08/2026)
+
+Cinco bugs em um arquivo. Nenhum aparecia nos 309 testes, porque todos moram na
+fronteira entre o app e o PostgREST — a fronteira que a Q11 dizia não ter sido exercitada.
+
+### D77 — `parseMoney` cortava um dígito de valor inteiro
+**O mais grave.** O PostgREST serializa `numeric` como **número JSON**: `800.00` chega
+como `800`, sem ponto. Com o separador declarado, `lastIndexOf(".")` devolvia −1 e
+`slice(0, -1)` derrubava o último dígito — **R$ 800,00 virava R$ 80,80**.
+
+327 das 426 linhas do primeiro extrato saíram erradas. Nenhum teste pegou porque o
+`postgres.js` devolve `"800.00"` como string, com o ponto.
+
+→ `parseMoney` trata separador ausente como "sem parte fracionária". Teste de ida e volta
+agora cobre as duas formas que o banco devolve, string e número.
+
+### D78 — O hash de dedup destruía folha de pagamento
+O extrato escreve `PIX ENVIADO` na descrição e põe a pessoa em **outra coluna**. Quatro
+pagamentos de R$ 4.000 no mesmo dia para quatro pessoas geravam o mesmo hash: um entrava e
+três viravam "duplicata". 29 grupos afetados no primeiro arquivo.
+
+→ A contraparte (CNPJ, ou nome) entra no hash.
+
+E duas linhas **genuinamente idênticas** no mesmo extrato são dois movimentos, não uma
+duplicata: cada repetição recebe o índice da sua ocorrência. Reimportar o mesmo arquivo
+reproduz os mesmos índices e casa um a um, que é o que o teste 5 da §11 exige.
+
+→ A aprovação carrega o hash que a linha já tinha; recalculá-lo perderia o índice e a
+reimportação deixaria de reconhecer a linha.
+
+### D79 — `in.(...)` com 300 hashes estourava a URL
+O PostgREST põe filtro na query string. Trezentos sha256 dão **19 KB de URL**, e o
+servidor recusa por volta de 8 KB — o erro chega como um `TypeError: fetch failed` seco,
+sem nada apontando para o tamanho.
+
+→ `lib/data/batching.ts` com os limites e o motivo. Mesmo risco existia em rejeitar uma
+importação inteira (426 uuids) e em contar uso de categorias.
+
+### D80 — Importação que falha no meio não pode bloquear a segunda tentativa
+Quando o staging falhava, a linha de `statement_imports` ficava com status `reviewing` e
+zero linhas — parecia um extrato vazio **e** fazia o `findImportByHash` recusar reimportar
+o arquivo. O usuário ficava preso.
+
+→ Qualquer falha depois da criação marca a importação como `failed`, e `failed` e
+`discarded` não bloqueiam uma nova tentativa.
+
+### D81 — O saldo de fechamento era o do primeiro dia
+O extrato do Itaú vem em ordem **decrescente**, então o último saldo do arquivo é o mais
+antigo. A tela mostrava o saldo de 05/01 rotulado como "saldo de fechamento".
+
+→ Passa a escolher o de data máxima.
+
+### O que o import real confirmou
+- 426 linhas lidas, **zero duplicatas**, zero hashes repetidos;
+- **o saldo confere em 99 dias** contra o próprio extrato;
+- abertura 142.469,28 + movimentos 5.035,71 = **147.504,99**, contra 147.510,24 que o
+  extrato declara em 15/07 — os 5,25 são o snapshot de exportação da D36;
+- `BUSINESS 7502-5632` saiu como −13.067,87, exatamente o total da fatura de 05/01/2026
+  lido do PDF na Fase 3 (A4).
+
+---
+
 ## Parte 13 — Decisões da Fase 8
 
 ### D68 — Escritor de XLSX próprio, com entradas sem compressão
@@ -743,4 +805,4 @@ Precisam de resposta antes da fase indicada.
 | Q18 | **A API da Anthropic nunca foi chamada de verdade.** Todo o caminho de IA está testado com o modelo mockado; sem `ANTHROPIC_API_KEY` nenhuma chamada real aconteceu. O formato da resposta e a qualidade das sugestões só se conhecem rodando. | uso real |
 | Q17 | **Guardar o arquivo do contrato no Supabase Storage?** Hoje a extração lê o arquivo e o descarta, ficando só o rascunho e os trechos. Guardar o original ajuda numa auditoria futura, mas precisa de bucket, policy e de um projeto Supabase para testar. Ver D67. | Fase 8 |
 | Q16 | **Importar os contratos de 2026 da aba `DRE Geral`?** A aba tem o valor espalhado por mês, mas não início, fim, método nem se o valor é mensal ou total — tudo isso teria de ser inferido do formato de cobrança. Prefere cadastrar à mão a partir dela, ou definimos as regras de inferência? Ver D51. | Fase 6 |
-| Q11 | **O caminho de escrita do app ainda não foi exercitado.** Em 14/08/2026 as quatro migrations foram aplicadas, o seed rodou e o isolamento de RLS foi confirmado — mas aprovar uma importação, gravar espelho de competência, reconhecer contrato e gravar POC continuam sem nunca ter rodado de verdade. Só o uso real fecha isto. | uso real |
+| Q11 | **O caminho de escrita do app está sendo exercitado.** Migrations, seed, RLS e **importação** confirmados em 14/08/2026 — a importação sozinha revelou cinco bugs (D77–D81), um deles corrompendo todo valor inteiro. Falta exercitar: aprovar para o ledger, espelho de competência, reconhecimento de contrato e POC. | uso real |
