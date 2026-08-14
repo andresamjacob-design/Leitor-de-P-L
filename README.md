@@ -33,7 +33,13 @@ As três variáveis vêm do painel do Supabase:
 |---|---|
 | `NEXT_PUBLIC_SUPABASE_URL` | Project Settings › API › Project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Project Settings › API › `anon` / `public` |
-| `DATABASE_URL` | Project Settings › Database › Connection string › URI |
+| `DATABASE_URL` | Project Settings › Database › Connection string › **Session pooler** |
+
+Duas armadilhas na `DATABASE_URL`, as duas já custaram tempo aqui:
+
+- use a string do **session pooler**, não a direta. A Supabase moveu
+  `db.<ref>.supabase.co` para IPv6 e o macOS não resolve o nome (`ENOTFOUND`);
+- a senha substitui o bloco `[YOUR-PASSWORD]` **inteiro** — os colchetes saem junto.
 
 **Não existe chave `service_role` neste projeto, e é de propósito** (D16): toda query roda
 com o JWT do usuário, e é isso que faz o RLS ser a fronteira real entre as entidades. Uma
