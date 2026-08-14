@@ -331,6 +331,45 @@ real recebido é xlsx com cabeçalho que o parser já entende, e o CSV passa pel
 casamento por cabeçalho. Uma tela de mapeamento sem nada para mapear seria adivinhação.
 Entra quando aparecer um arquivo que precise dela.
 
+## Parte 11 — Decisões da Fase 6
+
+### D52 — O DRE lê só competência, e mostra o caixa ao lado
+A §5 manda o DRE ler apenas `recognition_entries`, e é o que ele faz. Mas a pergunta
+"por que o DRE não bate com o banco?" ia aparecer na primeira semana, então a mesma tela
+traz uma tabela **ao lado** — receita reconhecida contra entrada de caixa, custo
+reconhecido contra saída — dizendo explicitamente que não é para bater. A diferença fica
+legível em vez de virar desconfiança.
+
+### D53 — Consolidado tem coluna de eliminações
+O §11.7 pede coluna por entidade mais o total. Acrescentei uma coluna **Eliminações**
+entre as duas: sem ela, o leitor soma as colunas das entidades, não bate com o
+consolidado, e conclui que o relatório está errado. Cada entidade continua vendo o seu
+próprio número, incluindo o intercompany — do ponto de vista dela é receita e custo de
+verdade —, e só o total do grupo desconta (D14e).
+
+### D54 — Transferência não existe no DRE
+Nenhuma linha do grupo `transferencias` aparece, em nenhum nível. Mover dinheiro entre as
+próprias contas não é resultado, e um DRE que a mostrasse estaria somando o mesmo dinheiro
+a si mesmo.
+
+### D55 — Categoria sem grupo aparece, não some
+Uma linha de competência cuja categoria não tem `dre_group` cai numa linha "Sem grupo de
+DRE" e o relatório avisa. A alternativa — descartar em silêncio — faria o resultado ficar
+errado sem ninguém perceber. Ela não entra em nenhum subtotal, de propósito: o número
+tem de incomodar até alguém classificar a categoria.
+
+### D56 — A folha diz quanto ficou de fora
+A tela de folha só mostra custo amarrado a uma pessoa, e o rodapé informa quanto de custo
+do período **não** tem pessoa identificada. Sem isso, o total pareceria a folha inteira
+quando na verdade é só a parte já amarrada.
+
+### D57 — Nova tela: Competência
+O drill-down do DRE precisa abrir `recognition_entries`, não `cash_entries` — é o outro
+razão. Ganhou tela própria, com filtro por origem (motor de contrato, espelho do caixa,
+manual) e marcação do que foi editado à mão. É onde se responde "de onde vem este número".
+
+---
+
 ## Parte 10 — Decisões da Fase 5
 
 ### D45 — A NF não cria receita; o contrato cria

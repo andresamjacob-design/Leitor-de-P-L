@@ -17,7 +17,7 @@ mudou.
 | 3 | Importação de extrato: XLSX/CSV + PDF de fatura, dedup, tela de revisão | ✅ construída — parsers validados contra 34 arquivos reais; escrita ainda não rodou contra Postgres (Q11) |
 | 4 | Categorização: motor de regras determinístico + aprendizado de regra | ✅ construída — nada rodou contra Postgres (Q11) |
 | 5 | Clientes, contratos, NFs, cronogramas de reconhecimento, POC | ✅ construída — sem o importador da `DRE Geral` (D51/Q16); nada rodou contra Postgres (Q11) |
-| 6 | P&L gerencial por entidade + consolidado | ⬜ |
+| 6 | P&L gerencial por entidade + consolidado | ✅ construída — Q1, Q3 e Q7 continuam abertas; nada rodou contra Postgres (Q11) |
 | 7 | Camada de IA: sugestões e extração de contrato em PDF | ⬜ |
 | 8 | Dashboards, exports (XLSX/CSV), tela de audit log | ⬜ |
 
@@ -254,17 +254,21 @@ Os arquivos em `docs/reference/` foram lidos antes deste plano. Achados que impo
 
 **Pronto quando:** os números batem com os testes de aceitação da §11.
 
-- [ ] P&L por entidade: receita bruta → deduções → receita líquida → custos diretos →
-      margem bruta → despesas operacionais agrupadas → EBITDA → impostos → resultado
-      líquido, na ordem de `dre_group`
-- [ ] Meses em coluna, drill-down para `recognition_entries`
-- [ ] Consolidado: coluna por entidade + total, com eliminação de intercompany (D14e)
-- [ ] Receita por cliente: reconhecida vs. recebida, por mês
-- [ ] Receita diferida / backlog por contrato, com "Receita a faturar" em coluna própria
-      (D14a) — **este é o relatório que caça bug entre os dois ledgers**
-- [ ] Folha por pessoa
-- [ ] Resolver Q1 (impostos), Q3 (férias), Q7 (rateio por cliente)
-- [ ] Testes: testes 1, 3, 7 e 8 da §11, mais reconciliação dos dois ledgers
+- [x] P&L por entidade na ordem de `dre_group`: receita bruta → deduções → receita
+      líquida → custos diretos → margem bruta → despesas operacionais → EBITDA → sócios →
+      resultado do período
+- [x] Meses em coluna, com drill-down para `recognition_entries` na nova tela de
+      **Competência** (D57)
+- [x] Consolidado: coluna por entidade + **eliminações** + total (D53, D14e)
+- [x] Receita por cliente: reconhecida contra recebida, mês a mês
+- [x] Receita diferida por contrato, com "Receita a faturar" em coluna própria (D14a)
+- [x] Folha por pessoa, dizendo quanto de custo ainda não tem pessoa amarrada (D56)
+- [x] Os dois razões lado a lado, com o aviso de que não é para bater (D52)
+- [ ] Q1 (impostos), Q3 (férias) e Q7 (rateio por cliente) — **continuam abertas**. O DRE
+      hoje segue a D14c: imposto é só o que veio no extrato, sem cálculo de alíquota
+- [x] Testes: **§11.7 (consolidação) e §11.8 (precisão)** no DRE, mais 19 testes de
+      montagem, eliminação e ordem das linhas. Os testes 1 e 3 já estavam cobertos no
+      motor de reconhecimento (Fase 5)
 
 ---
 

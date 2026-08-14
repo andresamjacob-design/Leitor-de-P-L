@@ -8,11 +8,11 @@ gerencial (regime de competência) e reconhecimento de receita, para **DD Group*
 - `docs/DECISIONS.md` — as decisões tomadas, e onde elas contrariam a spec
 - `docs/PLAN.md` — o plano por fase, com checklist e status
 
-**Fase atual: 5 concluída.** Dá para cadastrar contas e categorias, importar o extrato do
-Itaú e a fatura do cartão, deixar o sistema categorizar sozinho o que reconhece, ler o
-fluxo de caixa mês a mês, ver quanto a empresa paga de assinatura, e cadastrar clientes,
-contratos e notas fiscais com a receita sendo reconhecida por competência. O que falta é
-juntar tudo num DRE gerencial (Fase 6).
+**Fase atual: 6 concluída.** O sistema faz o ciclo inteiro: importar extrato e fatura,
+categorizar sozinho o que reconhece, lançar contratos e reconhecer receita por
+competência, e ler tanto o fluxo de caixa quanto o DRE gerencial — por entidade ou
+consolidado, com eliminação de intercompany. Falta a camada de IA (Fase 7) e os exports e
+dashboards (Fase 8).
 
 ## Como rodar
 
@@ -57,6 +57,7 @@ src/lib/dedup.ts            o hash que impede o mesmo movimento duas vezes
 src/lib/import/             leitores de arquivo e parsers, todos puros e testáveis
 src/lib/categorize/         o motor de categorização e a detecção de assinaturas
 src/lib/cash-flow.ts        o relatório de caixa, função pura, sem banco
+src/lib/pl.ts               o DRE e a consolidação, também sem banco
 src/lib/recognition/mirror.ts  quando um custo de caixa vira competência (D2a/D2b)
 src/lib/recognition/engine.ts  quando a receita de um contrato é considerada ganha
 src/lib/ledger-types.ts     tipos e rótulos que servidor e cliente compartilham
@@ -185,13 +186,38 @@ A nota fiscal **não** cria receita. O reconhecimento vem do contrato; a NF entr
 coluna "faturado" da conciliação, ao lado de "reconhecido" e "recebido". Se a NF também
 gerasse competência, a mesma receita entraria duas vezes.
 
+## O DRE gerencial
+
+Lê **apenas** `recognition_entries`, na ordem que a empresa já usa:
+
+```
+  Receita bruta − Deduções = Receita líquida
+  − Custos diretos = Margem bruta
+  − Despesas operacionais = EBITDA
+  − Sócios = Resultado do período
+```
+
+Transferência não aparece em lugar nenhum: mover dinheiro entre as próprias contas não é
+resultado. Categoria sem grupo de DRE cai numa linha "Sem grupo" e o relatório avisa —
+descartar em silêncio deixaria o resultado errado sem ninguém perceber.
+
+**Consolidado** tem uma coluna por entidade, uma de **eliminações** e o total. Cada
+entidade continua vendo o seu próprio número, incluindo o que cobrou da outra; só o total
+do grupo desconta. A coluna de eliminações existe para o leitor ver o que saiu, em vez de
+somar as colunas e concluir que o relatório está errado.
+
+A mesma tela mostra **os dois razões lado a lado** — receita reconhecida contra entrada de
+caixa, custo reconhecido contra saída — deixando explícito que **não é para bater**.
+Receita ganha em março pode entrar em maio; a compra de fevereiro no cartão sai do banco
+em março.
+
 ## O que ainda falta
 
 - **Saldo de abertura dos cartões.** A conta corrente abre em R$ 142.469,28 e o CDB em
   R$ 367.735,49, que somam a posição de 01/01/2026. A dívida das duas contas de cartão na
   mesma data ainda é desconhecida e segue em 0,00 — dá para corrigir na tela de Contas.
 - **Nada do caminho de escrita rodou contra um Postgres.** Sem projeto Supabase e sem
-  Docker, o que está verificado é a lógica pura (220 testes) e os importadores contra os
+  Docker, o que está verificado é a lógica pura (239 testes) e os importadores contra os
   arquivos reais. As migrations `0002` e `0003` nunca foram aplicadas; aprovar uma
   importação, varrer categorias e reconhecer receita nunca gravaram de verdade.
 - **Os contratos de 2026 ainda não estão cadastrados.** O importador da aba `DRE Geral`
@@ -204,4 +230,7 @@ gerasse competência, a mesma receita entraria duas vezes.
 - **Teste de RLS automatizado** (teste 6 da §11), pendente da Q5 em `docs/DECISIONS.md`.
 - **Projeto Supabase.** Sem URL e chave, o app sobe e mostra a tela de "não configurado",
   mas ninguém entra.
-- **Segunda entidade.** Nada da `GABRIEL SAMPAIO JACOB LTDA - ME` chegou (Q2).
+- **Segunda entidade.** Nada da `GABRIEL SAMPAIO JACOB LTDA - ME` chegou (Q2) — sem ela o
+  consolidado tem uma coluna só.
+- **Três perguntas em aberto que mudam o DRE:** impostos por alíquota ou só o que veio no
+  extrato (Q1), provisão de férias (Q3) e rateio de pessoas por cliente (Q7).

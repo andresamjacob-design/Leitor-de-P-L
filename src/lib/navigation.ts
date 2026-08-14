@@ -2,7 +2,10 @@
 export const NAV_ITEMS = [
   { href: "", label: "Visão geral", phase: "Fase 8" },
   { href: "/fluxo-de-caixa", label: "Fluxo de caixa", phase: null },
-  { href: "/dre", label: "DRE gerencial", phase: "Fase 6" },
+  { href: "/dre", label: "DRE gerencial", phase: null },
+  { href: "/competencia", label: "Competência", phase: null },
+  { href: "/receita", label: "Receita", phase: null },
+  { href: "/folha", label: "Folha", phase: null },
   { href: "/lancamentos", label: "Lançamentos", phase: null },
   { href: "/importacoes", label: "Importações", phase: null },
   { href: "/contratos", label: "Contratos", phase: null },
