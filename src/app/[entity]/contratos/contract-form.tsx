@@ -22,14 +22,21 @@ export function ContractForm({
   contract,
   clients,
   amend = false,
+  defaults,
+  clientNameHint,
 }: {
   slug: string;
   contract: Contract | null;
   clients: Client[];
   amend?: boolean;
+  /** Values proposed by the contract extraction (SPEC §9). Still validated on submit. */
+  defaults?: Record<string, string>;
+  clientNameHint?: string;
 }) {
   const [state, action, pending] = useActionState(saveContractAction, EMPTY_FORM_STATE);
-  const kept = (name: string, fallback: string) => state.values?.[name] ?? fallback;
+  // What was submitted wins; then an extraction's proposal; then what is on file.
+  const kept = (name: string, fallback: string) =>
+    state.values?.[name] ?? defaults?.[name] ?? fallback;
   const [method, setMethod] = useState<RecognitionMethod>(
     contract?.recognitionMethod ?? "straight_line",
   );
@@ -50,7 +57,16 @@ export function ContractForm({
       ) : null}
 
       <div className="grid gap-5 sm:grid-cols-2">
-        <Field label="Cliente" htmlFor="clientId" className="sm:col-span-2">
+        <Field
+          label="Cliente"
+          htmlFor="clientId"
+          className="sm:col-span-2"
+          hint={
+            clientNameHint
+              ? `O contrato diz “${clientNameHint}”. Escolha o cliente correspondente, ou cadastre-o antes.`
+              : undefined
+          }
+        >
           <Select id="clientId" name="clientId" defaultValue={kept("clientId", contract?.clientId ?? "")} required>
             <option value="">Escolha…</option>
             {clients.map((client) => (

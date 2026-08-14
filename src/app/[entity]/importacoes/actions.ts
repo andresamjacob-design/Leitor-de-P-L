@@ -16,6 +16,7 @@ import {
   type ImportFormat,
 } from "@/lib/data/imports";
 import { suggestForImport } from "@/lib/data/categorize";
+import { suggestWithAi } from "@/lib/data/ai-suggestions";
 import { readXlsx } from "@/lib/import/xlsx";
 import { parseCsv } from "@/lib/import/csv";
 import { parseItauStatement, reconcileStatement } from "@/lib/import/itau-statement";
@@ -272,4 +273,47 @@ export async function discardImportAction(
 
   revalidatePath(`/${slug}/importacoes`);
   redirect(`/${slug}/importacoes`);
+}
+
+/**
+ * Layer 3: one batched LLM call for what the rules and the history left undecided.
+ *
+ * It writes only `suggested_*`. Nothing reaches the ledger from here — approval still
+ * needs a human clicking on the review screen (SPEC §3, §8).
+ */
+export async function suggestWithAiAction(
+  _previous: FormState,
+  data: FormData,
+): Promise<FormState> {
+  const slug = String(data.get("slug") ?? "");
+  const importId = String(data.get("importId") ?? "");
+
+  try {
+    const { entity } = await requireWriteContext(slug);
+    const record = await getImport(importId);
+    if (!record) throw new FormError("importação não encontrada.");
+
+    const result = await suggestWithAi(entity.id, importId);
+    revalidatePath(`/${slug}/importacoes/${importId}`);
+
+    const notices = [
+      result.considered === 0
+        ? (result.warnings[0] ?? "nada a sugerir.")
+        : `${result.suggested} de ${result.considered} linhas ganharam sugestão da IA ` +
+          `(${result.model}). Nenhuma foi aprovada — isso continua sendo seu.`,
+    ];
+
+    // What the model got wrong is shown, not swallowed: it is the only way to notice a
+    // prompt that stopped working.
+    const dropped = result.discarded.slice(0, 5);
+    for (const item of dropped) notices.push(`descartado: ${item.reason}`);
+    if (result.discarded.length > dropped.length) {
+      notices.push(`e mais ${result.discarded.length - dropped.length} descarte(s).`);
+    }
+    for (const warning of result.warnings) notices.push(warning);
+
+    return { notices };
+  } catch (cause) {
+    return toFormState(cause, data);
+  }
 }

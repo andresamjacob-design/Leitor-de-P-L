@@ -52,6 +52,11 @@ export type StagedTransaction = {
   installmentCurrent: number | null;
   installmentTotal: number | null;
   suggestedCategoryId: string | null;
+  suggestedClientId: string | null;
+  suggestedPersonId: string | null;
+  suggestionSource: "rule" | "ai" | "none";
+  /** 0 to 1. Below 0,8 the review screen shows it without pre-selecting it (SPEC §8). */
+  confidence: number | null;
   dedupHash: string;
   status: StagedStatus;
 };
@@ -60,7 +65,9 @@ const IMPORT_COLUMNS =
   "id, entity_id, account_id, filename, file_hash, format, period_start, period_end, statement_closing_balance, status, error, created_at";
 
 const STAGED_COLUMNS =
-  "id, import_id, occurred_on, description, amount, counterparty_name, counterparty_tax_id, installment_current, installment_total, suggested_category_id, dedup_hash, status, raw_json";
+  `id, import_id, occurred_on, description, amount, counterparty_name, counterparty_tax_id,
+   installment_current, installment_total, suggested_category_id, suggested_client_id,
+   suggested_person_id, suggestion_source, confidence, dedup_hash, status, raw_json`;
 
 type ImportRow = {
   id: string;
@@ -88,6 +95,10 @@ type StagedRow = {
   installment_current: number | null;
   installment_total: number | null;
   suggested_category_id: string | null;
+  suggested_client_id: string | null;
+  suggested_person_id: string | null;
+  suggestion_source: "rule" | "ai" | "none";
+  confidence: string | null;
   dedup_hash: string;
   status: StagedStatus;
   raw_json: Record<string, unknown> | null;
@@ -126,6 +137,10 @@ function toStaged(row: StagedRow): StagedTransaction {
     installmentCurrent: row.installment_current,
     installmentTotal: row.installment_total,
     suggestedCategoryId: row.suggested_category_id,
+    suggestedClientId: row.suggested_client_id,
+    suggestedPersonId: row.suggested_person_id,
+    suggestionSource: row.suggestion_source ?? "none",
+    confidence: row.confidence === null ? null : Number(row.confidence),
     dedupHash: row.dedup_hash,
     status: row.status,
   };

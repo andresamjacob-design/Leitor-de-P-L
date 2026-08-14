@@ -8,6 +8,7 @@ import { Amount, Table, TableScroll, Td, Th } from "@/components/ui/table";
 import { formatPtBRDate } from "@/lib/dates";
 import { formatMoney } from "@/lib/money";
 import { EMPTY_FORM_STATE } from "@/lib/form";
+import { CONFIDENCE_THRESHOLD } from "@/lib/ai/categorize";
 import type { StagedTransaction } from "@/lib/data/imports";
 import type { Category } from "@/lib/data/categories";
 
@@ -31,8 +32,20 @@ export function ReviewForm({
 }) {
   const [state, action, pending] = useActionState(reviewImportAction, EMPTY_FORM_STATE);
   const pendingRows = staged.filter((row) => row.status === "pending");
+
+  // SPEC §8: a suggestion below the confidence threshold is shown, but never arrives
+  // pre-selected. Ticking it has to be a decision someone made.
   const [selected, setSelected] = useState<Set<string>>(
-    () => new Set(pendingRows.map((row) => row.id)),
+    () =>
+      new Set(
+        pendingRows
+          .filter(
+            (row) =>
+              row.suggestionSource !== "ai" ||
+              (row.confidence ?? 0) >= CONFIDENCE_THRESHOLD,
+          )
+          .map((row) => row.id),
+      ),
   );
 
   function toggle(id: string) {
@@ -125,6 +138,19 @@ export function ReviewForm({
                     {decided ? (
                       <span className="ml-2 text-xs text-muted">{STATUS_LABEL[row.status]}</span>
                     ) : null}
+                    {!decided && row.suggestionSource === "ai" ? (
+                      <span
+                        className={
+                          (row.confidence ?? 0) >= CONFIDENCE_THRESHOLD
+                            ? "ml-2 text-xs text-muted"
+                            : "ml-2 text-xs text-amber-700 dark:text-amber-400"
+                        }
+                      >
+                        IA · confiança{" "}
+                        {((row.confidence ?? 0) * 100).toFixed(0)}%
+                        {(row.confidence ?? 0) < CONFIDENCE_THRESHOLD ? " · confira" : ""}
+                      </span>
+                    ) : null}
                   </Td>
                   <Td className="text-xs text-muted">{row.counterpartyName ?? "—"}</Td>
                   <Td>
@@ -161,8 +187,8 @@ export function ReviewForm({
 
       <p className="text-xs text-muted">
         Categorizar aqui é opcional — o que ficar sem categoria entra no fluxo de caixa numa
-        linha “Sem categoria” e pode ser ajustado depois. A categorização automática é a
-        Fase 4.
+        linha “Sem categoria” e pode ser ajustado depois. Sugestão da IA com confiança
+        abaixo de {Math.round(CONFIDENCE_THRESHOLD * 100)}% aparece mas não vem marcada.
       </p>
     </form>
   );

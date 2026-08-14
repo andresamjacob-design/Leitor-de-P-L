@@ -3,12 +3,14 @@ import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/page-header";
 import { FormNotice } from "@/components/ui/field";
 import { ReviewForm } from "./review-form";
+import { AiSuggestButton } from "./ai-button";
 import { getAccount } from "@/lib/data/accounts";
 import { listCategories } from "@/lib/data/categories";
 import { getImport, listStaged } from "@/lib/data/imports";
 import { resolveScope } from "@/lib/entities";
 import { formatPtBRDate } from "@/lib/dates";
 import { formatMoney, sum } from "@/lib/money";
+import { isAiConfigured } from "@/lib/ai/provider";
 
 export default async function ReviewImportPage({
   params,
@@ -83,6 +85,17 @@ export default async function ReviewImportPage({
           Saldo de fechamento declarado no extrato:{" "}
           <span className="tabular">{formatMoney(record.statementClosingBalance)}</span>.
         </p>
+      ) : null}
+
+      {pending.length > 0 ? (
+        <div className="mb-6">
+          <AiSuggestButton
+            slug={slug}
+            importId={id}
+            undecided={pending.filter((row) => row.suggestedCategoryId === null).length}
+            configured={isAiConfigured()}
+          />
+        </div>
       ) : null}
 
       {staged.length === 0 ? (

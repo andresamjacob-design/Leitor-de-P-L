@@ -8,11 +8,11 @@ gerencial (regime de competência) e reconhecimento de receita, para **DD Group*
 - `docs/DECISIONS.md` — as decisões tomadas, e onde elas contrariam a spec
 - `docs/PLAN.md` — o plano por fase, com checklist e status
 
-**Fase atual: 6 concluída.** O sistema faz o ciclo inteiro: importar extrato e fatura,
+**Fase atual: 7 concluída.** O sistema faz o ciclo inteiro: importar extrato e fatura,
 categorizar sozinho o que reconhece, lançar contratos e reconhecer receita por
 competência, e ler tanto o fluxo de caixa quanto o DRE gerencial — por entidade ou
-consolidado, com eliminação de intercompany. Falta a camada de IA (Fase 7) e os exports e
-dashboards (Fase 8).
+consolidado. A IA entrou como camada opcional que só reduz digitação. Falta a Fase 8:
+dashboards, exports e a tela de auditoria.
 
 ## Como rodar
 
@@ -56,6 +56,7 @@ src/lib/tax-id.ts           CPF/CNPJ normalizado, para casar com o extrato
 src/lib/dedup.ts            o hash que impede o mesmo movimento duas vezes
 src/lib/import/             leitores de arquivo e parsers, todos puros e testáveis
 src/lib/categorize/         o motor de categorização e a detecção de assinaturas
+src/lib/ai/                 a única porta para um LLM, e a validação do que ele devolve
 src/lib/cash-flow.ts        o relatório de caixa, função pura, sem banco
 src/lib/pl.ts               o DRE e a consolidação, também sem banco
 src/lib/recognition/mirror.ts  quando um custo de caixa vira competência (D2a/D2b)
@@ -211,13 +212,37 @@ caixa, custo reconhecido contra saída — deixando explícito que **não é par
 Receita ganha em março pode entrar em maio; a compra de fevereiro no cartão sai do banco
 em março.
 
+## A camada de IA
+
+Opcional e desligável. **Sem `ANTHROPIC_API_KEY` o sistema inteiro funciona** — as telas
+dizem que a IA está desligada e seguem em frente. Ela só reduz digitação.
+
+Duas travas, e nenhuma delas é uma promessa em comentário:
+
+**Nenhuma chamada de LLM escreve em tabela de ledger.** As sugestões vão para
+`staged_transactions.suggested_*`, e o ledger só é alcançado quando um humano aprova a
+importação. `src/lib/data/ai-suggestions.test.ts` registra toda tabela tocada durante a
+execução e falha se `cash_entries` ou `recognition_entries` aparecerem.
+
+**O LLM não vê nem produz valor usado em cálculo.** O prompt de categorização leva
+descrição, contraparte e sentido — nunca um número, e há teste que falha se um entrar. Na
+extração de contrato, o valor é guardado como **texto ao lado do trecho de onde saiu**, e
+só vira dinheiro quando uma pessoa lê o trecho, concorda e envia o mesmo formulário usado
+para um contrato digitado do zero.
+
+Nada do que o modelo devolve é aceito sem conferência: código de conta inexistente, `ref`
+repetido ou não perguntado, confiança fora de 0–1 — cada um é descartado com o motivo
+aparecendo na tela. Sugestão abaixo de 80% de confiança aparece, mas não vem marcada.
+
+E um contrato em rascunho não reconhece um centavo até alguém confirmá-lo.
+
 ## O que ainda falta
 
 - **Saldo de abertura dos cartões.** A conta corrente abre em R$ 142.469,28 e o CDB em
   R$ 367.735,49, que somam a posição de 01/01/2026. A dívida das duas contas de cartão na
   mesma data ainda é desconhecida e segue em 0,00 — dá para corrigir na tela de Contas.
 - **Nada do caminho de escrita rodou contra um Postgres.** Sem projeto Supabase e sem
-  Docker, o que está verificado é a lógica pura (239 testes) e os importadores contra os
+  Docker, o que está verificado é a lógica pura (286 testes) e os importadores contra os
   arquivos reais. As migrations `0002` e `0003` nunca foram aplicadas; aprovar uma
   importação, varrer categorias e reconhecer receita nunca gravaram de verdade.
 - **Os contratos de 2026 ainda não estão cadastrados.** O importador da aba `DRE Geral`
@@ -232,5 +257,5 @@ em março.
   mas ninguém entra.
 - **Segunda entidade.** Nada da `GABRIEL SAMPAIO JACOB LTDA - ME` chegou (Q2) — sem ela o
   consolidado tem uma coluna só.
-- **Três perguntas em aberto que mudam o DRE:** impostos por alíquota ou só o que veio no
-  extrato (Q1), provisão de férias (Q3) e rateio de pessoas por cliente (Q7).
+- **A API da Anthropic nunca foi chamada de verdade** (Q18). Todo o caminho de IA está
+  testado com o modelo mockado; a qualidade das sugestões só se conhece rodando.

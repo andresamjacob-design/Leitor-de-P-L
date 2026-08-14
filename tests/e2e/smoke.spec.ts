@@ -79,3 +79,8 @@ for (const path of ["/dd-group/dre", "/dd-group/competencia", "/dd-group/receita
     await expect(page).toHaveURL(/\/login/);
   });
 }
+
+test("a tela de leitura de contrato exige sessão", async ({ page }) => {
+  await page.goto("/dd-group/contratos/extrair");
+  await expect(page).toHaveURL(/\/login/);
+});

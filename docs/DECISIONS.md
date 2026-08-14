@@ -331,6 +331,67 @@ real recebido é xlsx com cabeçalho que o parser já entende, e o CSV passa pel
 casamento por cabeçalho. Uma tela de mapeamento sem nada para mapear seria adivinhação.
 Entra quando aparecer um arquivo que precise dela.
 
+## Parte 12 — Decisões da Fase 7
+
+### D61 — A IA fala por `fetch`, sem SDK
+A §3 manda a chamada ficar atrás de `lib/ai/provider.ts` com o modelo trocável e a chave
+em env. Não manda usar SDK nenhum, e a Messages API é um POST. Zero dependência nova —
+o que também respeita a regra de perguntar antes de instalar.
+→ Modelo padrão `claude-sonnet-5`, trocável por `ANTHROPIC_MODEL`. Variável vazia conta
+como não definida (um `.env` cheio de linhas em branco não deve virar nome de modelo).
+
+### D62 — A IA só é chamada sobre o que ninguém decidiu
+A §8 diz que cada camada só roda se a anterior não produziu nada, e é literal aqui: o
+motor recebe apenas as linhas `pending` **sem** `suggested_category_id`. Pagar um modelo
+para redecidir o que uma regra já sabe é desperdício; deixá-lo sobrescrever a regra seria
+pior.
+
+### D63 — Sugestão de IA vive em `staged_transactions`, não no ledger
+As colunas `suggested_*` só existem em `staged_transactions`, e é lá que a IA escreve. O
+ledger é alcançado apenas quando um humano aprova a importação, pelo mesmo caminho de um
+lançamento digitado.
+
+Consequência assumida: lançamento **já aprovado** e sem categoria não recebe sugestão de
+IA — não há coluna para guardá-la, e criar uma seria dar à IA um lugar no ledger. Para
+esses, a varredura determinística da Fase 4 continua sendo o caminho.
+
+`src/lib/data/ai-suggestions.test.ts` registra toda tabela tocada durante a execução e
+falha se `cash_entries`, `recognition_entries`, `contracts` ou `invoices` aparecerem.
+
+### D64 — O prompt não leva valor, e a validação não confia em nada
+O modelo recebe descrição, contraparte e sentido. **Nunca um valor** (§8) — há teste que
+falha se um `R$` ou um número com centavos entrar no prompt.
+
+Na volta, tudo é conferido: `ref` que não foi perguntado, `ref` repetido, código de conta
+que não existe, confiança que não é número entre 0 e 1 — cada um é descartado com motivo
+visível na tela. Cliente ou pessoa inventados perdem só aquele campo, não a categoria
+inteira, porque a categoria ainda é útil.
+
+Os descartes aparecem na tela de propósito: é a única forma de perceber que um prompt
+parou de funcionar.
+
+### D65 — Extração de contrato guarda texto, nunca número
+A §9 pede que a IA extraia valor total, mensalidade e datas. A §8 proíbe que qualquer
+valor usado em cálculo venha do LLM. As duas convivem assim: a extração guarda **texto,
+ao lado do trecho de onde saiu**, e nada é convertido. O valor só vira dinheiro quando uma
+pessoa lê o trecho, concorda e envia o **mesmo formulário** usado para um contrato digitado
+do zero — onde o `parseMoney` e a validação de data rodam igual.
+
+A trava final já existia: contrato em `draft` não reconhece nada (o motor recusa). Um
+contrato que ninguém confirmou não produz um centavo de receita.
+
+### D66 — Ler `.docx` sem dependência nova
+Um `.docx` é um zip de XML, igual ao `.xlsx`. O leitor de zip e o scanner de XML saíram de
+`xlsx.ts` para `zip.ts` e `xml.ts`, e `docx.ts` reusa os dois. PDF continua pelo `unpdf`.
+
+### D67 — Supabase Storage ficou de fora
+A §9 manda guardar o contrato no Storage. Não foi feito: não existe projeto Supabase (Q6),
+o bucket precisaria de policy própria, e nada disso poderia ser testado. A extração lê o
+arquivo, produz o rascunho e o arquivo é descartado — o rascunho e os trechos ficam. Ver
+Q17.
+
+---
+
 ## Parte 11 — Decisões da Fase 6
 
 ### D52 — O DRE lê só competência, e mostra o caixa ao lado
@@ -603,5 +664,7 @@ Precisam de resposta antes da fase indicada.
 | Q13 | **Reexportar três extratos.** `Janeiro ate março`, `abril até junho` e `julho` são PDFs impressos pelo app do Itaú e não têm texto recuperável (A5). Preciso deles em XLSX/CSV. | Fase 3 |
 | ~~Q14~~ | ~~**Banco 301, conta 3111117-6.**~~ **Respondido em 13/08/2026:** conta encerrada, fica fora. Ver D33. | — |
 | Q15 | **Fatura 8299 de 05/06/2026** (R$ 830,97) não está na pasta, e faltam as de set–dez/2025 dessa conta. | Fase 3 |
+| Q18 | **A API da Anthropic nunca foi chamada de verdade.** Todo o caminho de IA está testado com o modelo mockado; sem `ANTHROPIC_API_KEY` nenhuma chamada real aconteceu. O formato da resposta e a qualidade das sugestões só se conhecem rodando. | uso real |
+| Q17 | **Guardar o arquivo do contrato no Supabase Storage?** Hoje a extração lê o arquivo e o descarta, ficando só o rascunho e os trechos. Guardar o original ajuda numa auditoria futura, mas precisa de bucket, policy e de um projeto Supabase para testar. Ver D67. | Fase 8 |
 | Q16 | **Importar os contratos de 2026 da aba `DRE Geral`?** A aba tem o valor espalhado por mês, mas não início, fim, método nem se o valor é mensal ou total — tudo isso teria de ser inferido do formato de cobrança. Prefere cadastrar à mão a partir dela, ou definimos as regras de inferência? Ver D51. | Fase 6 |
 | Q11 | **Nada do caminho de escrita foi executado contra um Postgres.** Sem projeto Supabase (Q6) e sem Docker/PGlite (Q5), o que está testado é a lógica pura: 83 testes cobrindo dinheiro, datas, dedup, espelho de competência e o relatório inteiro. As migrations 0002/0003 nunca rodaram. Isto é o que mais me preocupa hoje. | Fase 3 |

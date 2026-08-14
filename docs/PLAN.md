@@ -18,7 +18,7 @@ mudou.
 | 4 | Categorização: motor de regras determinístico + aprendizado de regra | ✅ construída — nada rodou contra Postgres (Q11) |
 | 5 | Clientes, contratos, NFs, cronogramas de reconhecimento, POC | ✅ construída — sem o importador da `DRE Geral` (D51/Q16); nada rodou contra Postgres (Q11) |
 | 6 | P&L gerencial por entidade + consolidado | ✅ construída — Q1, Q3 e Q7 continuam abertas; nada rodou contra Postgres (Q11) |
-| 7 | Camada de IA: sugestões e extração de contrato em PDF | ⬜ |
+| 7 | Camada de IA: sugestões e extração de contrato em PDF | ✅ construída — sem Storage (D67/Q17); nunca chamou a API de verdade (Q18) |
 | 8 | Dashboards, exports (XLSX/CSV), tela de audit log | ⬜ |
 
 ---
@@ -276,15 +276,24 @@ Os arquivos em `docs/reference/` foram lidos antes deste plano. Achados que impo
 
 **Pronto quando:** sugestões aparecem como rascunho que um humano confirma.
 
-- [ ] `lib/ai/provider.ts` — interface única, modelo trocável, chave em env
-- [ ] Sugestão de categoria em lote para o que sobrou sem categorizar, JSON estrito
-- [ ] Todo id retornado é validado contra o banco; o que não resolve é descartado
-- [ ] Grava só em `suggested_*`; **nenhuma chamada de LLM escreve em tabela de ledger**
-- [ ] Confiança abaixo de 0,8 aparece mas não vem pré-selecionada
-- [ ] Extração de contrato em PDF/DOCX → `contracts.extracted_json`, `status = 'draft'`,
-      com o trecho de origem ao lado do valor extraído
-- [ ] Nenhum valor usado em cálculo vem do LLM — número vem sempre do parser
-- [ ] Testes: LLM mockado; id inválido é descartado; nada entra no ledger
+- [x] `lib/ai/provider.ts` — interface única, modelo trocável por `ANTHROPIC_MODEL`, chave
+      em env, sem SDK (D61). Sem chave, tudo continua funcionando e as telas dizem isso
+- [x] Sugestão de categoria em lote, JSON estrito, **só para o que as regras e o histórico
+      não decidiram** (D62)
+- [x] Todo id validado contra o banco; código inventado, `ref` repetido ou não perguntado,
+      confiança fora de 0–1 — cada um descartado com o motivo visível na tela (D64)
+- [x] Grava só em `suggested_*`; **nenhuma chamada de LLM escreve em tabela de ledger**,
+      com teste que registra toda tabela tocada e falha se um ledger aparecer (D63)
+- [x] Confiança abaixo de 0,8 aparece marcada em âmbar e **não vem pré-selecionada**
+- [x] Extração de contrato em PDF/DOCX, com o trecho de origem ao lado de cada campo, e o
+      rascunho pré-preenchendo o formulário normal de contrato (D65)
+- [x] Nenhum valor usado em cálculo vem do LLM: a extração guarda texto, e o número só
+      nasce quando uma pessoa envia o formulário. O prompt de categorização não leva valor
+      nenhum, e há teste que falha se levar
+- [x] Leitor de `.docx` sem dependência nova, reusando o zip e o XML do xlsx (D66)
+- [ ] Guardar o arquivo no Supabase Storage — **não feito** (D67), ver Q17
+- [x] Testes: 38 testes de IA com o modelo mockado — id inválido descartado, nada entra no
+      ledger, prompt sem valor
 
 ---
 
