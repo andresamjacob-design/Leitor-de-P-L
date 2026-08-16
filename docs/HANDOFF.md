@@ -93,8 +93,8 @@ entidades.
 
 - **Extrato** de janeiro a julho: 426 linhas, zero duplicata, saldo reconciliando em 99 dias.
 - **19 faturas de cartão**: 516 lançamentos, todas fechando contra o total impresso nelas.
-- **942 linhas em `staged_transactions`**, 616 com categoria sugerida. Só 6 foram aprovadas
-  para o razão, de propósito — o resto espera decisão.
+- **942 lançamentos no razão**, todos aprovados; 326 sem categoria.
+- **492 linhas de espelho de custo** e 272 de receita na competência.
 - **80 contratos** e **272 linhas de competência**, R$ 3.185.088,91 reconhecidos de janeiro
   a agosto.
 
@@ -297,11 +297,26 @@ A DRE gerencial passou a ter receita bruta separada em 3.01 e 3.02.
 **Nenhum contrato é POC.** 68 lineares, 12 manuais. Se algum projeto deveria reconhecer por
 avanço, é troca na tela.
 
-### 4.5 O que falta
+### 4.5 Razão preenchido — 16/08/2026
 
-- **Aprovar as 936 linhas paradas para o razão** (610 com sugestão). O caminho está
-  provado; é decisão de sempre. Enquanto não acontecer, a DRE tem receita e quase nenhum
-  custo, porque o custo vem do espelho do caixa.
+**As 942 linhas foram aprovadas.** O razão de caixa tem 942 lançamentos — 426 do extrato,
+468 do cartão 5780 e 48 do 8299 — e 326 deles entraram sem categoria, que é legítimo: são
+movimentos reais, e o fluxo de caixa só reconcilia com o banco se todos entrarem.
+
+O espelho de competência subiu para **492 linhas de custo**, e a DRE gerencial passou a ter
+os dois lados: receita bruta, deduções, receita líquida, margem bruta, pessoal e
+ferramentas, mês a mês.
+
+Uma nota de operação, se alguém for repetir isso pela interface: a aprovação é uma tela por
+importação, sem ação em massa. E clicar por referência de elemento **não** submete o
+formulário — só clique por coordenada funciona, e a coordenada tem de vir de um screenshot
+tirado antes da chamada.
+
+### 4.6 O que falta
+
+- **Categorizar as 326 linhas sem conta.** Estão no razão e no fluxo de caixa numa linha
+  “Sem categoria”. As maiores: 52 `PIX ENVIADO`, 31 `SISPAG FORNECEDORES` (R$ 1,2 mi, sem
+  CNPJ útil), 16 estornos da Salesforce e 15 `ESTORNO ANUIDADE`.
 - **Rotear 3.03 e 3.04.** Um override de categoria no contrato, para tirar Ciclo e
   Salesforce do rascunho. É a única mudança de app que este trabalho deixou pendente.
 - **NFs:** zero notas fiscais cadastradas. A Fase 5 concilia NF contra caixa e isso ainda
