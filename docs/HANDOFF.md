@@ -57,7 +57,7 @@ Depois disso: `fe42ddb` (banco de verdade + teste 6 da §11), `aa9250d` (cinco b
 o import real revelou) e os três da auto-categorização — `2bb994e` (regra por sentido),
 `c6dcbf7` (regras de texto) e `382815c` (casamento por documento), detalhados na seção 3.
 
-**Testes:** 314 no Vitest, 25 no Playwright. `npm run check` roda typecheck + lint + testes.
+**Testes:** 316 no Vitest, 25 no Playwright. `npm run check` roda typecheck + lint + testes.
 
 ### Comandos
 
@@ -74,6 +74,8 @@ npm run propose:parties    # dry run do casamento planilha ↔ contraparte
 npm run preview:categorize # o que o “Categorizar” decidiria agora, sem decidir
 npm run inspect:staged     # composição do que está parado em staged_transactions
 npm run import:invoices    # importa as faturas de cartão em massa
+npm run propose:contracts  # lê os contratos do bloco de receita da planilha
+npm run recognize:manual   # grava o plano mensal dos contratos manuais
 ```
 
 Os dois `propose:*` aceitam `-- --aplicar` para gravar. O `propose:parties` aceita também
@@ -87,11 +89,14 @@ não resolve.
 ### O banco de verdade
 
 Projeto Supabase criado, migrations aplicadas, seed rodado, usuário vinculado às duas
-entidades. **Extrato de janeiro–março importado: 426 linhas, zero duplicata, saldo
-reconciliando em 99 dias.**
+entidades.
 
-As 426 linhas estão em `staged_transactions`, **ainda não aprovadas para o razão** — isso
-foi deixado de propósito para o usuário decidir.
+- **Extrato** de janeiro a julho: 426 linhas, zero duplicata, saldo reconciliando em 99 dias.
+- **19 faturas de cartão**: 516 lançamentos, todas fechando contra o total impresso nelas.
+- **942 linhas em `staged_transactions`**, 616 com categoria sugerida. Só 6 foram aprovadas
+  para o razão, de propósito — o resto espera decisão.
+- **80 contratos** e **272 linhas de competência**, R$ 3.185.088,91 reconhecidos de janeiro
+  a agosto.
 
 ---
 
@@ -102,8 +107,9 @@ O pedido em aberto era:
 > "a partir dos dados que tem na planilha do fluxo de caixa que eu havia colocado no
 > projeto, tente auto selecionar as categorias de cada gasto"
 
-Está construído, testado, commitado e **aplicado no banco**: 54 partes, 50 regras por
-documento e 44 de texto, cobrindo 221 das 426 linhas (51,9%). Veja a §4.1.
+Está construído, testado, commitado e **aplicado no banco**: 54 partes e 95 regras. Na
+época cobria 221 das 426 linhas; depois das faturas e da regra de rendimentos, cobre 616
+de 942 (65,4%). Veja da §4.1 em diante.
 
 ### 3.1 A checagem que faltava, respondida
 
@@ -262,7 +268,47 @@ Uma observação de tela, cosmética: depois de aprovar, a coluna Categoria da t
 revisão mostra “—” mesmo nas linhas que foram para o razão com conta. O dado está certo;
 é só o que a tela desenha depois que o select some.
 
-### 4.4 O que falta
+### 4.4 Contratos e receita — 16/08/2026
+
+O lado da competência saiu do zero. **80 contratos** lidos do bloco de receita da
+`DRE Geral`, com 95 parcelas mensais e 41 clientes novos, e a leitura **fecha com o total
+do ano da planilha**: R$ 5.033.061,88 contra 5.033.061,87 declarados, um centavo de
+arredondamento dela mesma.
+
+Depois disso, **272 linhas de competência, R$ 3.185.088,91 de janeiro a agosto** — 206 do
+motor (linha reta) e 66 do plano mensal dos contratos manuais. A receita reconhecida
+**bate com a planilha mês a mês, ao centavo**; a diferença que resta é exatamente Ciclo e
+Salesforce, e está explicada abaixo.
+
+A DRE gerencial passou a ter receita bruta separada em 3.01 e 3.02.
+
+**Duas armadilhas encontradas, e como ficaram:**
+
+- **3.03 e 3.04 não têm rota.** `applyRecognition` deriva a conta de receita do *tipo* do
+  contrato, e o enum de tipo tem dois valores. Então `Referral / Ciclo` (R$ 15.300) e
+  `Salesforce / Salesforce` (R$ 363.548) reconheceriam em 3.01, que é errado. Ficaram como
+  **rascunho**: o motor não reconhece rascunho e diz por quê, o dinheiro segue visível na
+  lista, e o ano continua fechando. **Rotear direito precisa de um override de categoria no
+  contrato — é mudança no app.**
+- **Contrato `manual` gera zero pelo motor**, o que deixaria metade do ano invisível (doze
+  contratos, o Gringo entre eles). O `recognize-manual` grava o plano mensal que veio da
+  planilha, sem passar do mês corrente e sem sobrescrever linha existente.
+
+**Nenhum contrato é POC.** 68 lineares, 12 manuais. Se algum projeto deveria reconhecer por
+avanço, é troca na tela.
+
+### 4.5 O que falta
+
+- **Aprovar as 936 linhas paradas para o razão** (610 com sugestão). O caminho está
+  provado; é decisão de sempre. Enquanto não acontecer, a DRE tem receita e quase nenhum
+  custo, porque o custo vem do espelho do caixa.
+- **Rotear 3.03 e 3.04.** Um override de categoria no contrato, para tirar Ciclo e
+  Salesforce do rascunho. É a única mudança de app que este trabalho deixou pendente.
+- **NFs:** zero notas fiscais cadastradas. A Fase 5 concilia NF contra caixa e isso ainda
+  não tem dado.
+- **Clientes que pagam e não estão na planilha:** Brazil Wind, Ligavit, A. F. Comércio,
+  AIDC, DB Genética e outros aparecem recebendo no extrato mas não estão no bloco de
+  receita da `DRE Geral`.
 - **Q18: chamar a API da Anthropic de verdade.** A variável `ANTHROPIC_API_KEY` existe no
   `.env.local` mas está **vazia**, então segue bloqueada. Todo o caminho de IA está
   testado com modelo mockado.
