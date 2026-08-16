@@ -93,7 +93,7 @@ entidades.
 
 - **Extrato** de janeiro a julho: 426 linhas, zero duplicata, saldo reconciliando em 99 dias.
 - **19 faturas de cartão**: 516 lançamentos, todas fechando contra o total impresso nelas.
-- **942 lançamentos no razão**, todos aprovados; 326 sem categoria.
+- **942 lançamentos no razão**, todos aprovados; 709 categorizados (75,3%).
 - **492 linhas de espelho de custo** e 272 de receita na competência.
 - **80 contratos** e **272 linhas de competência**, R$ 3.185.088,91 reconhecidos de janeiro
   a agosto.
@@ -312,11 +312,39 @@ importação, sem ação em massa. E clicar por referência de elemento **não**
 formulário — só clique por coordenada funciona, e a coordenada tem de vir de um screenshot
 tirado antes da chamada.
 
-### 4.6 O que falta
+### 4.6 Segunda rodada de categorização — 16/08/2026
 
-- **Categorizar as 326 linhas sem conta.** Estão no razão e no fluxo de caixa numa linha
-  “Sem categoria”. As maiores: 52 `PIX ENVIADO`, 31 `SISPAG FORNECEDORES` (R$ 1,2 mi, sem
-  CNPJ útil), 16 estornos da Salesforce e 15 `ESTORNO ANUIDADE`.
+**709 de 942 (75,3%)**, contra 616. Das 93 novas, 22 vieram de regra e **71 do histórico** —
+o motor aprendendo do que já estava decidido, que é a camada 3 e 4 da D40 funcionando pela
+primeira vez com material de verdade.
+
+Três correções, todas da mesma classe: planilha e banco escrevem o mesmo nome com
+separadores diferentes.
+
+- `Escola.i` normaliza para `ESCOLA I`; o banco manda `ESCOLAI SERVICOS`. Mesma forma do
+  `ATTENTIVE`, causa diferente.
+- O casamento por documento passou a tentar também com os separadores removidos, o que
+  pega `Enutri` contra `E NUTRI PRODUTOS NUTRICIONAIS`.
+- Os três nomes que a `Colaboradores` põe na coluna *Cliente* com `COLABORADOR` vazio —
+  CUSTODIO, JACOB, LEONARDO — passam a ser lidos.
+
+**Gabriel Sampaio Jacob ficou de fora de propósito:** é o nome da outra entidade, e
+dinheiro entre elas é transferência, não folha (D-C). São 7 linhas, R$ 47.000, e a decisão
+é da Q2.
+
+Existe agora um relatório de **conferir** no `propose:parties`: órfãos que parecem estar na
+planilha, listados com a evidência e nunca aplicados. Dos sete que ele achou, três estão
+certos (Pasolini, Medicom, Migano) e três claramente errados (`SANTA MONICA CRIACAO` não é
+a cliente `Santa Lucia`). Meio a meio — que é a taxa que proíbe automatizar.
+
+### 4.7 O que falta
+
+- **233 linhas sem conta**, R$ 2,44 mi, só 46 com documento. Dominadas por
+  **32 `SISPAG FORNECEDORES`** (R$ 1,22 mi, **zero com documento**) — o handoff já marcava
+  como genuinamente ambíguo, e segue sendo: depende de olhar a contraparte linha a linha.
+- **Os sete casos do relatório “conferir”**, que são um sim/não seu por linha.
+- **PDG IT, Hold Beauty, CSO e Hogrefe** têm contrato de projeto *e* de retainer, então o
+  recebimento não sabe em qual receita cair. São 12 linhas, R$ 121.200.
 - **Rotear 3.03 e 3.04.** Um override de categoria no contrato, para tirar Ciclo e
   Salesforce do rascunho. É a única mudança de app que este trabalho deixou pendente.
 - **NFs:** zero notas fiscais cadastradas. A Fase 5 concilia NF contra caixa e isso ainda
