@@ -61,6 +61,10 @@ const ALIASES: Record<string, string[]> = {
   // it arrives as `BOLETO PAGO ATTENTIVE CO`. The prefix alone is enough, and it also
   // catches `ATTENTIVE SERVICOS ADMINISTRAT`, which is the same office billing separately.
   Contabilidade: ["ATTENTIVE"],
+  // Same shape, different cause: the sheet writes the product name with a dot, which
+  // normalises to `ESCOLA I`, and the bank writes the company, `ESCOLAI SERVICOS`. A dot
+  // is not a space, and the two never met.
+  "Escola.i": ["ESCOLAI"],
   "Agência Ciclo": ["CICLO"],
   "Bank Charges": ["TAR CAMB", "TARIFA"],
   IOF: ["IOF"],

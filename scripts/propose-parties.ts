@@ -184,11 +184,18 @@ function readPeople(): Party[] {
     const name = String(row[5] ?? "").trim();
     const role = String(row[6] ?? "").trim();
 
-    // Only the data rows carry a bond *and* a name; the header repeats itself down the sheet.
-    if (bond === "" || bond === "VÍNCULO" || name === "" || name === "COLABORADOR") continue;
+    // Only the data rows carry a bond; the header repeats itself down the sheet.
+    if (bond === "" || bond === "VÍNCULO" || name === "COLABORADOR") continue;
     if (active !== "" && active.toLowerCase() !== "sim") continue;
 
-    const label = baseName(name);
+    // Three rows carry the person's surname in the *Cliente* column and leave
+    // `COLABORADOR` empty — CUSTODIO, JACOB, LEONARDO. They are the three largest
+    // payments in the statement, and the sheet does say `FREELANCER` about them; it just
+    // says it one column to the left. Reading it is not guessing.
+    const written = name === "" ? client : name;
+    if (written === "") continue;
+
+    const label = baseName(written);
     const tokens = tokensOf(label);
     if (tokens.length === 0) continue;
 
@@ -224,9 +231,16 @@ function matches(party: Party, counterparty: Counterparty): boolean {
   const haystack = normalize(counterparty.name);
   const words = haystack.split(" ");
 
-  for (const token of party.tokens) {
-    if (!words.some((word) => word.startsWith(token))) return false;
-  }
+  const found = party.tokens.every((token) => words.some((word) => word.startsWith(token)));
+
+  // A space is not a fact about a company. The sheet writes `Enutri` and the bank writes
+  // `E NUTRI PRODUTOS NUTRICIONAIS`; the sheet writes `Escola.i` and the bank writes
+  // `ESCOLAI SERVICOS`. Comparing with the separators removed catches those without
+  // loosening anything else — it is still a prefix match on the same distinctive token,
+  // and a token long enough to be distinctive is still required below.
+  const compact = party.tokens.join("");
+  const glued = haystack.replace(/ /g, "");
+  if (!found && !glued.startsWith(compact)) return false;
 
   if (party.tokens.some((token) => token.length >= 4)) return true;
   const first = words[0] ?? "";
@@ -320,11 +334,28 @@ try {
     claims.set(pairing.counterparty.taxId, list);
   }
 
+  // A counterparty whose name is another entity of this group is not a supplier and not a
+  // freelancer — it is the company next door, and money moving between them is a transfer
+  // (D-C). Booking it as payroll would put an intercompany movement in the P&L.
+  const others = await sql<{ name: string }[]>`
+    select name from entities where id <> ${entityId}`;
+  const otherNames = others.map((row) => normalize(row.name));
+
   const clean: Pairing[] = [];
   const disputed: Pairing[][] = [];
+  const intercompany: Pairing[] = [];
   for (const list of claims.values()) {
-    if (list.length === 1) clean.push(list[0]!);
-    else disputed.push(list);
+    if (list.length !== 1) {
+      disputed.push(list);
+      continue;
+    }
+    const pairing = list[0]!;
+    const name = normalize(pairing.counterparty.name);
+    if (otherNames.some((other) => other.startsWith(name) || name.startsWith(other))) {
+      intercompany.push(pairing);
+      continue;
+    }
+    clean.push(pairing);
   }
 
   /**
@@ -356,6 +387,16 @@ try {
     show(pairing);
   }
 
+  if (intercompany.length > 0) {
+    console.log(`\n${BOLD}${YELLOW}deixados de fora — o nome é de outra entidade do grupo${RESET}`);
+    for (const pairing of intercompany) {
+      console.log(
+        `  ${String(pairing.counterparty.lines).padStart(3)}  ${pairing.counterparty.name} ` +
+          `${DIM}${mask(pairing.counterparty.taxId)} — provável transferência entre empresas (Q2), não ${pairing.kind}${RESET}`,
+      );
+    }
+  }
+
   if (disputed.length > 0) {
     console.log(`\n${BOLD}${RED}disputados — o mesmo documento casa com dois nomes${RESET}`);
     for (const list of disputed) {
@@ -378,6 +419,31 @@ try {
     }
   }
 
+  /**
+   * Levenshtein, capped at two. Only used to *report*, never to decide.
+   *
+   * The sheet says `Medcom` and the bank says `MEDICOM`; the sheet says `Caio Migani` and
+   * the bank says `CAIO CESAR DA SILVA MIGANO`. One letter apart is almost always the same
+   * company and occasionally two different ones, and this script does not get to guess
+   * which — a person reading the pair decides in a second.
+   */
+  function nearby(a: string, b: string): number {
+    if (Math.abs(a.length - b.length) > 2) return 9;
+    let previous = [...Array(b.length + 1).keys()];
+    for (let i = 1; i <= a.length; i += 1) {
+      const current = [i];
+      for (let j = 1; j <= b.length; j += 1) {
+        current[j] = Math.min(
+          (previous[j] ?? 0) + 1,
+          (current[j - 1] ?? 0) + 1,
+          (previous[j - 1] ?? 0) + (a[i - 1] === b[j - 1] ? 0 : 1),
+        );
+      }
+      previous = current;
+    }
+    return previous[b.length] ?? 9;
+  }
+
   const matched = new Set(clean.map((pairing) => pairing.counterparty.taxId));
   for (const list of disputed) for (const pairing of list) matched.add(pairing.counterparty.taxId);
   const orphans = counterparties.filter((counterparty) => !matched.has(counterparty.taxId));
@@ -393,6 +459,41 @@ try {
     );
   }
   if (orphans.length > 20) console.log(`  ${DIM}… e mais ${orphans.length - 20}${RESET}`);
+
+  // Orphans that look like somebody on the sheet, close enough to be worth a human's eye
+  // and never close enough for this script to act on.
+  const usedParties = new Set(clean.map((pairing) => pairing.party.label));
+  const spare = [...clients, ...people].filter((party) => !usedParties.has(party.label));
+  const review: { counterparty: Counterparty; party: Party; why: string }[] = [];
+
+  for (const counterparty of orphans) {
+    const words = normalize(counterparty.name).split(" ").filter((word) => word.length >= 5);
+    for (const party of spare) {
+      for (const token of party.tokens.filter((item) => item.length >= 5)) {
+        const exact = words.find((word) => word === token || word.startsWith(token));
+        if (exact) {
+          review.push({ counterparty, party, why: `“${token}” aparece no nome` });
+          break;
+        }
+        const close = words.find((word) => nearby(word, token) === 1);
+        if (close) {
+          review.push({ counterparty, party, why: `“${token}” × “${close}” — uma letra` });
+          break;
+        }
+      }
+      if (review.some((item) => item.counterparty.taxId === counterparty.taxId)) break;
+    }
+  }
+
+  if (review.length > 0) {
+    console.log(`\n${BOLD}${YELLOW}conferir — parecem estar na planilha, mas não o bastante para decidir${RESET}`);
+    for (const item of review) {
+      console.log(
+        `  ${String(item.counterparty.lines).padStart(3)}  ${item.counterparty.name.slice(0, 38).padEnd(38)} ` +
+          `${DIM}→${RESET} ${item.party.label.padEnd(20).slice(0, 20)} ${DIM}${item.why}${RESET}`,
+      );
+    }
+  }
 
   const withCode = clean.filter((pairing) => pairing.party.code !== null);
   const ruleLines = withCode.reduce((total, pairing) => total + pairing.counterparty.lines, 0);
