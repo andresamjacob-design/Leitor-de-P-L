@@ -91,9 +91,13 @@ não resolve.
 Projeto Supabase criado, migrations aplicadas, seed rodado, usuário vinculado às duas
 entidades.
 
-- **Extrato** de janeiro a julho: 426 linhas, zero duplicata, saldo reconciliando em 99 dias.
+- **Extrato** de janeiro a julho: 426 linhas, saldo reconciliando em 99 dias. Mais dois
+  extratos curtos importados em 16/08 (`6 (1).xlsx` e `Entradas_Saidas`), que estendem a
+  conta corrente até 31/07 e trouxeram 35 linhas novas — 69 linhas se sobrepunham e
+  vieram marcadas como duplicata, sozinhas, pelo hash de dedup.
 - **19 faturas de cartão**: 516 lançamentos, todas fechando contra o total impresso nelas.
-- **942 lançamentos no razão**, todos aprovados; 709 categorizados (75,3%).
+- **977 lançamentos no razão**, todos aprovados; 726 categorizados (74,3%).
+- Conta corrente coberta de 05/01 a 31/07/2026; cartões de 08/2025 a 07/2026.
 - **492 linhas de espelho de custo** e 272 de receita na competência.
 - **80 contratos** e **272 linhas de competência**, R$ 3.185.088,91 reconhecidos de janeiro
   a agosto.
