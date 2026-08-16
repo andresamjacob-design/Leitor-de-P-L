@@ -341,7 +341,22 @@ planilha, listados com a evidência e nunca aplicados. Dos sete que ele achou, t
 certos (Pasolini, Medicom, Migano) e três claramente errados (`SANTA MONICA CRIACAO` não é
 a cliente `Santa Lucia`). Meio a meio — que é a taxa que proíbe automatizar.
 
-### 4.7 O que falta
+### 4.7 Contrato escolhe sua conta de receita — 16/08/2026
+
+`applyRecognition` derivava a conta do *tipo*, e `contract_type` tem dois valores contra
+quatro receitas no plano. Migration **0005**: `contracts.category_id`, opcional, vence o
+tipo quando preenchida. O formulário oferece "pelo tipo do contrato" como primeira opção,
+que é o que 78 dos 80 contratos usam.
+
+O tipo `Contract` ganhou `categoryOverrideId` ao lado do `categoryId` já resolvido — sem
+distinguir os dois, abrir e salvar um contrato congelaria o padrão de hoje na linha.
+
+Ciclo (3.03) e Salesforce (3.04) saíram do rascunho. **A receita reconhecida agora bate com
+a planilha mês a mês: R$ 0,03 de diferença acumulada em oito meses.** As quatro contas
+estão preenchidas — 3.01 com R$ 1.278.411, 3.02 com R$ 1.906.677, 3.03 com R$ 8.100 e
+3.04 com R$ 363.548.
+
+### 4.8 O que falta
 
 - **233 linhas sem conta**, R$ 2,44 mi, só 46 com documento. Dominadas por
   **32 `SISPAG FORNECEDORES`** (R$ 1,22 mi, **zero com documento**) — o handoff já marcava
@@ -349,8 +364,6 @@ a cliente `Santa Lucia`). Meio a meio — que é a taxa que proíbe automatizar.
 - **Os sete casos do relatório “conferir”**, que são um sim/não seu por linha.
 - **PDG IT, Hold Beauty, CSO e Hogrefe** têm contrato de projeto *e* de retainer, então o
   recebimento não sabe em qual receita cair. São 12 linhas, R$ 121.200.
-- **Rotear 3.03 e 3.04.** Um override de categoria no contrato, para tirar Ciclo e
-  Salesforce do rascunho. É a única mudança de app que este trabalho deixou pendente.
 - **NFs:** zero notas fiscais cadastradas. A Fase 5 concilia NF contra caixa e isso ainda
   não tem dado.
 - **Clientes que pagam e não estão na planilha:** Brazil Wind, Ligavit, A. F. Comércio,
