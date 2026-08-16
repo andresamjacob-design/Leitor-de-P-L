@@ -26,7 +26,8 @@
     "propose:parties": "vite-node --config vitest.config.ts scripts/propose-parties.ts",
     "preview:categorize": "vite-node --config vitest.config.ts scripts/preview-categorize.ts",
     "import:invoices": "vite-node --config vitest.config.ts scripts/import-invoices.ts",
-    "propose:contracts": "vite-node --config vitest.config.ts scripts/propose-contracts.ts"
+    "propose:contracts": "vite-node --config vitest.config.ts scripts/propose-contracts.ts",
+    "recognize:manual": "vite-node --config vitest.config.ts scripts/recognize-manual.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.4",
@@ -53,7 +54,7 @@
     "eslint-config-next": "^16.3.0",
     "tailwindcss": "^4.0.0",
     "typescript": "^5.7.0",
-    "vitest": "^3.0.0",
-    "vite-node": "^3.2.4"
+    "vite-node": "^3.2.4",
+    "vitest": "^3.0.0"
   }
 }
