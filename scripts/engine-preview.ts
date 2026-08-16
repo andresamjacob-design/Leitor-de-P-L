@@ -13,7 +13,7 @@
 
 import type { Sql } from "postgres";
 import { suggestCategory, type EngineInput } from "@/lib/categorize/engine";
-import type { HistoryEntry, Person, Rule, Subject } from "@/lib/categorize/types";
+import type { HistoryEntry, Person, Rule, Subject, Suggestion } from "@/lib/categorize/types";
 import { parseMoney, formatMoney } from "@/lib/money";
 
 /** Where a recognised person's salary lands. Mirrors `src/lib/data/categorize.ts`. */
@@ -27,6 +27,8 @@ const RESET = "[0m";
 /** postgres.js hands `numeric` back as text, which is the only safe way to read it (D77). */
 export const money = (value: string) => parseMoney(value, { decimalSeparator: "." });
 
+export type Decision = { id: string; suggestion: Suggestion };
+
 export type Preview = {
   total: number;
   decided: number;
@@ -36,6 +38,8 @@ export type Preview = {
   rules: number;
   people: number;
   history: number;
+  /** One per line the engine decided, so a caller can write them where the UI would. */
+  decisions: Decision[];
 };
 
 export async function runPreview(sql: Sql, entityId: string): Promise<Preview> {
@@ -82,8 +86,11 @@ export async function runPreview(sql: Sql, entityId: string): Promise<Preview> {
 
   const input: EngineInput = { rules, history, people, payrollCategoryId };
 
+  // Only what is still pending: a line already approved or rejected is a decision someone
+  // made, and re-deciding it is the behaviour that makes an automatic system untrustworthy.
   const staged = await sql<
     {
+      id: string;
       description: string;
       amount: string;
       accountId: string;
@@ -91,17 +98,18 @@ export async function runPreview(sql: Sql, entityId: string): Promise<Preview> {
       counterpartyName: string | null;
     }[]
   >`
-    select s.description, s.amount::text as amount,
+    select s.id, s.description, s.amount::text as amount,
            i.account_id          as "accountId",
            s.counterparty_tax_id as "counterpartyTaxId",
            s.counterparty_name   as "counterpartyName"
     from staged_transactions s
     join statement_imports i on i.id = s.import_id
-    where s.entity_id = ${entityId}
+    where s.entity_id = ${entityId} and s.status = 'pending'
     order by s.occurred_on`;
 
   const bySource = new Map<string, number>();
   const byCategory = new Map<string, { lines: number; total: bigint }>();
+  const decisions: Decision[] = [];
   let decided = 0;
   let undecidedValue = 0n;
 
@@ -124,6 +132,7 @@ export async function runPreview(sql: Sql, entityId: string): Promise<Preview> {
     }
 
     decided += 1;
+    decisions.push({ id: row.id, suggestion });
     bySource.set(suggestion.source, (bySource.get(suggestion.source) ?? 0) + 1);
     const current = byCategory.get(suggestion.categoryId) ?? { lines: 0, total: 0n };
     byCategory.set(suggestion.categoryId, {
@@ -141,7 +150,31 @@ export async function runPreview(sql: Sql, entityId: string): Promise<Preview> {
     rules: rules.length,
     people: people.length,
     history: history.length,
+    decisions,
   };
+}
+
+/**
+ * Writes the engine's decisions onto the staged rows — what the “Categorizar” button does.
+ *
+ * Only `suggested_*`, `suggestion_source` and `confidence`, exactly as
+ * `suggestForImport` in src/lib/data/categorize.ts. A suggestion is not an approval: the
+ * line stays `pending` and still waits for a human (SPEC §7).
+ */
+export async function writeSuggestions(sql: Sql, decisions: readonly Decision[]): Promise<number> {
+  let written = 0;
+  for (const { id, suggestion } of decisions) {
+    await sql`
+      update staged_transactions set
+        suggested_category_id = ${suggestion.categoryId},
+        suggested_client_id   = ${suggestion.clientId},
+        suggested_person_id   = ${suggestion.personId},
+        suggestion_source     = ${suggestion.ruleId ? "rule" : "none"},
+        confidence            = ${suggestion.confidence.toFixed(3)}
+      where id = ${id}`;
+    written += 1;
+  }
+  return written;
 }
 
 export function report(preview: Preview, names: Map<string, { code: string; name: string }>): void {

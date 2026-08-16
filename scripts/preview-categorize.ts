@@ -7,20 +7,25 @@
  * real engine — the same `suggestCategory` the review screen calls — over the same rules
  * the database actually holds.
  *
- * Reads only. Nothing is written, so it is safe to run before deciding whether to write.
+ * Reads only, unless `--aplicar` is passed — and then it does exactly what the
+ * “Categorizar” button does: writes `suggested_*` onto the pending staged rows so the
+ * review screen can show each line with its reason. A suggestion is still not an
+ * approval; every line stays `pending`, waiting for a human (SPEC §7).
  *
  *   npm run preview:categorize
+ *   npm run preview:categorize -- --aplicar
  */
 
 import postgres from "postgres";
 import { loadEnvLocal } from "./load-env.ts";
-import { runPreview, report } from "./engine-preview.ts";
+import { runPreview, report, writeSuggestions } from "./engine-preview.ts";
 
 loadEnvLocal();
 
 const url = process.env.DATABASE_URL;
 if (!url) throw new Error("DATABASE_URL não definido — veja o README.");
 
+const GREEN = "[32m";
 const DIM = "[2m";
 const RESET = "[0m";
 
@@ -36,8 +41,18 @@ try {
     select id, code, name from categories where entity_id = ${entity.id}`;
   const names = new Map(categories.map((category) => [category.id, category]));
 
-  report(await runPreview(sql, entity.id), names);
-  console.log(`\n${DIM}nada foi gravado — isto só lê.${RESET}\n`);
+  const preview = await runPreview(sql, entity.id);
+  report(preview, names);
+
+  if (process.argv.includes("--aplicar")) {
+    const written = await writeSuggestions(sql, preview.decisions);
+    console.log(
+      `\n${GREEN}${written} sugestões gravadas${RESET} nas linhas paradas. ` +
+        `Elas continuam pendentes — aprovar é outra decisão.\n`,
+    );
+  } else {
+    console.log(`\n${DIM}nada foi gravado. Rode com --aplicar para gravar as sugestões.${RESET}\n`);
+  }
 } finally {
   await sql.end();
 }
