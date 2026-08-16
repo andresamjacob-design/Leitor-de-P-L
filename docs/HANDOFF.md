@@ -237,10 +237,32 @@ Duas coisas que pareciam bug e não são:
   estorno de cobrança da Salesforce não é despesa da Salesforce.
 - **`ESTORNO ANUIDADE`, 15 linhas.** A regra `ANUIDADE` é `out`; um estorno é entrada.
 
-### 4.3 O que falta
+### 4.3 O caminho de escrita rodou — Q11
 
-- **Aprovar as linhas para o razão.** Decisão do usuário. Vai exercitar pela primeira vez
-  o caminho de escrita do razão, do espelho de competência e do reconhecimento (Q11).
+Decisão do usuário: uma fatura pequena primeiro. Aprovada pela interface a
+`Itaucard_8299_fatura_002026`, 6 lançamentos, R$ 111,16. **Funcionou de ponta a ponta:**
+
+- 6 linhas em `cash_entries`, com as categorias que o motor sugeriu (11.01 ×2, 7.04,
+  11.02) e as duas de estorno sem conta;
+- **4 linhas em `recognition_entries`** — o espelho nasceu só para as 4 que ganharam
+  categoria, que é exatamente a D2a: dar categoria a um custo é o que cria a competência;
+- auditoria registrando os três inserts.
+
+A tela de Competência mostra as 4 como “espelho do caixa”: receita 0,00, custo 148,66.
+
+Isso também confirmou que as sugestões gravadas por script aparecem certas na interface
+real — a tela de revisão veio com 11.01, 7.04 e 11.02 já selecionadas.
+
+Falta do Q11 o **reconhecimento de receita a partir de contrato** e o **POC**, que
+dependem de haver contrato cadastrado (Q16).
+
+**Restam 936 linhas paradas**, 610 com sugestão. Aprovar o resto é decisão de sempre.
+
+Uma observação de tela, cosmética: depois de aprovar, a coluna Categoria da tela de
+revisão mostra “—” mesmo nas linhas que foram para o razão com conta. O dado está certo;
+é só o que a tela desenha depois que o select some.
+
+### 4.4 O que falta
 - **Q18: chamar a API da Anthropic de verdade.** A variável `ANTHROPIC_API_KEY` existe no
   `.env.local` mas está **vazia**, então segue bloqueada. Todo o caminho de IA está
   testado com modelo mockado.
