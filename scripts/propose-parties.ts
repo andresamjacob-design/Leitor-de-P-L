@@ -334,12 +334,18 @@ try {
     claims.set(pairing.counterparty.taxId, list);
   }
 
-  // A counterparty whose name is another entity of this group is not a supplier and not a
-  // freelancer — it is the company next door, and money moving between them is a transfer
-  // (D-C). Booking it as payroll would put an intercompany movement in the P&L.
-  const others = await sql<{ name: string }[]>`
-    select name from entities where id <> ${entityId}`;
-  const otherNames = others.map((row) => normalize(row.name));
+  // A counterparty that *is* another entity of this group is not a supplier and not a
+  // freelancer — it is the company next door, and money between them is a transfer (D-C).
+  //
+  // Compared by document, never by name, and the reason is the whole point of D40: the
+  // entity `Gabriel Sampaio Jacob LTDA - ME` has a CNPJ, and the person Gabriel Sampaio
+  // Jacob has a CPF. They share a name and are not the same party — he is paid on the same
+  // day, in the same batch, as the other two partners. A name guard held those seven lines
+  // out of payroll for no reason.
+  const others = await sql<{ taxId: string | null }[]>`
+    select regexp_replace(tax_id, '\\D', '', 'g') as "taxId"
+    from entities where id <> ${entityId}`;
+  const otherDocuments = new Set(others.map((row) => row.taxId).filter((doc): doc is string => !!doc));
 
   const clean: Pairing[] = [];
   const disputed: Pairing[][] = [];
@@ -350,8 +356,7 @@ try {
       continue;
     }
     const pairing = list[0]!;
-    const name = normalize(pairing.counterparty.name);
-    if (otherNames.some((other) => other.startsWith(name) || name.startsWith(other))) {
+    if (otherDocuments.has(pairing.counterparty.taxId)) {
       intercompany.push(pairing);
       continue;
     }
