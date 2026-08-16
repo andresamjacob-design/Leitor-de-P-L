@@ -148,6 +148,12 @@ const STATEMENT_RULES: { pattern: string; code: string; direction: Direction; no
   { pattern: "APLICACAO CDB", code: "99.03", direction: "out", note: "aplicação no CDB" },
   { pattern: "RESGATE CDB", code: "99.03", direction: "in", note: "resgate do CDB" },
   { pattern: "APLICACAO TRUST", code: "99.03", direction: "out", note: "aplicação" },
+  // Decisão do usuário em 16/08/2026: o rendimento fica junto da movimentação que o
+  // gerou, e não vira receita. O plano de contas não tem conta de receita financeira, e
+  // criar uma mudaria um plano que até aqui saiu inteiro da planilha.
+  // A varredura `APL/RES APLIC AUT` continua descartada na importação (D35); o que chega
+  // aqui é só o `REND PAGO`.
+  { pattern: "RENDIMENTOS REND PAGO", code: "99.03", direction: "in", note: "rendimento da aplicação automática" },
   { pattern: "PAGAMENTOS TRIB", code: "4.01", direction: "out", note: "tributo pago por código de barras" },
   { pattern: "ANUIDADE", code: "11.01", direction: "out", note: "anuidade do cartão" },
 ];
