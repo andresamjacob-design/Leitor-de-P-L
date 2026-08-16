@@ -36,7 +36,11 @@ const BOLD = "[1m";
 const DIM = "[2m";
 const RESET = "[0m";
 
-/** Mirrors `REVENUE_CODE` in src/lib/data/contracts.ts. */
+/**
+ * The account a contract's type reaches. Mirrors `REVENUE_CODE` in
+ * src/lib/data/contracts.ts — and, like it, only decides when the contract does not carry
+ * its own `category_id` (migration 0005).
+ */
 const REVENUE_CODE: Record<string, string> = { retainer: "3.01", project: "3.02" };
 
 const MONTH_NAMES = [
@@ -80,12 +84,14 @@ try {
       clientId: string;
       type: string;
       status: string;
+      categoryOverrideId: string | null;
       description: string;
       value: string;
     }[]
   >`
     select c.id as "contractId", c.name as "contractName", c.client_id as "clientId",
            c.type::text as type, c.status::text as status,
+           c.category_id as "categoryOverrideId",
            i.description, i.value::text as value
     from contracts c
     join contract_items i on i.contract_id = c.id
@@ -107,7 +113,8 @@ try {
       continue;
     }
 
-    const categoryId = categoryByCode.get(REVENUE_CODE[row.type] ?? "");
+    // The contract's own account wins; the type is the fallback.
+    const categoryId = row.categoryOverrideId ?? categoryByCode.get(REVENUE_CODE[row.type] ?? "");
     if (!categoryId) continue;
 
     const amount = parseMoney(row.value, { decimalSeparator: "." });

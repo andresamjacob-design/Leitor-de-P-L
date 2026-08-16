@@ -239,6 +239,16 @@ export const contracts = pgTable(
     name: text("name").notNull(),
     type: contractType("type").notNull(),
     status: contractStatus("status").notNull().default("draft"),
+    /**
+     * Which revenue account this contract recognises into, when the type is not enough.
+     *
+     * Null means "decide from the type" — `3.01` for a retainer, `3.02` for a project,
+     * which is right for every contract that is client work. It stops being right for the
+     * two rows of the `DRE Geral` that are not: a referral commission belongs in `3.03`
+     * and a partner share in `3.04`, and the chart carries both precisely because the
+     * sheet has them.
+     */
+    categoryId: uuid("category_id").references(() => categories.id, { onDelete: "restrict" }),
     totalValue: money("total_value"),
     monthlyValue: money("monthly_value"),
     currency: text("currency").notNull().default("BRL"),

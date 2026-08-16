@@ -69,16 +69,15 @@ const SCOPES: Record<string, { type: "retainer" | "project"; code: string; note:
 };
 
 /**
- * Which revenue accounts the recognition engine can actually reach.
+ * The accounts a contract's *type* can reach on its own: `3.01` and `3.02`.
  *
- * `applyRecognition` derives the account from the contract's *type*, and the type enum has
- * exactly two values — so 3.03 and 3.04 have no route, even though the chart carries them
- * and the sheet has rows for them. A contract that would land in the wrong account is
- * created as `draft` instead: the engine recognises nothing from a draft and says so, the
- * money stays visible in the contract list, and the year still reconciles. Routing them
- * properly needs a category override on the contract, which is a change to the app.
+ * Anything else — `3.03` para indicação, `3.04` para parceria — is written onto the
+ * contract itself, in `category_id`, which the migration `0005` added for exactly this.
+ * Before it existed these two rows had to be parked as `draft`, because a type with two
+ * values cannot point at four accounts and landing them in `3.01` would have misstated
+ * R$ 378.848 as ongoing support.
  */
-const REACHABLE_CODES = new Set(["3.01", "3.02"]);
+const REACHABLE_BY_TYPE = new Set(["3.01", "3.02"]);
 
 /** Columns 4..15 of the revenue block are January through December of `YEAR`. */
 const FIRST_MONTH_COLUMN = 4;
@@ -96,7 +95,7 @@ type Draft = {
   /** The part before the qualifier, which is the client. */
   clientLabel: string;
   type: "retainer" | "project";
-  status: "active" | "completed" | "draft";
+  status: "active" | "completed";
   /** The revenue account this contract belongs in, whether or not the engine can reach it. */
   code: string;
   billing: string;
@@ -191,11 +190,7 @@ function readDrafts(): {
       label,
       clientLabel: baseName(label),
       type: kind.type,
-      status: !REACHABLE_CODES.has(kind.code)
-        ? "draft"
-        : status.toLowerCase() === "finalizado"
-          ? "completed"
-          : "active",
+      status: status.toLowerCase() === "finalizado" ? "completed" : "active",
       code: kind.code,
       // The scope word survives into the contract, so `Referral` and `Salesforce` stay
       // distinguishable from client work once they are rows in a table.
@@ -225,6 +220,10 @@ try {
   const entity = entities[0];
   if (!entity) throw new Error("entidade dd-group não encontrada — rode npm run db:seed");
   const entityId = entity.id;
+
+  const categories = await sql<{ id: string; code: string }[]>`
+    select id, code from categories where entity_id = ${entityId}`;
+  const categoryByCode = new Map(categories.map((category) => [category.code, category.id]));
 
   const clients = await sql<{ id: string; name: string }[]>`
     select id, name from clients where entity_id = ${entityId}`;
@@ -261,7 +260,7 @@ try {
         `${draft.recognition === "straight_line" ? `${GREEN}linear${RESET}` : `${YELLOW}manual${RESET}`}` +
         `${draft.monthlyValue ? ` ${DIM}${formatMoney(draft.monthlyValue)}/mês${RESET}` : ""}` +
         `${client ? "" : `  ${YELLOW}cliente a cadastrar${RESET}`}` +
-        `${draft.status === "draft" ? `  ${YELLOW}rascunho — ${draft.code} fora do alcance do motor${RESET}` : ""}` +
+        `${REACHABLE_BY_TYPE.has(draft.code) ? "" : `  ${YELLOW}conta ${draft.code} no próprio contrato${RESET}`}` +
         `${isNew ? "" : `  ${DIM}já existe${RESET}`}`,
     );
   }
@@ -323,9 +322,10 @@ try {
 
       const contract = await db<{ id: string }[]>`
         insert into contracts
-          (entity_id, client_id, name, type, status, total_value, monthly_value,
+          (entity_id, client_id, name, type, status, category_id, total_value, monthly_value,
            start_date, end_date, billing_terms, recognition_method, prorate_first_last_month)
         values (${entityId}, ${client.id}, ${draft.label}, ${draft.type}, ${draft.status},
+                ${REACHABLE_BY_TYPE.has(draft.code) ? null : (categoryByCode.get(draft.code) ?? null)},
                 ${toNumeric(draft.total)},
                 ${draft.monthlyValue === null ? null : toNumeric(draft.monthlyValue)},
                 ${startDate}, ${endDate}, ${draft.billing === "" ? null : draft.billing},
