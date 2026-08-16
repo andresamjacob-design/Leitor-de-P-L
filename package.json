@@ -25,7 +25,8 @@
     "inspect:staged": "vite-node --config vitest.config.ts scripts/inspect-staged.ts",
     "propose:parties": "vite-node --config vitest.config.ts scripts/propose-parties.ts",
     "preview:categorize": "vite-node --config vitest.config.ts scripts/preview-categorize.ts",
-    "import:invoices": "vite-node --config vitest.config.ts scripts/import-invoices.ts"
+    "import:invoices": "vite-node --config vitest.config.ts scripts/import-invoices.ts",
+    "propose:contracts": "vite-node --config vitest.config.ts scripts/propose-contracts.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.4",
