@@ -73,6 +73,7 @@ npm run propose:rules      # dry run das regras de texto vindas da planilha
 npm run propose:parties    # dry run do casamento planilha ↔ contraparte
 npm run preview:categorize # o que o “Categorizar” decidiria agora, sem decidir
 npm run inspect:staged     # composição do que está parado em staged_transactions
+npm run import:invoices    # importa as faturas de cartão em massa
 ```
 
 Os dois `propose:*` aceitam `-- --aplicar` para gravar. O `propose:parties` aceita também
@@ -210,13 +211,40 @@ Três casamentos que valem um olho na tela, todos visíveis em `npm run propose:
 - **`SISPAG FORNECEDORES` (18 linhas)** — genuinamente ambíguo, sem CNPJ útil na descrição.
   Depende de olhar a contraparte linha a linha.
 
-### 4.2 Depois disso
+### 4.2 Faturas importadas — 16/08/2026
 
-- **Importar as faturas de cartão** — libera todas as regras de fornecedor da planilha.
-- **Aprovar as 426 linhas para o razão.** Decisão do usuário. Vai exercitar pela primeira
-  vez o caminho de escrita do razão, do espelho de competência e do reconhecimento (Q11).
-- **Q18: chamar a API da Anthropic de verdade.** Todo o caminho de IA está testado com
-  modelo mockado; sem `ANTHROPIC_API_KEY` nenhuma chamada real aconteceu.
+**Feito.** 19 faturas distintas, 516 lançamentos, todas fechando contra o total impresso
+nelas mesmas. Os 34 arquivos da pasta viram 19 faturas porque nove são a mesma fatura
+salva com o nome de outro cartão, e cinco não são fatura.
+
+Isso resolveu de passagem uma discrepância que parecia erro: os arquivos `8299` parseiam
+como conta `8384`. Lendo os blocos de cartão de dentro dos PDFs, a conta 8384 tem um
+cartão só, o 8299, e a semente nomeou a conta pelo cartão. A conta 5780 carrega sete
+cartões — 2227, 4460, 4740, 8993, 6256, 0063 e 4200 —, que é de onde vêm os nomes de
+arquivo. O mapa está em `scripts/import-invoices.ts` com a justificativa.
+
+**Cobertura depois disso: 581 de 942 linhas, 61,7%** — `rule_text` saltou de 60 para 420,
+que são exatamente as regras de fornecedor da planilha. Elas descreviam compra no cartão e
+por isso não tinham o que casar no extrato.
+
+As 581 sugestões estão **gravadas nas linhas** (`npm run preview:categorize -- --aplicar`,
+que faz o que o botão “Categorizar” faz). Todas continuam `pending`.
+
+Duas coisas que pareciam bug e não são:
+
+- **`SALESFORCE TECNOLOGIA`, 16 linhas sem decisão.** Das 49 linhas Salesforce nas
+  faturas, 33 são compra e as 33 receberam a sugestão 7.02. As outras 16 são estorno, e
+  estorno de cobrança da Salesforce não é despesa da Salesforce.
+- **`ESTORNO ANUIDADE`, 15 linhas.** A regra `ANUIDADE` é `out`; um estorno é entrada.
+
+### 4.3 O que falta
+
+- **Aprovar as linhas para o razão.** Decisão do usuário. Vai exercitar pela primeira vez
+  o caminho de escrita do razão, do espelho de competência e do reconhecimento (Q11).
+- **Q18: chamar a API da Anthropic de verdade.** A variável `ANTHROPIC_API_KEY` existe no
+  `.env.local` mas está **vazia**, então segue bloqueada. Todo o caminho de IA está
+  testado com modelo mockado.
+- **Q15** confirmada pelo import: falta mesmo a fatura de junho/2026 da conta 8384.
 
 ---
 
