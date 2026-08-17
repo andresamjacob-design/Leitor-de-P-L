@@ -96,8 +96,9 @@ entidades.
   conta corrente até 31/07 e trouxeram 35 linhas novas — 69 linhas se sobrepunham e
   vieram marcadas como duplicata, sozinhas, pelo hash de dedup.
 - **19 faturas de cartão**: 516 lançamentos, todas fechando contra o total impresso nelas.
-- **977 lançamentos no razão**, todos aprovados; 726 categorizados (74,3%).
-- Conta corrente coberta de 05/01 a 31/07/2026; cartões de 08/2025 a 07/2026.
+- **1.497 lançamentos no razão**, todos aprovados; 1.058 categorizados (70,7%).
+- Quatro contas: Itaú conta corrente (940 linhas, 01/2025 a 07/2026), Itaucard 5780 (468),
+  Itaucard 8299 (48) e **Contabilizei** (41, 01 a 10/2025).
 - **492 linhas de espelho de custo** e 272 de receita na competência.
 - **80 contratos** e **272 linhas de competência**, R$ 3.185.088,91 reconhecidos de janeiro
   a agosto.
@@ -356,14 +357,46 @@ a planilha mês a mês: R$ 0,03 de diferença acumulada em oito meses.** As quat
 estão preenchidas — 3.01 com R$ 1.278.411, 3.02 com R$ 1.906.677, 3.03 com R$ 8.100 e
 3.04 com R$ 363.548.
 
-### 4.8 O que falta
+### 4.8 Ano de 2025 e a terceira conta — 17/08/2026
 
-- **233 linhas sem conta**, R$ 2,44 mi, só 46 com documento. Dominadas por
-  **32 `SISPAG FORNECEDORES`** (R$ 1,22 mi, **zero com documento**) — o handoff já marcava
-  como genuinamente ambíguo, e segue sendo: depende de olhar a contraparte linha a linha.
-- **Os sete casos do relatório “conferir”**, que são um sim/não seu por linha.
+Duas descobertas que não estavam no plano porque ninguém sabia que existiam.
+
+**O extrato Itaú de 2025 estava na pasta e nunca fora importado.** 479 movimentos, ano
+inteiro, saldo conferindo em 175 dias. O razão dizia cobrir desde 08/2025, mas só pelo
+cartão — um DRE de 2025 mostrava compras de cartão e mais nada.
+
+**E há uma terceira conta bancária: Contabilizei (Banco 301)**, mesmo CNPJ, de janeiro a
+outubro de 2025, com R$ 843 mil de movimento. Apareceu ao procurar nota fiscal num PDF que
+o `verify:import` classificava como "não é uma fatura". Não havia conta cadastrada nem
+leitor para o formato.
+
+`src/lib/import/contabilizei-statement.ts` é o leitor, com 7 testes. Três coisas que o
+arquivo ensinou, cada uma depois de a conta não fechar:
+
+- **O valor não tem sinal.** `Pix enviado` e `Pix recebido` são ambos `3.000,00`; o sentido
+  só existe no saldo andando. É o saldo que decide; as palavras conferem.
+- **CPF vem mascarado** (`709.***.***-26`), CNPJ não. Documento mascarado não chega em
+  `counterparty_tax_id` — os cinco dígitos que sobrevivem casariam a pessoa errada.
+- **Linha cujo saldo não anda não moveu dinheiro.** O `Boleto estornado` de R$ 166,98 é um
+  boleto cancelado antes do pagamento.
+
+Ele confere de três jeitos independentes, e a segunda conferência achou um bug meu na
+hora: os totais de entradas e saídas dividem a mesma linha visual, e eu dava o valor da
+saída para os dois lados.
+
+**Razão: 1.497 lançamentos, 1.058 categorizados (70,7%).** O percentual caiu porque 2025
+entrou inteiro e o histórico ainda não cobre aquele vocabulário.
+
+### 4.9 O que falta
+
+- **439 linhas sem conta.** Boa parte é 2025, que acabou de entrar e cujo vocabulário o
+  histórico ainda não viu. Segue dominado pelos `SISPAG FORNECEDORES`, que não têm
+  documento nenhum — o detalhe do lote está no arquivo de retorno do banco, fora da pasta.
+- **Sem contratos de 2025.** A DRE daquele ano mostra custo e nenhuma receita, porque os
+  80 contratos lidos da planilha são todos de 2026.
 - **PDG IT, Hold Beauty, CSO e Hogrefe** têm contrato de projeto *e* de retainer, então o
-  recebimento não sabe em qual receita cair. São 12 linhas, R$ 121.200.
+  recebimento não sabe em qual receita cair. Agora dá para resolver: a coluna
+  `contracts.category_id` existe, e basta dizer qual contrato é qual.
 - **NFs:** zero notas fiscais cadastradas. A Fase 5 concilia NF contra caixa e isso ainda
   não tem dado.
 - **Clientes que pagam e não estão na planilha:** Brazil Wind, Ligavit, A. F. Comércio,
