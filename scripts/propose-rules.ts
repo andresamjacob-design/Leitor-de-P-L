@@ -155,9 +155,18 @@ const STATEMENT_RULES: { pattern: string; code: string; direction: Direction; no
   // Decisão do usuário em 16/08/2026: o rendimento fica junto da movimentação que o
   // gerou, e não vira receita. O plano de contas não tem conta de receita financeira, e
   // criar uma mudaria um plano que até aqui saiu inteiro da planilha.
-  // A varredura `APL/RES APLIC AUT` continua descartada na importação (D35); o que chega
-  // aqui é só o `REND PAGO`.
-  { pattern: "RENDIMENTOS REND PAGO", code: "99.03", direction: "in", note: "rendimento da aplicação automática" },
+  //
+  // O padrão é `REND PAGO` e não a frase inteira porque os bancos a escrevem de dois
+  // jeitos — `RENDIMENTOS REND PAGO APLIC AUT MAIS` e `ENTRADA REND PAGO APLIC AUT MAIS` —
+  // e o pedaço que os dois compartilham é justamente o que importa. A varredura
+  // `APL/RES APLIC AUT` continua descartada na importação (D35).
+  { pattern: "REND PAGO", code: "99.03", direction: "in", note: "rendimento da aplicação automática" },
+  // Tributo, nas três formas em que os dois bancos o escrevem. O Itaú manda
+  // `PAGAMENTOS TRIB COD BARRAS` com a contraparte no campo próprio; a Contabilizei
+  // escreve `Boleto pago - Simples Nacional` e não preenche contraparte nenhuma.
+  { pattern: "SIMPLES NACIONAL", code: "4.01", direction: "out", note: "Simples Nacional" },
+  { pattern: "DARF", code: "4.01", direction: "out", note: "DARF" },
+  { pattern: "SISPAG TRIBUTOS", code: "4.01", direction: "out", note: "tributo pago em lote" },
   { pattern: "PAGAMENTOS TRIB", code: "4.01", direction: "out", note: "tributo pago por código de barras" },
   { pattern: "ANUIDADE", code: "11.01", direction: "out", note: "anuidade do cartão" },
 ];

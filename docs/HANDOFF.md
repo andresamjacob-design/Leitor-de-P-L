@@ -96,7 +96,7 @@ entidades.
   conta corrente até 31/07 e trouxeram 35 linhas novas — 69 linhas se sobrepunham e
   vieram marcadas como duplicata, sozinhas, pelo hash de dedup.
 - **19 faturas de cartão**: 516 lançamentos, todas fechando contra o total impresso nelas.
-- **1.497 lançamentos no razão**, todos aprovados; 1.058 categorizados (70,7%).
+- **1.497 lançamentos no razão**, todos aprovados; 1.102 categorizados (73,6%).
 - Quatro contas: Itaú conta corrente (940 linhas, 01/2025 a 07/2026), Itaucard 5780 (468),
   Itaucard 8299 (48) e **Contabilizei** (41, 01 a 10/2025).
 - **492 linhas de espelho de custo** e 272 de receita na competência.
@@ -389,9 +389,11 @@ entrou inteiro e o histórico ainda não cobre aquele vocabulário.
 
 ### 4.9 O que falta
 
-- **439 linhas sem conta.** Boa parte é 2025, que acabou de entrar e cujo vocabulário o
-  histórico ainda não viu. Segue dominado pelos `SISPAG FORNECEDORES`, que não têm
-  documento nenhum — o detalhe do lote está no arquivo de retorno do banco, fora da pasta.
+- **395 linhas sem conta**, e **101 delas são `SISPAG FORNECEDORES`** — R$ 2,9 milhões
+  sem documento nenhum. O detalhe do lote está no arquivo de retorno do banco, fora da
+  pasta, e sem ele não há o que decidir.
+- O resto são recebimentos de clientes que não estão na `DRE Geral` (Passare, CN INC,
+  Maruri, Nexodata, Cidade Center Norte) e os quatro clientes de conta ambígua.
 - **Sem contratos de 2025.** A DRE daquele ano mostra custo e nenhuma receita, porque os
   80 contratos lidos da planilha são todos de 2026.
 - **PDG IT, Hold Beauty, CSO e Hogrefe** têm contrato de projeto *e* de retainer, então o
