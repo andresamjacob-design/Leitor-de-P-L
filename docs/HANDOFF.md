@@ -74,6 +74,7 @@ npm run propose:parties    # dry run do casamento planilha ↔ contraparte
 npm run preview:categorize # o que o “Categorizar” decidiria agora, sem decidir
 npm run inspect:staged     # composição do que está parado em staged_transactions
 npm run import:invoices    # importa as faturas de cartão em massa
+npm run pendencias         # o que falta decidir, do maior para o menor
 npm run propose:contracts  # lê os contratos do bloco de receita da planilha
 npm run recognize:manual   # grava o plano mensal dos contratos manuais
 ```
@@ -389,11 +390,15 @@ entrou inteiro e o histórico ainda não cobre aquele vocabulário.
 
 ### 4.9 O que falta
 
-- **395 linhas sem conta**, e **101 delas são `SISPAG FORNECEDORES`** — R$ 2,9 milhões
-  sem documento nenhum. O detalhe do lote está no arquivo de retorno do banco, fora da
-  pasta, e sem ele não há o que decidir.
-- O resto são recebimentos de clientes que não estão na `DRE Geral` (Passare, CN INC,
-  Maruri, Nexodata, Cidade Center Norte) e os quatro clientes de conta ambígua.
+- **394 linhas sem conta.** Rode `npm run pendencias` — ele agrupa por contraparte,
+  ordena por dinheiro e diz o que o sistema já sabe de cada grupo. **165 dos 197 grupos
+  não têm documento nenhum** e somam R$ 4,2 milhões, quase todo em `SISPAG FORNECEDORES`:
+  o detalhe do lote está no arquivo de retorno do banco, fora da pasta.
+- Os grupos que **têm** documento são recebimentos de clientes fora da `DRE Geral`
+  (A. F. Comércio, CN INC, Cidade Center Norte, Maruri, DB Genética) — cada um resolvido
+  por uma resposta sua e uma regra.
+- **`OP REC EXT`**, cinco entradas somando ~R$ 470 mil, sem contraparte. Parecem
+  recebimentos de câmbio, mas em qual receita caem é decisão.
 - **Sem contratos de 2025.** A DRE daquele ano mostra custo e nenhuma receita, porque os
   80 contratos lidos da planilha são todos de 2026.
 - **PDG IT, Hold Beauty, CSO e Hogrefe** têm contrato de projeto *e* de retainer, então o
@@ -422,7 +427,7 @@ Detalhe completo na Parte 7 do `docs/DECISIONS.md`.
 | Q8 | A aba `Vendas e Perdas` é um CRM; nenhuma fase cobre |
 | Q9 | `Cópia de Autorização de saída - Saint Paul` é documento escolar alheio. Não foi aberto. Apagar? |
 | Q11 | Caminho de escrita parcialmente exercitado — falta aprovar, espelhar, reconhecer, POC |
-| Q13 | Três extratos em PDF sem texto recuperável; precisa reexportar em XLSX/CSV |
+| Q13 | Três extratos em PDF **têm** texto (26 mil chars), mas a fonte é um subconjunto sem mapa Unicode, então cada glifo vem como código arbitrário. É substituição consistente e específica do documento. Como os nomes cobrem jan–jul/2026, período já importado do xlsx, não vale decodificar |
 | Q15 | Fatura 8299 de 05/06/2026 (R$ 830,97) não está na pasta |
 | Q16 | Importar contratos de 2026 da `DRE Geral` ou cadastrar à mão? |
 | Q17 | Guardar o arquivo do contrato no Supabase Storage? |

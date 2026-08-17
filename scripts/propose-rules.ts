@@ -151,7 +151,8 @@ const STATEMENT_RULES: { pattern: string; code: string; direction: Direction; no
   // one of them would swallow the other's lines.
   { pattern: "APLICACAO CDB", code: "99.03", direction: "out", note: "aplicação no CDB" },
   { pattern: "RESGATE CDB", code: "99.03", direction: "in", note: "resgate do CDB" },
-  { pattern: "APLICACAO TRUST", code: "99.03", direction: "out", note: "aplicação" },
+  { pattern: "APLICACAO TRUST", code: "99.03", direction: "out", note: "aplicação no Trust DI" },
+  { pattern: "RESGATE TRUST", code: "99.03", direction: "in", note: "resgate do Trust DI" },
   // Decisão do usuário em 16/08/2026: o rendimento fica junto da movimentação que o
   // gerou, e não vira receita. O plano de contas não tem conta de receita financeira, e
   // criar uma mudaria um plano que até aqui saiu inteiro da planilha.

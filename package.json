@@ -27,7 +27,8 @@
     "preview:categorize": "vite-node --config vitest.config.ts scripts/preview-categorize.ts",
     "import:invoices": "vite-node --config vitest.config.ts scripts/import-invoices.ts",
     "propose:contracts": "vite-node --config vitest.config.ts scripts/propose-contracts.ts",
-    "recognize:manual": "vite-node --config vitest.config.ts scripts/recognize-manual.ts"
+    "recognize:manual": "vite-node --config vitest.config.ts scripts/recognize-manual.ts",
+    "pendencias": "vite-node --config vitest.config.ts scripts/pendencias.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.4",
