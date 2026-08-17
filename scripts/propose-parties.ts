@@ -247,14 +247,76 @@ function matches(party: Party, counterparty: Counterparty): boolean {
   return party.tokens.every((token) => first.startsWith(token));
 }
 
-type Pairing = { party: Party; counterparty: Counterparty; kind: "cliente" | "pessoa" };
+
+/**
+ * Levenshtein, capped at two.
+ *
+ * The sheet says `Medcom` and the bank says `MEDICOM`; the sheet says `Caio Migani` and the
+ * bank says `CAIO CESAR DA SILVA MIGANO`. One letter apart is usually the same party.
+ */
+function nearby(a: string, b: string): number {
+  if (Math.abs(a.length - b.length) > 2) return 9;
+  let previous = [...Array(b.length + 1).keys()];
+  for (let i = 1; i <= a.length; i += 1) {
+    const current = [i];
+    for (let j = 1; j <= b.length; j += 1) {
+      current[j] = Math.min(
+        (previous[j] ?? 0) + 1,
+        (current[j - 1] ?? 0) + 1,
+        (previous[j - 1] ?? 0) + (a[i - 1] === b[j - 1] ? 0 : 1),
+      );
+    }
+    previous = current;
+  }
+  return previous[b.length] ?? 9;
+}
+
+/**
+ * How long a token must be before one letter of difference is evidence rather than
+ * coincidence: six characters.
+ *
+ * The number is not arbitrary — it is where the real matches and the false ones separated
+ * when a person read all seven candidates the report produced. `PASOLINI`, `MEDCOM` and
+ * `MIGANI` are the same parties the sheet names. `SANTA` (Santa Monica × Santa Lucia),
+ * `PAULO` (PM São Paulo × Paulo Carvalho), `ANCRE`/`ANDRE` (PM Santo André × Clínica
+ * Ancre) and `JACOB` are not, and every one of them is five.
+ */
+const DISTINCTIVE = 6;
+
+/**
+ * A second attempt, for the party whose strict match found nothing.
+ *
+ * One token, long enough to be distinctive, matching within a letter. It only decides when
+ * the pairing turns out unique in both directions — the caller enforces that — because a
+ * surname that fits two companies is a surname, not an identification.
+ */
+function nearMatch(party: Party, counterparty: Counterparty): boolean {
+  const words = normalize(counterparty.name).split(" ");
+  return party.tokens.some(
+    (token) =>
+      token.length >= DISTINCTIVE &&
+      words.some((word) => word.length >= DISTINCTIVE && nearby(word, token) <= 1),
+  );
+}
+
+type Pairing = {
+  party: Party;
+  counterparty: Counterparty;
+  kind: "cliente" | "pessoa";
+  /** True when only the near match found it. A strict claim on the same document wins. */
+  near: boolean;
+};
 
 function pair(parties: Party[], counterparties: Counterparty[], kind: Pairing["kind"]) {
   const found: Pairing[] = [];
   const ambiguous: { party: Party; candidates: Counterparty[] }[] = [];
 
   for (const party of parties) {
-    const candidates = counterparties.filter((counterparty) => matches(party, counterparty));
+    // The strict match first. Only when it finds nothing does the near match get a turn,
+    // so a party that already has a clean pairing is never re-decided by a fuzzier rule.
+    const strict = counterparties.filter((counterparty) => matches(party, counterparty));
+    const near = strict.length > 0 ? [] : counterparties.filter((c) => nearMatch(party, c));
+    const candidates = strict.length > 0 ? strict : near;
     if (candidates.length === 0) continue;
 
     // One party legitimately holds two documents: a freelancer invoices as a person one
@@ -266,7 +328,9 @@ function pair(parties: Party[], counterparties: Counterparty[], kind: Pairing["k
       continue;
     }
 
-    for (const counterparty of candidates) found.push({ party, counterparty, kind });
+    for (const counterparty of candidates) {
+      found.push({ party, counterparty, kind, near: strict.length === 0 });
+    }
   }
 
   return { found, ambiguous };
@@ -350,7 +414,12 @@ try {
   const clean: Pairing[] = [];
   const disputed: Pairing[][] = [];
   const intercompany: Pairing[] = [];
-  for (const list of claims.values()) {
+  for (const raw of claims.values()) {
+    // A document claimed both strictly and approximately is not in dispute: the strict
+    // claim wins and the approximate one was a coincidence. `VICTORIA DE LACERDA` is
+    // Victoria Lacerda, however much `Liga Vitoria` looks like it from one letter away.
+    const strict = raw.filter((pairing) => !pairing.near);
+    const list = strict.length > 0 ? strict : raw;
     if (list.length !== 1) {
       disputed.push(list);
       continue;
@@ -422,31 +491,6 @@ try {
         console.log(`         ${DIM}↳ ${candidate.name} ${mask(candidate.taxId)} (${candidate.lines} linhas)${RESET}`);
       }
     }
-  }
-
-  /**
-   * Levenshtein, capped at two. Only used to *report*, never to decide.
-   *
-   * The sheet says `Medcom` and the bank says `MEDICOM`; the sheet says `Caio Migani` and
-   * the bank says `CAIO CESAR DA SILVA MIGANO`. One letter apart is almost always the same
-   * company and occasionally two different ones, and this script does not get to guess
-   * which — a person reading the pair decides in a second.
-   */
-  function nearby(a: string, b: string): number {
-    if (Math.abs(a.length - b.length) > 2) return 9;
-    let previous = [...Array(b.length + 1).keys()];
-    for (let i = 1; i <= a.length; i += 1) {
-      const current = [i];
-      for (let j = 1; j <= b.length; j += 1) {
-        current[j] = Math.min(
-          (previous[j] ?? 0) + 1,
-          (current[j - 1] ?? 0) + 1,
-          (previous[j - 1] ?? 0) + (a[i - 1] === b[j - 1] ? 0 : 1),
-        );
-      }
-      previous = current;
-    }
-    return previous[b.length] ?? 9;
   }
 
   const matched = new Set(clean.map((pairing) => pairing.counterparty.taxId));
