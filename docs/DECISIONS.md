@@ -613,6 +613,54 @@ Não foi construído um caminho de recategorização, e de propósito: medido, e
 sendo resolver a identidade (D87) e conseguir o retorno do SISPAG, que sozinho é 95% do que
 falta.
 
+### D89 — Vigência desempata melhor que valor: dinheiro não paga contrato que não existia
+Quatro clientes — Hold Beauty, PDG IT, Hogrefe e CSO — têm contrato de projeto *e* de
+retainer, que alcançam contas de receita diferentes. O handover listava isso como decisão
+do Andre desde o começo. Eram 13 recebimentos, R$ 150.400.
+
+O casamento por valor resolvia 2. O que resolve de verdade é a **janela de vigência**, e
+ela é a única regra aqui que é **impossibilidade, não probabilidade**: um recebimento
+anterior ao início de um contrato não pode ser dele.
+
+- Hogrefe, R$ 10.000 em 16/06 — o retainer dela só começa em **01/07**.
+- CSO, R$ 8.000 em 06/02 — o retainer começa em **01/06**. E R$ 8.000 não bate com
+  mensalidade nenhuma: só a vigência resolve esse.
+- PDG IT, três de R$ 15.000 em março, abril e maio — o retainer começa em **01/06**.
+
+→ `resolveRevenueCategory` passou a receber a data do recebimento e a data de início dos
+contratos. Ordem dos desempates: conta única, **vigência**, valor igual à mensalidade.
+Contrato sem data de início **não é descartado** — não declarar vigência não é o mesmo que
+não estar vigente. E se nenhum contrato estava vigente, nada é eliminado: descartar tudo
+devolveria uma resposta inventada.
+
+**Resolveu 7 das 13.** Com as 2 anteriores, 9 de 15. Restam 6, em três clientes.
+
+O que **não** virou regra, de propósito: *"o recebimento fecha o saldo em aberto do
+contrato ao centavo"*. É evidência forte — PDG IT deve exatamente R$ 15.000 do projeto e
+recebeu R$ 15.000; Hold Beauty deve exatamente R$ 4.500 e recebeu R$ 4.500 — mas depende de
+os totais da planilha estarem completos, e um aumento de escopo não registrado quebraria a
+inferência em silêncio. O `decisoes` imprime o saldo em aberto de cada contrato ao lado dos
+recebimentos, e a última palavra é do Andre.
+
+### D90 — Um relatório que faz a pergunta com a evidência do lado
+`pendencias` ordena o que falta por dinheiro. `decisoes` faz a pergunta seguinte, que é a
+que custa tempo: **o que o sistema já sabe de cada caso, para responder sem abrir o
+extrato?**
+
+Duas checagens que **mudam a pergunta** quando dão positivo, e por isso vêm antes da
+resposta:
+
+- **A contraparte também recebe pagamento da DD Group?** Aí é fornecedor *e* cliente, e a
+  regra vai precisar de `direction` para não repetir a D83. Deu positivo na Ciclo: manda
+  R$ 5.400 e recebe R$ 4.000.
+- **A cadência é mensal e de valor fixo?** Assinatura de retainer. Impresso como evidência,
+  nunca usado como decisão — pelo mesmo motivo da D89.
+
+Para os CNPJs sem dono, mostra **candidatos entre os 41 clientes cadastrados sem
+documento**, e diz explicitamente que se for um deles o certo é pôr o CNPJ nele, não criar
+outro. Achou `Windlog` para `BRAZIL WIND LOGISTICS` e `Ciclo` para
+`CICLO INTELIGENCIA EM E - COMMERCE` — os dois casos que teriam virado duplicata.
+
 ---
 
 ## Parte 13 — Decisões da Fase 8

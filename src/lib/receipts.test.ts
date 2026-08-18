@@ -13,6 +13,7 @@ function contract(overrides: Partial<ClientContract> = {}): ClientContract {
     type: "retainer",
     revenueCategoryId: "3.01",
     monthlyValue: null,
+    startDate: null,
     ...overrides,
   };
 }
@@ -26,6 +27,7 @@ function receipt(overrides: Partial<Receipt> = {}): Receipt {
     document: CNPJ,
     counterpartyName: "EMPRESA EXEMPLO LTDA",
     amount: parseMoney("10.000,00"),
+    occurredOn: "2026-06-15",
     ...overrides,
   };
 }
@@ -93,7 +95,7 @@ describe("resolveRevenueCategory", () => {
         contract({ id: "b", revenueCategoryId: "3.01" }),
       ],
     });
-    expect(resolveRevenueCategory(alvo, parseMoney("1,00"))).toEqual({
+    expect(resolveRevenueCategory(alvo, parseMoney("1,00"), "2026-06-15")).toEqual({
       categoryId: "3.01",
       basis: "conta-unica",
     });
@@ -107,7 +109,7 @@ describe("resolveRevenueCategory", () => {
         contract({ id: "ret", type: "retainer", revenueCategoryId: "3.01", monthlyValue: parseMoney("4.000,00") }),
       ],
     });
-    expect(resolveRevenueCategory(alvo, parseMoney("15.000,00"))).toEqual({
+    expect(resolveRevenueCategory(alvo, parseMoney("15.000,00"), "2026-06-15")).toEqual({
       categoryId: null,
       basis: "ambiguo",
     });
@@ -121,7 +123,7 @@ describe("resolveRevenueCategory", () => {
         contract({ id: "ret", type: "retainer", revenueCategoryId: "3.01", monthlyValue: parseMoney("4.000,00") }),
       ],
     });
-    expect(resolveRevenueCategory(alvo, parseMoney("4.000,00"))).toEqual({
+    expect(resolveRevenueCategory(alvo, parseMoney("4.000,00"), "2026-06-15")).toEqual({
       categoryId: "3.01",
       basis: "valor-bate-com-mensalidade",
     });
@@ -134,7 +136,7 @@ describe("resolveRevenueCategory", () => {
         contract({ id: "b", revenueCategoryId: "3.02", monthlyValue: parseMoney("5.000,00") }),
       ],
     });
-    expect(resolveRevenueCategory(alvo, parseMoney("5.000,00")).basis).toBe("ambiguo");
+    expect(resolveRevenueCategory(alvo, parseMoney("5.000,00"), "2026-06-15").basis).toBe("ambiguo");
   });
 
   it("contrato sem mensalidade não é candidato a desempate", () => {
@@ -144,13 +146,134 @@ describe("resolveRevenueCategory", () => {
         contract({ id: "b", revenueCategoryId: "3.02", monthlyValue: parseMoney("9.000,00") }),
       ],
     });
-    expect(resolveRevenueCategory(alvo, parseMoney("0,00")).basis).toBe("ambiguo");
+    expect(resolveRevenueCategory(alvo, parseMoney("0,00"), "2026-06-15").basis).toBe("ambiguo");
   });
 
   it("cliente sem contrato não recebe conta chutada", () => {
-    expect(resolveRevenueCategory(client(), parseMoney("1,00"))).toEqual({
+    expect(resolveRevenueCategory(client(), parseMoney("1,00"), "2026-06-15")).toEqual({
       categoryId: null,
       basis: "sem-contrato",
+    });
+  });
+});
+
+describe("vigência: dinheiro não paga contrato que ainda não existia", () => {
+  it("Hogrefe em 16/06 só pode ser projeto — o retainer dela começa em 01/07", () => {
+    const hogrefe = client({
+      contracts: [
+        contract({
+          id: "proj",
+          type: "project",
+          revenueCategoryId: "3.02",
+          monthlyValue: parseMoney("8.333,33"),
+          startDate: "2026-05-01",
+        }),
+        contract({
+          id: "ret",
+          type: "retainer",
+          revenueCategoryId: "3.01",
+          monthlyValue: null,
+          startDate: "2026-07-01",
+        }),
+      ],
+    });
+
+    expect(resolveRevenueCategory(hogrefe, parseMoney("10.000,00"), "2026-06-16")).toEqual({
+      categoryId: "3.02",
+      basis: "unico-contrato-vigente",
+    });
+  });
+
+  it("mas em 16/07 os dois já valem, e volta a ser ambíguo", () => {
+    const hogrefe = client({
+      contracts: [
+        contract({ id: "proj", type: "project", revenueCategoryId: "3.02", startDate: "2026-05-01" }),
+        contract({ id: "ret", type: "retainer", revenueCategoryId: "3.01", startDate: "2026-07-01" }),
+      ],
+    });
+
+    expect(resolveRevenueCategory(hogrefe, parseMoney("10.000,00"), "2026-07-16").basis).toBe(
+      "ambiguo",
+    );
+  });
+
+  it("CSO em 06/02 é projeto: o retainer dela só começa em 01/06", () => {
+    const cso = client({
+      contracts: [
+        contract({
+          id: "proj",
+          type: "project",
+          revenueCategoryId: "3.02",
+          monthlyValue: parseMoney("9.600,00"),
+          startDate: "2026-01-01",
+        }),
+        contract({
+          id: "ret",
+          type: "retainer",
+          revenueCategoryId: "3.01",
+          monthlyValue: parseMoney("3.000,00"),
+          startDate: "2026-06-01",
+        }),
+      ],
+    });
+
+    // Repare que R$ 8.000 não bate com nenhuma mensalidade — só a vigência resolve.
+    expect(resolveRevenueCategory(cso, parseMoney("8.000,00"), "2026-02-06")).toEqual({
+      categoryId: "3.02",
+      basis: "unico-contrato-vigente",
+    });
+  });
+
+  it("contrato sem data de início não é descartado — não declarar não é não valer", () => {
+    const alvo = client({
+      contracts: [
+        contract({ id: "a", revenueCategoryId: "3.01", startDate: null }),
+        contract({ id: "b", revenueCategoryId: "3.02", startDate: "2026-07-01" }),
+      ],
+    });
+
+    expect(resolveRevenueCategory(alvo, parseMoney("1,00"), "2026-02-01")).toEqual({
+      categoryId: "3.01",
+      basis: "unico-contrato-vigente",
+    });
+  });
+
+  it("recebimento anterior a todos os contratos não elimina nada", () => {
+    // Zero vigentes: descartar tudo devolveria uma resposta inventada.
+    const alvo = client({
+      contracts: [
+        contract({ id: "a", revenueCategoryId: "3.01", startDate: "2026-06-01" }),
+        contract({ id: "b", revenueCategoryId: "3.02", startDate: "2026-07-01" }),
+      ],
+    });
+
+    expect(resolveRevenueCategory(alvo, parseMoney("1,00"), "2026-01-01").basis).toBe("ambiguo");
+  });
+
+  it("a vigência vem antes do valor, porque é impossibilidade e não probabilidade", () => {
+    // O valor bateria com a mensalidade do retainer, mas o retainer nem tinha começado.
+    const alvo = client({
+      contracts: [
+        contract({
+          id: "proj",
+          type: "project",
+          revenueCategoryId: "3.02",
+          monthlyValue: parseMoney("10.000,00"),
+          startDate: "2026-01-01",
+        }),
+        contract({
+          id: "ret",
+          type: "retainer",
+          revenueCategoryId: "3.01",
+          monthlyValue: parseMoney("4.000,00"),
+          startDate: "2026-09-01",
+        }),
+      ],
+    });
+
+    expect(resolveRevenueCategory(alvo, parseMoney("4.000,00"), "2026-03-01")).toEqual({
+      categoryId: "3.02",
+      basis: "unico-contrato-vigente",
     });
   });
 });

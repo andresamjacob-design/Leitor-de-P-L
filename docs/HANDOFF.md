@@ -4,7 +4,7 @@ Onde tudo está, o que foi feito, e o que falta. Escrito para quem chega sem con
 nenhum, inclusive eu mesmo numa conversa nova.
 
 Leia junto quando precisar do detalhe: `docs/PLAN.md` (o roteiro original),
-`docs/DECISIONS.md` (decisões numeradas D1–D88 e pendências Q2–Q18) e `README.md`.
+`docs/DECISIONS.md` (decisões numeradas D1–D89 e pendências Q2–Q18) e `README.md`.
 
 ---
 
@@ -66,7 +66,7 @@ Todos os scripts que gravam têm dry run por padrão e pedem `--aplicar`. Vário
 
 ```
 npm run dev
-npm run check               # typecheck + lint + 364 testes
+npm run check               # typecheck + lint + 370 testes
 npm run test:e2e            # Playwright, 25 testes
 npm run db:migrate          # aplica migrations
 npm run db:seed             # 62 categorias × 2 entidades
@@ -81,6 +81,7 @@ npm run preview:categorize  # o que o "Categorizar" decidiria agora (--aplicar g
 
 npm run fix:credits         # entrada parada em conta de custo (--ensaio / --aplicar)
 npm run propose:receipts    # de quem é o dinheiro que entrou (--ensaio / --aplicar)
+npm run decisoes            # ← o que falta decidir, com a evidência de cada caso
 
 npm run propose:rules       # regras de texto vindas da planilha
 npm run propose:parties     # casa nome da planilha ↔ contraparte do extrato
@@ -96,7 +97,7 @@ npm run import:invoices     # faturas de cartão em massa
 | | |
 |---|---|
 | Razão de caixa | **982 lançamentos**, 06/08/2025 a 31/07/2026 |
-| Categorizados | **734 (74,7%)** — 248 sem conta |
+| Categorizados | **741 (75,5%)** — 241 sem conta |
 | Competência | 284 linhas de receita + 577 de custo |
 | Receita reconhecida | **R$ 3.556.736,91** (jan–ago/2026) |
 | Contratos | 80 (65 ativos, 15 concluídos), 95 parcelas mensais |
@@ -267,8 +268,8 @@ aparecer como surpresa no fechamento.
 
 ### Depende de você
 
-Rode **`npm run pendencias`** para o quadro por dinheiro, e **`npm run propose:receipts`**
-para o lado das entradas. Uma resposta sua costuma resolver várias linhas, porque a regra
+Rode **`npm run decisoes`** — ele lista cada pergunta em aberto com a evidência do lado,
+e é feito para você responder de uma sentada. `npm run pendencias` dá o quadro por dinheiro. Uma resposta sua costuma resolver várias linhas, porque a regra
 por documento pega todo o histórico daquela contraparte de uma vez.
 
 > ⚠️ **O motor não alcança o que já está no razão** (D88). Ele só roda sobre

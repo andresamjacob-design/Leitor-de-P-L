@@ -17,10 +17,10 @@
  *     `MS Tecnologia` × `FULANO MARKETING E TECNOLOGIA` casa sendo coisas diferentes.
  *     Duplicar cliente estraga a margem por cliente em silêncio, então os CNPJs sem dono
  *     saem como lista de decisão, não como escrita.
- *   - **Só propõe conta de receita quando ela é inequívoca** — todos os contratos do
- *     cliente na mesma conta, ou o valor batendo com a mensalidade de um contrato só.
- *     Cliente com projeto *e* retainer fica sem conta de propósito, e aparece na lista de
- *     decisões no fim.
+ *   - **Só propõe conta de receita quando ela é inequívoca.** O desempate mais forte é a
+ *     **vigência** — dinheiro não paga contrato que ainda não existia —, seguido do valor
+ *     batendo com a mensalidade de um contrato só. O que sobra ambíguo fica sem conta de
+ *     propósito e aparece na lista de decisões no fim.
  *   - **Nunca trata CPF como cliente.** Pessoa física que manda dinheiro é devolução ou
  *     reembolso, não receita — são as duas devoluções do Ricardo e um Roberto, R$ 170 mil
  *     que virariam receita fantasma.
@@ -93,6 +93,7 @@ try {
       contract_type: "retainer" | "project" | null;
       revenue_category_id: string | null;
       monthly_value: string | null;
+      start_date: string | null;
     }[]
   >`
     select cl.id as client_id, cl.name as client_name,
@@ -105,7 +106,7 @@ try {
                  and c.code = case ct.type when 'retainer' then '3.01' else '3.02' end
                limit 1)
            ) as revenue_category_id,
-           ct.monthly_value
+           ct.monthly_value, ct.start_date
     from clients cl
     left join contracts ct on ct.client_id = cl.id
     where cl.tax_id is not null and cl.tax_id <> ''`;
@@ -124,6 +125,7 @@ try {
         type: row.contract_type ?? "project",
         revenueCategoryId: row.revenue_category_id,
         monthlyValue: row.monthly_value === null ? null : fromNumeric(row.monthly_value),
+        startDate: row.start_date === null ? null : iso(row.start_date),
       });
     }
     clientsByDocument.set(row.doc, existing);
@@ -149,6 +151,7 @@ try {
         document: row.doc,
         counterpartyName: row.counterparty_name,
         amount: fromNumeric(row.amount),
+        occurredOn: iso(row.occurred_on),
       },
       clientsByDocument,
     ),

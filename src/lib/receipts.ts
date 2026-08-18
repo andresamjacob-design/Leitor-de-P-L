@@ -24,9 +24,11 @@
  * Sobre a conta de receita, o critério é o do `propose-parties`: **ambiguidade é motivo
  * para não propor.** Um cliente com um contrato de projeto *e* um de retainer alcança duas
  * contas diferentes, e adivinhar qual delas trocaria um "não sei" honesto por um número
- * errado que ninguém mais confere. Só se propõe quando os contratos do cliente apontam
- * todos para a mesma conta, ou quando o valor recebido bate exatamente com a mensalidade
- * de um único contrato.
+ * errado que ninguém mais confere.
+ *
+ * O que desempata sem chutar está em `resolveRevenueCategory`, e o mais forte é a
+ * **vigência**: *dinheiro não paga contrato que ainda não existia*. É impossibilidade, não
+ * probabilidade, e sozinha resolve mais casos reais do que o casamento por valor.
  *
  * Vale lembrar por que isso é seguro: categorizar uma **entrada** não cria competência.
  * `planCashMirror` só espelha custo, e receita nasce de contrato e NF (SPEC §5). Ligar
@@ -46,6 +48,8 @@ export type ClientContract = {
   /** `contracts.category_id`, ou o padrão do tipo quando ele é nulo. */
   revenueCategoryId: string;
   monthlyValue: Cents | null;
+  /** `YYYY-MM-DD`, ou null quando o contrato não declara início. */
+  startDate: string | null;
 };
 
 export type KnownClient = {
@@ -59,6 +63,8 @@ export type Receipt = {
   document: string;
   counterpartyName: string | null;
   amount: Cents;
+  /** `YYYY-MM-DD`. Serve para descartar contrato que ainda não existia. */
+  occurredOn: string;
 };
 
 export type ReceiptVerdict =
@@ -73,7 +79,7 @@ export type ReceiptVerdict =
       clientName: string;
       categoryId: string | null;
       /** Por que a conta foi (ou não foi) escolhida. */
-      basis: "conta-unica" | "valor-bate-com-mensalidade" | "ambiguo" | "sem-contrato";
+      basis: Basis;
     }
   /** CNPJ novo: o extrato traz o nome legal, e cadastrar não inventa nada. */
   | { kind: "cliente-novo"; name: string; document: string };
@@ -88,14 +94,36 @@ export function documentKind(document: string): "cnpj" | "cpf" | "vazio" | "inva
   return "invalido";
 }
 
+export type Basis =
+  | "conta-unica"
+  | "unico-contrato-vigente"
+  | "valor-bate-com-mensalidade"
+  | "ambiguo"
+  | "sem-contrato";
+
 /**
  * Qual conta de receita a entrada alcança, ou `null` quando o cliente tem contratos que
  * apontam para contas diferentes e nada desempata.
+ *
+ * Os desempates, do mais duro para o mais frouxo:
+ *
+ *   1. **Todos os contratos na mesma conta.** Não há o que desempatar.
+ *   2. **Vigência.** *Dinheiro não paga contrato que ainda não existia.* Um recebimento
+ *      anterior ao início de um contrato não pode ser dele — é o único critério aqui que
+ *      é impossibilidade, não probabilidade. Resolve os R$ 10.000 da Hogrefe em 16/06,
+ *      quando o retainer dela só começa em 01/07, e os R$ 8.000 da CSO em 06/02, com o
+ *      retainer começando em 01/06.
+ *   3. **Valor igual à mensalidade de um contrato só.**
+ *
+ * O que deliberadamente *não* é critério: "parece um retainer porque repete todo mês".
+ * Repetição é evidência para um humano olhar, não para o código decidir — o relatório
+ * `decisoes` a imprime, e para por aí.
  */
 export function resolveRevenueCategory(
   client: KnownClient,
   amount: Cents,
-): { categoryId: string | null; basis: "conta-unica" | "valor-bate-com-mensalidade" | "ambiguo" | "sem-contrato" } {
+  occurredOn: string,
+): { categoryId: string | null; basis: Basis } {
   if (client.contracts.length === 0) return { categoryId: null, basis: "sem-contrato" };
 
   const accounts = new Set(client.contracts.map((contract) => contract.revenueCategoryId));
@@ -103,9 +131,20 @@ export function resolveRevenueCategory(
     return { categoryId: client.contracts[0]!.revenueCategoryId, basis: "conta-unica" };
   }
 
+  // Um contrato sem data de início não pode ser descartado: não declarar vigência não é
+  // o mesmo que não estar vigente.
+  const vigentes = client.contracts.filter(
+    (contract) => contract.startDate === null || contract.startDate <= occurredOn,
+  );
+  const contasVigentes = new Set(vigentes.map((contract) => contract.revenueCategoryId));
+  if (vigentes.length > 0 && contasVigentes.size === 1) {
+    return { categoryId: vigentes[0]!.revenueCategoryId, basis: "unico-contrato-vigente" };
+  }
+
   // O valor desempata quando bate com a mensalidade de um contrato só. Dois contratos com
   // a mesma mensalidade não desempatam nada, e aí continua ambíguo.
-  const exact = client.contracts.filter(
+  const candidatos = vigentes.length > 0 ? vigentes : client.contracts;
+  const exact = candidatos.filter(
     (contract) => contract.monthlyValue !== null && contract.monthlyValue === amount,
   );
   if (exact.length === 1) {
@@ -127,7 +166,11 @@ export function judgeReceipt(
 
   const client = clientsByDocument.get(receipt.document);
   if (client) {
-    const { categoryId, basis } = resolveRevenueCategory(client, receipt.amount);
+    const { categoryId, basis } = resolveRevenueCategory(
+      client,
+      receipt.amount,
+      receipt.occurredOn,
+    );
     return {
       kind: "cliente-conhecido",
       clientId: client.id,
@@ -147,6 +190,8 @@ export const VERDICT_LABEL: Record<string, string> = {
   "documento-invalido": "documento com tamanho que não é CPF nem CNPJ",
   "pessoa-fisica": "CPF — é pessoa, não cliente; a entrada não é receita",
   "conta-unica": "todos os contratos do cliente apontam para a mesma conta",
+  "unico-contrato-vigente":
+    "só um contrato já tinha começado nessa data — dinheiro não paga contrato que não existia",
   "valor-bate-com-mensalidade": "o valor bate exatamente com a mensalidade de um contrato",
   ambiguo: "o cliente tem contratos em contas diferentes e nada desempata",
   "sem-contrato": "cliente sem contrato cadastrado — a conta é decisão sua",
