@@ -293,3 +293,117 @@ describe("proposeRuleFrom", () => {
     expect(proposeRuleFrom(subject({ description: "12345678" })).pattern).toBe("12345678");
   });
 });
+
+describe("o histórico não põe entrada em conta de custo (D83)", () => {
+  const CUSTO = new Set(["freelancers", "agencia"]);
+
+  const historico = [
+    {
+      description: "PIX ENVIADO",
+      counterpartyTaxId: "12345678901",
+      categoryId: "freelancers",
+      clientId: null,
+      personId: "ricardo",
+      occurredOn: "2026-07-02",
+    },
+  ];
+
+  it("a devolução do Ricardo não volta para 6.10 pela camada de histórico", () => {
+    // Sem a trava, `history_tax_id` devolvia R$ 115.000 de custo negativo para a folha —
+    // medido rodando o motor sobre as 250 linhas sem conta do razão.
+    const devolucao = subject({
+      description: "PIX DEVOLVIDO RICARDO DE 09/01",
+      direction: "in",
+      amount: parseMoney("115.000,00"),
+      counterpartyTaxId: "12345678901",
+    });
+
+    expect(
+      suggestCategory(devolucao, { ...EMPTY, history: historico, costCategoryIds: CUSTO }),
+    ).toBeNull();
+  });
+
+  it("sem o conjunto de contas de custo, nada é bloqueado — a trava é opt-in", () => {
+    const devolucao = subject({
+      description: "PIX DEVOLVIDO RICARDO DE 09/01",
+      direction: "in",
+      counterpartyTaxId: "12345678901",
+    });
+
+    expect(suggestCategory(devolucao, { ...EMPTY, history: historico })?.categoryId).toBe(
+      "freelancers",
+    );
+  });
+
+  it("a saída do mesmo CNPJ continua indo para 6.10", () => {
+    const pagamento = subject({
+      description: "PIX ENVIADO",
+      direction: "out",
+      counterpartyTaxId: "12345678901",
+    });
+
+    expect(
+      suggestCategory(pagamento, { ...EMPTY, history: historico, costCategoryIds: CUSTO })
+        ?.categoryId,
+    ).toBe("freelancers");
+  });
+
+  it("uma regra explícita continua podendo — ela tem `direction` para dizer que quis", () => {
+    // O estorno de cartão em 7.02 é exatamente esse caso legítimo.
+    const estorno = subject({
+      description: "SALESFORCE TECNOLOGIA",
+      direction: "in",
+      accountId: "cartao",
+    });
+    const regra = rule({ pattern: "SALESFORCE", categoryId: "agencia" });
+
+    expect(
+      suggestCategory(estorno, { ...EMPTY, rules: [regra], costCategoryIds: CUSTO })?.categoryId,
+    ).toBe("agencia");
+  });
+
+  it("o histórico por descrição também é travado", () => {
+    const porDescricao = [
+      {
+        description: "PIX RECEBIDO CICLO",
+        counterpartyTaxId: null,
+        categoryId: "agencia",
+        clientId: "ciclo",
+        personId: null,
+        occurredOn: "2026-05-12",
+      },
+    ];
+
+    expect(
+      suggestCategory(subject({ description: "PIX RECEBIDO CICLO", direction: "in" }), {
+        ...EMPTY,
+        history: porDescricao,
+        costCategoryIds: CUSTO,
+      }),
+    ).toBeNull();
+  });
+
+  it("entrada numa conta que não é de custo passa normalmente", () => {
+    const receita = [
+      {
+        description: "RECEBIMENTOS MARY KAY",
+        counterpartyTaxId: "50050390000182",
+        categoryId: "receita-projeto",
+        clientId: "marykay",
+        personId: null,
+        occurredOn: "2026-06-05",
+      },
+    ];
+
+    expect(
+      suggestCategory(
+        subject({
+          description: "RECEBIMENTOS MARY KAY",
+          direction: "in",
+          counterpartyTaxId: "50050390000182",
+        }),
+        { ...EMPTY, history: receita, costCategoryIds: CUSTO },
+      )?.categoryId,
+    ).toBe("receita-projeto");
+  });
+});

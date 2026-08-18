@@ -31,7 +31,8 @@
     "pendencias": "vite-node --config vitest.config.ts scripts/pendencias.ts",
     "fix:credits": "vite-node --config vitest.config.ts scripts/fix-cost-credits.ts",
     "propose:cdb": "vite-node --config vitest.config.ts scripts/propose-cdb-legs.ts",
-    "verify:reconcile": "vite-node --config vitest.config.ts scripts/verify-reconcile.ts"
+    "verify:reconcile": "vite-node --config vitest.config.ts scripts/verify-reconcile.ts",
+    "propose:receipts": "vite-node --config vitest.config.ts scripts/propose-receipts.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.4",

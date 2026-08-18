@@ -43,9 +43,17 @@ export type Preview = {
 };
 
 export async function runPreview(sql: Sql, entityId: string): Promise<Preview> {
-  const categories = await sql<{ id: string; code: string }[]>`
-    select id, code from categories where entity_id = ${entityId}`;
+  const categories = await sql<{ id: string; code: string; kind: string }[]>`
+    select id, code, kind from categories where entity_id = ${entityId}`;
   const payrollCategoryId = categories.find((category) => category.code === PAYROLL_CODE)?.id ?? null;
+
+  // D83: o histórico não pode pôr uma entrada numa conta de custo. As mesmas espécies que
+  // `planCashMirror` espelha.
+  const costCategoryIds = new Set(
+    categories
+      .filter((category) => ["cost", "expense", "tax"].includes(category.kind))
+      .map((category) => category.id),
+  );
 
   const ruleRows = await sql<Record<string, string | number | boolean | null>[]>`
     select id, priority, match_type, pattern, counterparty_tax_id, direction,
@@ -84,7 +92,7 @@ export async function runPreview(sql: Sql, entityId: string): Promise<Preview> {
     where entity_id = ${entityId} and category_id is not null
     order by occurred_on desc limit 5000`;
 
-  const input: EngineInput = { rules, history, people, payrollCategoryId };
+  const input: EngineInput = { rules, history, people, payrollCategoryId, costCategoryIds };
 
   // Only what is still pending: a line already approved or rejected is a decision someone
   // made, and re-deciding it is the behaviour that makes an automatic system untrustworthy.

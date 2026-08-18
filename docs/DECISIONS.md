@@ -546,6 +546,73 @@ competência** — dinheiro que saiu e ainda não pesa na DRE porque a linha nã
 em maioria os lotes SISPAG. Conforme forem categorizadas, o custo cresce e o resultado cai,
 sem o caixa mudar. Fica previsto em vez de virar surpresa no fechamento.
 
+### D86 — O histórico não pode pôr uma entrada em conta de custo
+Medindo o que o motor decidiria para as 250 linhas sem conta **já aprovadas no razão**,
+apareceu o pior tipo de resultado: ele decidiria **5 linhas (2%) — e as 5 eram exatamente
+as que a D83 tinha acabado de corrigir**. As duas devoluções do Ricardo voltariam para 6.10
+e três Ciclo para 8.03, todas pela camada `history_tax_id`.
+
+O histórico aprende com o que já foi categorizado e **não sabe nada sobre sentido**. Ele
+não tem como declarar intenção; uma regra explícita tem, desde a migration `0004`.
+
+→ `EngineInput` ganhou `costCategoryIds`, e as duas camadas de histórico (`history_tax_id`
+e `history_description`) passam a recusar uma sugestão que ponha uma **entrada** numa conta
+de custo, despesa ou imposto — as mesmas espécies que o `planCashMirror` espelha. Regra
+explícita continua podendo, e deve: o estorno de cartão em 7.02 é esse caso legítimo.
+
+Opt-in de propósito: sem o conjunto, nada é bloqueado. Ligado em `loadEngineInput` (app) e
+em `engine-preview` (scripts), que são todos os caminhos.
+
+Medido de novo contra o banco depois da trava: **de 5 sugestões erradas para 0.**
+
+> Sem isso, qualquer recategorização em massa — a tentação óbvia diante de 250 linhas
+> paradas — desfaria a D83 em silêncio.
+
+### D87 — Casar nome de empresa não se automatiza; CPF nunca é cliente
+Sobravam 67 entradas sem conta, R$ 1,3 milhão. `propose:receipts` decide de quem é o
+dinheiro por identidade, e a regra vive em `src/lib/receipts.ts` (12 testes).
+
+Duas coisas que o dado ensinou, ambas caras se descobertas depois:
+
+- **CPF nunca é cliente.** Três linhas, R$ 170 mil, são pessoa física: as duas devoluções
+  do Ricardo e um Roberto. Tratá-las como recebimento inventaria R$ 170 mil de receita que
+  não existe. O tipo do documento resolve por construção — 11 dígitos é pessoa, 14 é
+  empresa — em vez de por lista de exceção.
+- **Cadastrar cliente pelo nome legal do extrato parecia seguro, e não é.** O dry run
+  mostrou `CICLO - A. M. I. D. P. E-COMMERCE` a caminho de virar um segundo "Ciclo", que
+  já existe **com contrato**; e `UMI SAN SERVICOS…` um segundo "UMI SAN". **41 dos 72
+  clientes estão sem documento**, e é a eles que esses CNPJs pertencem. Nenhum casador
+  resolve: `Windlog` × `BRAZIL WIND LOGISTICS` escapa de qualquer um, e
+  `MS Tecnologia` × `FULANO MARKETING E TECNOLOGIA` casa sendo coisas diferentes.
+
+→ O script **não cria cliente**. Liga o CNPJ ao cliente que já existe, propõe conta de
+receita só quando ela é inequívoca, e devolve os CNPJs sem dono como lista de decisão.
+Duplicar cliente estragaria a margem por cliente em silêncio, que é o tipo de erro que
+ninguém encontra depois.
+
+Aplicado em 18/08/2026: 15 entradas ligadas ao cliente pelo CNPJ, 2 com conta de receita
+(PDG IT e CSO, onde o valor bate exatamente com a mensalidade de um contrato). A ponte
+continuou em zero, como tem de ser — categorizar entrada não cria competência.
+
+**Fica em aberto, e é decisão sua:** a conta de receita de 47 entradas, R$ 670.713,49. Os
+quatro clientes com projeto *e* retainer (Hold Beauty, PDG IT, Hogrefe, CSO) e os 14 CNPJs
+sem dono.
+
+### D88 — O motor não alcança o que já está no razão
+Achado estrutural, encontrado ao investigar por que a cobertura não sobe: **o motor de
+categorização só roda sobre `staged_transactions`**, e o staging está vazio porque tudo já
+foi aprovado. `preview:categorize` escreve `suggested_*` em linhas paradas que não existem
+mais, e `propose:parties` mede cobertura contra o mesmo lugar — por isso o ensaio dele
+imprime `0 de 0 linhas`.
+
+Consequência: **toda regra criada depois da aprovação é peso morto** para as linhas que já
+estão no razão. As 110 regras e 33 pessoas não alcançam as 248 linhas sem conta.
+
+Não foi construído um caminho de recategorização, e de propósito: medido, ele recuperaria
+2% — e, antes da D86, os 2% eram justamente as sugestões erradas. O caminho certo continua
+sendo resolver a identidade (D87) e conseguir o retorno do SISPAG, que sozinho é 95% do que
+falta.
+
 ---
 
 ## Parte 13 — Decisões da Fase 8

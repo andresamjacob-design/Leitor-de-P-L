@@ -17,6 +17,13 @@ import { listStaged, type StagedTransaction } from "@/lib/data/imports";
 /** Where a recognised person's salary lands, by chart-of-accounts code. */
 const PAYROLL_CODE = "6.02";
 
+/**
+ * As contas que o espelho de competência assina pelo sentido — as mesmas de
+ * `planCashMirror`. O motor usa isso para não deixar o histórico pôr uma entrada em conta
+ * de custo (D83).
+ */
+const COST_KINDS = ["cost", "expense", "tax"];
+
 export async function loadEngineInput(entityIds: string[]): Promise<EngineInput> {
   const [rules, history, people, categories] = await Promise.all([
     listRules(entityIds),
@@ -26,7 +33,19 @@ export async function loadEngineInput(entityIds: string[]): Promise<EngineInput>
   ]);
 
   const payroll = categories.find((category) => category.code === PAYROLL_CODE);
-  return { rules, history, people, payrollCategoryId: payroll?.id ?? null };
+  const costCategoryIds = new Set(
+    categories
+      .filter((category) => COST_KINDS.includes(category.kind))
+      .map((category) => category.id),
+  );
+
+  return {
+    rules,
+    history,
+    people,
+    payrollCategoryId: payroll?.id ?? null,
+    costCategoryIds,
+  };
 }
 
 export type SuggestionResult = {

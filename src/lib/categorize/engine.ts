@@ -45,6 +45,23 @@ export type EngineInput = {
   people: readonly Person[];
   /** Where a salary lands when a person's name is recognised but nothing else is known. */
   payrollCategoryId?: string | null;
+  /**
+   * As contas de custo, despesa e imposto — as que o espelho de competência assina pelo
+   * sentido (`planCashMirror`).
+   *
+   * Serve a uma única regra, a D83: **o histórico não pode pôr uma entrada numa conta de
+   * custo.** O histórico aprende com o que já aconteceu e não sabe nada sobre sentido; foi
+   * ele que arquivou os recebimentos de Hold Beauty e Ciclo na 8.03 Agência — a despesa que
+   * a empresa paga *a eles* — e as devoluções do Ricardo na 6.10, criando R$ 218.800 de
+   * custo negativo fantasma.
+   *
+   * Uma regra explícita continua podendo fazer isso, e deve: ela tem `direction` para dizer
+   * que quis (migration `0004`), e um estorno de cartão em 7.02 é exatamente esse caso. O
+   * histórico não tem como declarar intenção, então não recebe o benefício da dúvida.
+   *
+   * Opcional para não quebrar quem chama sem ela; sem o conjunto, nada é bloqueado.
+   */
+  costCategoryIds?: ReadonlySet<string>;
 };
 
 // ---------------------------------------------------------------------------
@@ -179,9 +196,24 @@ export function indexHistory(history: readonly HistoryEntry[]): HistoryIndex {
 // The engine
 // ---------------------------------------------------------------------------
 
+/**
+ * O histórico pode mandar esta entrada para esta conta?
+ *
+ * Não, quando a entrada cairia numa conta de custo (D83). Ver `costCategoryIds`.
+ */
+function learnedSuggestionIsAllowed(
+  subject: Subject,
+  categoryId: string,
+  costCategoryIds: ReadonlySet<string> | undefined,
+): boolean {
+  if (!costCategoryIds) return true;
+  if (subject.direction !== "in") return true;
+  return !costCategoryIds.has(categoryId);
+}
+
 export function suggestCategory(
   subject: Subject,
-  { rules, history, people, payrollCategoryId = null }: EngineInput,
+  { rules, history, people, payrollCategoryId = null, costCategoryIds }: EngineInput,
 ): Suggestion | null {
   const matches = matchRules(rules, subject);
 
@@ -221,7 +253,7 @@ export function suggestCategory(
   // 3. The same counterparty, categorised before.
   if (subject.counterpartyTaxId) {
     const previous = index.byTaxId.get(normalizeTaxId(subject.counterpartyTaxId));
-    if (previous) {
+    if (previous && learnedSuggestionIsAllowed(subject, previous.categoryId, costCategoryIds)) {
       return {
         categoryId: previous.categoryId,
         clientId: previous.clientId,
@@ -236,7 +268,7 @@ export function suggestCategory(
 
   // 4. The same description, categorised before.
   const seen = index.byDescription.get(normalizeDescription(subject.description));
-  if (seen) {
+  if (seen && learnedSuggestionIsAllowed(subject, seen.categoryId, costCategoryIds)) {
     return {
       categoryId: seen.categoryId,
       clientId: seen.clientId,

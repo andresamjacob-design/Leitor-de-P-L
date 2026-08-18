@@ -4,7 +4,7 @@ Onde tudo está, o que foi feito, e o que falta. Escrito para quem chega sem con
 nenhum, inclusive eu mesmo numa conversa nova.
 
 Leia junto quando precisar do detalhe: `docs/PLAN.md` (o roteiro original),
-`docs/DECISIONS.md` (decisões numeradas D1–D85 e pendências Q2–Q18) e `README.md`.
+`docs/DECISIONS.md` (decisões numeradas D1–D88 e pendências Q2–Q18) e `README.md`.
 
 ---
 
@@ -66,7 +66,7 @@ Todos os scripts que gravam têm dry run por padrão e pedem `--aplicar`. Vário
 
 ```
 npm run dev
-npm run check               # typecheck + lint + 346 testes
+npm run check               # typecheck + lint + 364 testes
 npm run test:e2e            # Playwright, 25 testes
 npm run db:migrate          # aplica migrations
 npm run db:seed             # 62 categorias × 2 entidades
@@ -80,6 +80,7 @@ npm run inspect:staged      # composição do que está parado
 npm run preview:categorize  # o que o "Categorizar" decidiria agora (--aplicar grava)
 
 npm run fix:credits         # entrada parada em conta de custo (--ensaio / --aplicar)
+npm run propose:receipts    # de quem é o dinheiro que entrou (--ensaio / --aplicar)
 
 npm run propose:rules       # regras de texto vindas da planilha
 npm run propose:parties     # casa nome da planilha ↔ contraparte do extrato
@@ -95,7 +96,7 @@ npm run import:invoices     # faturas de cartão em massa
 | | |
 |---|---|
 | Razão de caixa | **982 lançamentos**, 06/08/2025 a 31/07/2026 |
-| Categorizados | **732 (74,5%)** — 250 sem conta |
+| Categorizados | **734 (74,7%)** — 248 sem conta |
 | Competência | 284 linhas de receita + 577 de custo |
 | Receita reconhecida | **R$ 3.556.736,91** (jan–ago/2026) |
 | Contratos | 80 (65 ativos, 15 concluídos), 95 parcelas mensais |
@@ -148,6 +149,16 @@ npm run import:invoices     # faturas de cartão em massa
   crédito na fatura só pode ser estorno de compra. No banco, é devolução só se o pagamento
   que ela reverte estiver na mesma categoria. Tirou R$ 218.800 de custo fantasma da DRE
   sem mover o saldo.
+- **Trava no motor para o defeito não voltar** (D86). Medindo o que o motor decidiria para
+  as linhas sem conta, ele decidiria 5 — e as 5 eram exatamente as que a D83 corrigira,
+  pela camada de histórico. O histórico aprende com o passado e não sabe nada sobre
+  sentido, então perdeu o direito de pôr uma **entrada** numa conta de custo. Regra
+  explícita continua podendo, porque tem `direction` para dizer que quis. De 5 sugestões
+  erradas para 0.
+- **De quem é o dinheiro que entrou** (`propose:receipts`, D87). Identidade por documento,
+  com duas recusas deliberadas: **CPF nunca é cliente** (são as devoluções do Ricardo, e
+  tratá-las como recebimento inventaria R$ 170 mil de receita), e **o script não cadastra
+  cliente** — o dry run mostrou a Ciclo a caminho de ser duplicada.
 
 ### Importação
 
@@ -256,17 +267,25 @@ aparecer como surpresa no fechamento.
 
 ### Depende de você
 
-Rode **`npm run pendencias`** — lista as 250 linhas sem conta agrupadas por contraparte,
-ordenadas por dinheiro. Uma resposta sua costuma resolver várias linhas, porque a regra por
-documento pega todo o histórico daquela contraparte de uma vez.
+Rode **`npm run pendencias`** para o quadro por dinheiro, e **`npm run propose:receipts`**
+para o lado das entradas. Uma resposta sua costuma resolver várias linhas, porque a regra
+por documento pega todo o histórico daquela contraparte de uma vez.
+
+> ⚠️ **O motor não alcança o que já está no razão** (D88). Ele só roda sobre
+> `staged_transactions`, e o staging está vazio porque tudo foi aprovado. Toda regra criada
+> depois da aprovação é peso morto para essas 248 linhas — não adianta criar regra
+> esperando que elas sejam pegas sozinhas. Recategorizar em massa foi medido e recuperaria
+> 2%; antes da D86, os 2% eram justamente as sugestões erradas.
+
+**Na ordem do dinheiro:**
 
 | | O que é | Como destrava |
 |---|---|---|
-| **SISPAG** | ~101 linhas, **R$ 2,9 mi**, sem contraparte nenhuma — cada uma é um lote pagando vários fornecedores | O **arquivo de retorno do SISPAG** (CNAB) ou o detalhe do lote no internet banking. Maior bloco isolado. **Também é onde estão as duas pernas de saída do Ricardo** (D82). |
-| **`OP REC EXT`** | 5 entradas, ~R$ 470 mil | Parecem câmbio. Em qual receita caem é decisão. |
-| **Clientes fora da planilha** | A. F. Comércio, CN INC, Cidade Center Norte, Maruri, DB Genética, Brazil Wind, Ligavit, AIDC | Dizer quem é cada um. Vira uma regra por documento. |
-| **PDG IT, Hold Beauty, CSO, Hogrefe** | Têm contrato de projeto *e* de retainer, e o recebimento não sabe onde cair | `contracts.category_id` já existe — basta dizer qual contrato é qual. |
-| **Hold Beauty, Ciclo, Conexão** | 8 recebimentos, **R$ 53.800**, que estavam em 8.03 Agência e agora estão sem conta (D83) | Em qual receita caem. Hold Beauty e Ciclo já são clientes com contrato; Conexão Marketing não está cadastrada. |
+| **SISPAG** ← *o próximo passo* | 34 linhas, **R$ 1.221.679,97** — **95% de todo o custo que ainda falta na DRE**. Cada uma é um lote pagando vários fornecedores, e o extrato não nomeia nenhum | O **arquivo de retorno do SISPAG** (CNAB) ou o detalhe do lote no internet banking. Nenhuma regra, camada de identidade ou IA resolve: **a informação não está no arquivo que temos**. **Também é onde estão as duas pernas de saída do Ricardo** (D82). |
+| **14 CNPJs sem dono** | 34 entradas, R$ 519.913,49 — A. F. Comércio (R$ 213 mil), DB Genética, CN INC, Brazil Wind, Ligavit, Fulano, Brain, SW, ISM, UMI SAN, Ciclo, Conexão, Mara Thaysa, Keepclear | Dizer se cada um é cliente novo ou um dos **41 clientes que já existem sem documento**. O script não decide isso sozinho de propósito (D87): casar nome de empresa duplica cliente. |
+| **`OP REC EXT`** | 4 entradas, ~R$ 408 mil, sem documento | Parecem câmbio. Em qual receita caem é decisão. |
+| **PDG IT, Hold Beauty, CSO, Hogrefe** | 13 entradas, R$ 150.400 — têm contrato de projeto *e* de retainer, e o recebimento não sabe onde cair | `contracts.category_id` já existe — basta dizer qual contrato é qual. As duas em que o valor bate com a mensalidade já foram resolvidas sozinhas. |
+| **`BOLETOS RECEBIDOS`** | 8 entradas, R$ 43.100, sem documento | O extrato não nomeia o sacado. |
 
 ### Depende de arquivo ou chave que não chegou
 
