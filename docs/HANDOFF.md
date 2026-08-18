@@ -4,7 +4,7 @@ Onde tudo está, o que foi feito, e o que falta. Escrito para quem chega sem con
 nenhum, inclusive eu mesmo numa conversa nova.
 
 Leia junto quando precisar do detalhe: `docs/PLAN.md` (o roteiro original),
-`docs/DECISIONS.md` (decisões numeradas D1–D89 e pendências Q2–Q18) e `README.md`.
+`docs/DECISIONS.md` (decisões numeradas D1–D91 e pendências Q2–Q18) e `README.md`.
 
 ---
 
@@ -82,6 +82,7 @@ npm run preview:categorize  # o que o "Categorizar" decidiria agora (--aplicar g
 npm run fix:credits         # entrada parada em conta de custo (--ensaio / --aplicar)
 npm run propose:receipts    # de quem é o dinheiro que entrou (--ensaio / --aplicar)
 npm run decisoes            # ← o que falta decidir, com a evidência de cada caso
+npm run vincular            # põe o CNPJ do extrato no cliente que já existe (--aplicar)
 
 npm run propose:rules       # regras de texto vindas da planilha
 npm run propose:parties     # casa nome da planilha ↔ contraparte do extrato
@@ -97,7 +98,7 @@ npm run import:invoices     # faturas de cartão em massa
 | | |
 |---|---|
 | Razão de caixa | **982 lançamentos**, 06/08/2025 a 31/07/2026 |
-| Categorizados | **741 (75,5%)** — 241 sem conta |
+| Categorizados | **749 (76,3%)** — 233 sem conta |
 | Competência | 284 linhas de receita + 577 de custo |
 | Receita reconhecida | **R$ 3.556.736,91** (jan–ago/2026) |
 | Contratos | 80 (65 ativos, 15 concluídos), 95 parcelas mensais |
@@ -283,7 +284,7 @@ por documento pega todo o histórico daquela contraparte de uma vez.
 | | O que é | Como destrava |
 |---|---|---|
 | **SISPAG** ← *o próximo passo* | 34 linhas, **R$ 1.221.679,97** — **95% de todo o custo que ainda falta na DRE**. Cada uma é um lote pagando vários fornecedores, e o extrato não nomeia nenhum | O **arquivo de retorno do SISPAG** (CNAB) ou o detalhe do lote no internet banking. Nenhuma regra, camada de identidade ou IA resolve: **a informação não está no arquivo que temos**. **Também é onde estão as duas pernas de saída do Ricardo** (D82). |
-| **14 CNPJs sem dono** | 34 entradas, R$ 519.913,49 — A. F. Comércio (R$ 213 mil), DB Genética, CN INC, Brazil Wind, Ligavit, Fulano, Brain, SW, ISM, UMI SAN, Ciclo, Conexão, Mara Thaysa, Keepclear | Dizer se cada um é cliente novo ou um dos **41 clientes que já existem sem documento**. O script não decide isso sozinho de propósito (D87): casar nome de empresa duplica cliente. |
+| **12 CNPJs sem dono** | 26 entradas, R$ 463.513,49 — A. F. Comércio (R$ 213 mil), DB Genética, CN INC, Ligavit, Fulano, Brain, SW, ISM, UMI SAN, Conexão, Mara Thaysa, Keepclear | Dizer se cada um é cliente novo ou um dos **39 clientes que já existem sem documento**. O script não decide isso sozinho de propósito (D87): casar nome de empresa duplica cliente. |
 | **`OP REC EXT`** | 4 entradas, ~R$ 408 mil, sem documento | Parecem câmbio. Em qual receita caem é decisão. |
 | **PDG IT, Hold Beauty, CSO, Hogrefe** | 13 entradas, R$ 150.400 — têm contrato de projeto *e* de retainer, e o recebimento não sabe onde cair | `contracts.category_id` já existe — basta dizer qual contrato é qual. As duas em que o valor bate com a mensalidade já foram resolvidas sozinhas. |
 | **`BOLETOS RECEBIDOS`** | 8 entradas, R$ 43.100, sem documento | O extrato não nomeia o sacado. |

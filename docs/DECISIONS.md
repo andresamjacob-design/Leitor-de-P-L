@@ -661,6 +661,44 @@ documento**, e diz explicitamente que se for um deles o certo é pôr o CNPJ nel
 outro. Achou `Windlog` para `BRAZIL WIND LOGISTICS` e `Ciclo` para
 `CICLO INTELIGENCIA EM E - COMMERCE` — os dois casos que teriam virado duplicata.
 
+### D91 — O relatório é sobre o que entra e sai, não sobre quem deve o quê
+O `decisoes` tinha começado a mostrar, para cada contrato, quanto já fora recebido e quanto
+faltava. **Andre cortou isso em 18/08/2026:** *"não precisa saber quanto cada um deve, faça
+apenas sobre o que entra e sai de valor na empresa"*.
+
+Está certo, e o corte é mais do que estético. Saldo de contrato é **cobrança**; a pergunta
+que o sistema precisa responder é de **classificação** — em qual conta o dinheiro cai. Ter
+as duas juntas convidava a inferir uma pela outra, que é exatamente o que a D89 recusou a
+transformar em regra.
+
+→ Cada contraparte é apresentada por **entrou / saiu / líquido**, contando tudo. O alerta de
+"também recebe pagamento da DD Group" deixou de ser exceção e virou consequência natural de
+o líquido não ser igual ao que entrou.
+
+### D92 — Windlog e Ciclo: os dois primeiros CNPJs confirmados
+Andre confirmou em 18/08/2026 que `BRAZIL WIND LOGISTICS AGENCIAMENTO INTERNACIONAL` é o
+cliente **Windlog**, e `CICLO INTELIGENCIA EM E - COMMERCE` é o **Ciclo** — os dois casos
+que o `propose:receipts` tinha se recusado a decidir sozinho, e que teriam virado duplicata.
+
+→ `npm run vincular` executa esse tipo de resposta e **guarda a memória dela**: a tabela
+`CONFIRMADOS` registra cliente, como o extrato escreve o nome, e *por quê* — porque daqui a
+seis meses ninguém lembra por que "Windlog" e "BRAZIL WIND LOGISTICS" são a mesma coisa.
+
+Duas coisas que o script faz questão de não fazer:
+
+- **Não digita CNPJ.** O documento é lido do extrato pelo nome da contraparte. Um CNPJ
+  escrito à mão num arquivo de código é um número que ninguém confere e que cola no cliente
+  errado em silêncio. (Escrevi a primeira versão com os dígitos na tabela e estava
+  inventando os que não tinha visto.)
+- **Conta pelo documento, nunca pelo nome.** A Ciclo aparece no extrato com **quatro
+  grafias** sob o mesmo CNPJ; a primeira versão contava só uma delas e reportava um terço do
+  movimento.
+
+Efeito: as 8 entradas dos dois (R$ 56.400) ganharam conta **sozinhas**, sem ninguém escolher
+— cada um tem um único contrato, então a conta de receita é única. Windlog cai em 3.02
+Projeto; Ciclo em **3.03 Referral**, coerente com ela ser parceira e pagadora ao mesmo tempo.
+Cobertura foi de 741 para **749 de 982 (76,3%)**.
+
 ---
 
 ## Parte 13 — Decisões da Fase 8

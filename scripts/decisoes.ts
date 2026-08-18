@@ -5,17 +5,22 @@
  * é a que custa tempo: **o que o sistema já sabe sobre cada caso, para você responder sem
  * abrir o extrato?**
  *
+ * O eixo é **o que entra e o que sai de valor da empresa**, por contraparte. Saldo de
+ * contrato ficou de fora de propósito: a pergunta aqui é de classificação — em qual conta
+ * o dinheiro cai —, não de cobrança. Quem deve o quê é outro assunto, e o sistema não é o
+ * lugar de responder isso hoje.
+ *
  * São duas famílias, e elas pedem respostas de natureza diferente:
  *
  *   1. **CNPJ sem dono.** Dinheiro entrou, o documento identifica uma empresa, e nenhum
  *      cliente cadastrado tem esse documento. A pergunta não é só "quem é" — é "é cliente
- *      novo, ou é um dos 41 clientes que já existem sem documento?". Duplicar cliente
- *      estraga a margem por cliente em silêncio (D87), então o script mostra os candidatos
- *      e não escolhe.
- *   2. **Cliente com dois contratos.** Hold Beauty, PDG IT, Hogrefe e CSO têm projeto *e*
- *      retainer, que alcançam contas de receita diferentes. Aqui a evidência é a série de
- *      recebimentos contra o cronograma dos contratos: cadência e valor costumam dizer
- *      qual é qual sem que ninguém precise lembrar.
+ *      novo, ou é um dos clientes que já existem sem documento?". Duplicar cliente estraga
+ *      a margem por cliente em silêncio (D87), então o script mostra os candidatos e não
+ *      escolhe.
+ *   2. **Cliente com contratos em contas diferentes.** Projeto e retainer alcançam contas
+ *      de receita distintas, e o que a vigência não elimina (D89) fica aqui. A evidência é
+ *      a série de recebimentos: cadência e valor costumam dizer qual é qual sem que
+ *      ninguém precise lembrar.
  *
  * Duas checagens que mudam a pergunta quando dão positivo, e por isso vêm antes da
  * resposta:
@@ -141,9 +146,13 @@ try {
     console.log(
       `${BOLD}${row.nome.slice(0, 52)}${RESET} ${DIM}${mask(row.doc)}${RESET}`,
     );
+    const saiuTotal = fromNumeric(row.total_saida);
     console.log(
-      `   ${row.entradas}× entrando, ${formatBRL(total)}   ${DIM}${iso(row.primeira)} → ${iso(row.ultima)}${RESET}`,
+      `   entrou ${GREEN}${formatBRL(total).padStart(14)}${RESET} em ${row.entradas} linhas` +
+        `   ·   saiu ${formatBRL(saiuTotal).padStart(14)} em ${row.saidas} linhas` +
+        `   ·   líquido ${BOLD}${formatBRL(total - saiuTotal)}${RESET}`,
     );
+    console.log(`   ${DIM}${iso(row.primeira)} → ${iso(row.ultima)}${RESET}`);
 
     if (fixo) {
       console.log(
@@ -159,10 +168,8 @@ try {
 
     if (Number(row.saidas) > 0) {
       console.log(
-        `   ${RED}⚠ também RECEBE pagamento da DD Group${RESET}: ${row.saidas}× ${formatBRL(fromNumeric(row.total_saida))}`,
-      );
-      console.log(
-        `   ${DIM}  fornecedor e cliente ao mesmo tempo — a regra vai precisar de \`direction\` (D83)${RESET}`,
+        `   ${RED}⚠ dinheiro anda nos dois sentidos${RESET} ${DIM}— fornecedor e cliente ao mesmo tempo.` +
+          ` A regra vai precisar de \`direction\`, ou repete a D83.${RESET}`,
       );
     }
 
@@ -212,8 +219,8 @@ try {
     `${BOLD}════ 2. ${ambiguos.length} clientes cujo recebimento não sabe em qual contrato cair ════${RESET}`,
   );
   console.log(
-    `${DIM}Cada um tem contratos que alcançam contas de receita diferentes. A evidência é a\n` +
-      `série de recebimentos contra o cronograma dos contratos.${RESET}\n`,
+    `${DIM}Cada um tem contratos que alcançam contas de receita diferentes, e a vigência\n` +
+      `não eliminou nenhum. A evidência é a série de recebimentos.${RESET}\n`,
   );
 
   for (const alvo of ambiguos) {
@@ -244,7 +251,27 @@ try {
       where client_id = ${alvo.client_id} and category_id is null and direction = 'in'
       order by occurred_on`;
 
+    // O eixo é o dinheiro: quanto essa contraparte já pôs e tirou da empresa, contando
+    // tudo — inclusive o que já tem conta. O saldo de contrato não entra aqui de
+    // propósito: a pergunta é de classificação, não de cobrança.
+    const [fluxo] = await sql<
+      { entrou: string; entradas: string; saiu: string; saidas: string }[]
+    >`
+      select coalesce(sum(amount) filter (where direction = 'in'), 0)  as entrou,
+             count(*) filter (where direction = 'in')                  as entradas,
+             coalesce(sum(amount) filter (where direction = 'out'), 0) as saiu,
+             count(*) filter (where direction = 'out')                 as saidas
+      from cash_entries where client_id = ${alvo.client_id}`;
+
+    const entrou = fromNumeric(fluxo?.entrou ?? "0");
+    const saiu = fromNumeric(fluxo?.saiu ?? "0");
+
     console.log(`${BOLD}${alvo.cliente}${RESET}`);
+    console.log(
+      `   entrou ${GREEN}${formatBRL(entrou).padStart(14)}${RESET} em ${fluxo?.entradas ?? 0} linhas` +
+        `   ·   saiu ${formatBRL(saiu).padStart(14)} em ${fluxo?.saidas ?? 0} linhas` +
+        `   ·   líquido ${BOLD}${formatBRL(entrou - saiu)}${RESET}`,
+    );
     console.log(`   ${DIM}contratos:${RESET}`);
     for (const contract of contratos) {
       const mensal = contract.monthly_value ? formatBRL(fromNumeric(contract.monthly_value)) : "—";
@@ -254,23 +281,6 @@ try {
           `  ${DIM}${contract.start_date ? iso(contract.start_date) : "?"} → ${contract.end_date ? iso(contract.end_date) : "aberto"}${RESET}`,
       );
       console.log(`       ${DIM}↳ ${contract.conta}${RESET}`);
-
-      // Quanto já foi recebido nessa conta. Um contrato já quitado não recebe mais, e é
-      // isso que costuma decidir o que a vigência sozinha não decidiu.
-      const [recebido] = await sql<{ total: string | null }[]>`
-        select sum(e.amount) as total from cash_entries e
-        join categories c on c.id = e.category_id
-        where e.client_id = ${alvo.client_id} and e.direction = 'in'
-          and c.code = ${contract.conta.split(" ")[0] ?? ""}`;
-      const jaRecebido = fromNumeric(recebido?.total ?? "0");
-      if (contract.total_value) {
-        const alvoTotal = fromNumeric(contract.total_value);
-        const falta = alvoTotal - jaRecebido;
-        const marca = falta === 0n ? `${GREEN}quitado${RESET}` : `faltam ${formatBRL(falta)}`;
-        console.log(
-          `       ${DIM}já recebido nessa conta: ${formatBRL(jaRecebido)} de ${formatBRL(alvoTotal)} — ${RESET}${marca}`,
-        );
-      }
     }
 
     console.log(`   ${DIM}recebimentos sem conta:${RESET}`);

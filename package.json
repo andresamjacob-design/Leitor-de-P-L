@@ -33,7 +33,8 @@
     "propose:cdb": "vite-node --config vitest.config.ts scripts/propose-cdb-legs.ts",
     "verify:reconcile": "vite-node --config vitest.config.ts scripts/verify-reconcile.ts",
     "propose:receipts": "vite-node --config vitest.config.ts scripts/propose-receipts.ts",
-    "decisoes": "vite-node --config vitest.config.ts scripts/decisoes.ts"
+    "decisoes": "vite-node --config vitest.config.ts scripts/decisoes.ts",
+    "vincular": "vite-node --config vitest.config.ts scripts/vincular-clientes.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.4",
