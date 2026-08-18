@@ -11,6 +11,13 @@ const config = [
       "drizzle/**",
       "playwright-report/**",
       "test-results/**",
+      // Andaime de ferramentas, não código deste projeto. O `ruflo init` deixa helpers em
+      // CommonJS que violam as regras daqui — e corrigi-los seria editar código de
+      // terceiro que a próxima atualização sobrescreve.
+      ".claude/**",
+      ".claude-flow/**",
+      ".agents/**",
+      ".swarm/**",
     ],
   },
 ];

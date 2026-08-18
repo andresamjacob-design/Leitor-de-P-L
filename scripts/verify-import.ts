@@ -20,6 +20,11 @@ import { readXlsx } from "@/lib/import/xlsx";
 import { parseItauStatement, reconcileStatement } from "@/lib/import/itau-statement";
 import { readPdfPages } from "@/lib/import/pdf";
 import { parseItauCardInvoice, reconcileCardInvoice } from "@/lib/import/itau-card";
+import {
+  looksLikeContabilizei,
+  parseContabilizeiStatement,
+  reconcileContabilizei,
+} from "@/lib/import/contabilizei-statement";
 import { detectRecurring, totalMonthly } from "@/lib/categorize/recurrence";
 import type { RecurrenceCandidate } from "@/lib/categorize/recurrence";
 import { formatMoney } from "@/lib/money";
@@ -90,14 +95,55 @@ async function main(): Promise<void> {
     }
   }
 
+  // ---- Statements that arrive as PDF ---------------------------------------
+  //
+  // The Contabilizei exports one, and it shares the `.pdf` extension with the card
+  // invoices while being a completely different document. Read once, decide by content.
+  const pdfPages = new Map<string, Awaited<ReturnType<typeof readPdfPages>>>();
+  const pdfs = entries.filter((file) => file.toLowerCase().endsWith(".pdf")).sort();
+
+  console.log("\nExtratos em PDF");
+  let anyPdfStatement = false;
+  for (const name of pdfs) {
+    const bytes = new Uint8Array(readFileSync(join(directory, name)));
+    let pages;
+    try {
+      pages = await readPdfPages(bytes);
+    } catch {
+      continue; // reported by the invoice pass below
+    }
+    pdfPages.set(name, pages);
+    if (!looksLikeContabilizei(pages)) continue;
+
+    anyPdfStatement = true;
+    const parse = parseContabilizeiStatement(pages);
+    const result = reconcileContabilizei(parse);
+    checked += 1;
+    if (!result.ok) failed += 1;
+
+    console.log(
+      `  ${result.ok ? GREEN + "OK   " : RED + "FALHA"}${RESET} ${pad(name, 46)}` +
+        ` ${String(parse.transactions.length).padStart(4)} mov` +
+        ` ${DIM}${parse.periodStart ?? "?"} a ${parse.periodEnd ?? "?"}${RESET}` +
+        `  ${result.message}`,
+    );
+    for (const warning of parse.warnings) console.log(`        ${DIM}${warning.message}${RESET}`);
+    for (const dropped of parse.discarded) {
+      console.log(`        ${DIM}descartada: ${dropped.description} — ${dropped.reason}${RESET}`);
+    }
+  }
+  if (!anyPdfStatement) console.log(`  ${DIM}nenhum${RESET}`);
+
   // ---- Card invoices ------------------------------------------------------
   console.log("\nFaturas de cartão");
-  for (const name of entries.filter((file) => file.toLowerCase().endsWith(".pdf")).sort()) {
+  for (const name of pdfs) {
     const bytes = new Uint8Array(readFileSync(join(directory, name)));
+    const pages = pdfPages.get(name);
+    if (pages && looksLikeContabilizei(pages)) continue; // já conferido acima
 
     let parse;
     try {
-      parse = parseItauCardInvoice(await readPdfPages(bytes));
+      parse = parseItauCardInvoice(pages ?? (await readPdfPages(bytes)));
     } catch (cause) {
       console.log(`  ${DIM}pular${RESET} ${pad(name, 46)} não abriu: ${(cause as Error).message}`);
       continue;
