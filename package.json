@@ -28,7 +28,8 @@
     "import:invoices": "vite-node --config vitest.config.ts scripts/import-invoices.ts",
     "propose:contracts": "vite-node --config vitest.config.ts scripts/propose-contracts.ts",
     "recognize:manual": "vite-node --config vitest.config.ts scripts/recognize-manual.ts",
-    "pendencias": "vite-node --config vitest.config.ts scripts/pendencias.ts"
+    "pendencias": "vite-node --config vitest.config.ts scripts/pendencias.ts",
+    "fix:credits": "vite-node --config vitest.config.ts scripts/fix-cost-credits.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.4",

@@ -421,6 +421,60 @@ antigo. A tela mostrava o saldo de 05/01 rotulado como "saldo de fechamento".
 
 ---
 
+## Parte 16 — Dinheiro que volta (18/08/2026)
+
+### D82 — Categoria errada se corrige tirando a categoria, não apagando a linha
+O pedido foi literal: *"esse pix do ricardo foi feito e devolvido, pode apagá-lo de tudo"*.
+Apagar o lançamento era o caminho errado, e a aritmética diz por quê.
+
+A devolução de **R$ 115.000 de 09/01/2026** é uma linha do extrato do banco. A conta
+corrente só fecha nos **R$ 226.916,33** que o banco declara **porque ela está lá**. Apagá-la
+trocaria uma categoria errada — que aparece em `pendencias` e um dia é resolvida — por um
+razão que não bate mais com o extrato, que é o erro mais caro de achar depois.
+
+→ **Nenhuma correção de categoria apaga `cash_entries`.** Tira-se a categoria; o
+`planCashMirror` devolve `null` e o espelho de competência some junto. O dinheiro sai da
+DRE e da folha e continua no caixa, que é exatamente onde um pagamento que saiu e voltou
+pertence.
+
+A perna de saída não sumiu: ela está **dentro de um lote `SISPAG FORNECEDORES`** —
+R$ 290.000 no mesmo 09/01, R$ 276.250 no 10/02 — que paga vários fornecedores de uma vez e
+não nomeia nenhum. Enquanto o retorno CNAB não chegar, as duas pontas ficam sem categoria,
+e o efeito líquido na DRE é zero, que é o certo.
+
+### D83 — Crédito em conta de custo: o cartão é a prova, o banco precisa de par
+O espelho assina pelo sentido (`mirror.ts`): entrada numa conta de custo vira **custo
+negativo**. Isso só é verdade quando o pagamento estornado também está naquela categoria.
+Duas maneiras reais de quebrar isso apareceram, e o discriminador é a **conta**, não uma
+heurística de texto:
+
+- **Cartão de crédito:** um crédito na fatura só pode ser devolução de compra — ninguém
+  paga a empresa na fatura do cartão dela. **Todos ficam**, com ou sem valor
+  correspondente. Estorno parcial é comum, e casar por valor jogaria fora os honestos
+  (Adobe R$ 11,43, Salesforce R$ 1.394,43).
+- **Conta bancária:** dinheiro que chega é normalmente receita. Só é devolução quando o
+  pagamento que ela reverte está visível na mesma categoria — mesma quantia, data próxima.
+  Inaldo, R$ 1.000 fora e R$ 1.000 de volta em 05/05, é o formato de uma de verdade.
+
+→ Regra pura e testada em `src/lib/recognition/cost-credits.ts` (9 testes);
+`npm run fix:credits` aplica, com dry run por padrão e `--ensaio` em transação revertida.
+
+**O que estava errado, e virou 10 linhas sem categoria (R$ 218.800):**
+
+| Categoria | Linhas | Valor | O que era |
+|---|---|---|---|
+| 6.10 Freelancers | 2 | R$ 165.000 | As devoluções do Ricardo, sem a perna de saída no razão |
+| 8.03 Agência | 8 | R$ 53.800 | **Receita** de Hold Beauty, Ciclo e Conexão arquivada na despesa que a DD Group paga *a eles* |
+
+O caso 8.03 é a D40 mordendo a própria cauda: a camada de **identidade** reconheceu a
+contraparte e arquivou pelo histórico dela, então o `direction` das regras (migration
+`0004`) nunca teve voz. Identidade vence texto, mas identidade sozinha não sabe o sentido.
+
+Efeito: janeiro/2026 deixou de ter −R$ 115.000 de custo de freelancer e fevereiro −R$
+50.000. O saldo da conta corrente não se moveu um centavo, medido antes e depois.
+
+---
+
 ## Parte 13 — Decisões da Fase 8
 
 ### D68 — Escritor de XLSX próprio, com entradas sem compressão

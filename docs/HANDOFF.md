@@ -78,6 +78,8 @@ npm run pendencias          # ← COMECE POR AQUI: o que falta decidir, por dinh
 npm run inspect:staged      # composição do que está parado
 npm run preview:categorize  # o que o "Categorizar" decidiria agora (--aplicar grava)
 
+npm run fix:credits         # entrada parada em conta de custo (--ensaio / --aplicar)
+
 npm run propose:rules       # regras de texto vindas da planilha
 npm run propose:parties     # casa nome da planilha ↔ contraparte do extrato
 npm run propose:contracts   # contratos do bloco de receita
@@ -92,8 +94,8 @@ npm run import:invoices     # faturas de cartão em massa
 | | |
 |---|---|
 | Razão de caixa | **977 lançamentos**, 06/08/2025 a 31/07/2026 |
-| Categorizados | **737 (75,4%)** — 240 sem conta |
-| Competência | 284 linhas de receita + 587 de custo |
+| Categorizados | **727 (74,4%)** — 250 sem conta |
+| Competência | 284 linhas de receita + 577 de custo |
 | Receita reconhecida | **R$ 3.556.736,91** (jan–ago/2026) |
 | Contratos | 80 (65 ativos, 15 concluídos), 95 parcelas mensais |
 | Clientes / pessoas | 72 / 33 |
@@ -138,6 +140,10 @@ npm run import:invoices     # faturas de cartão em massa
   Migani entrarem e manteve `SANTA MONICA` × `Santa Lucia` de fora.
 - **Relatório `pendencias`**, que ordena o que falta por dinheiro e diz o que o sistema já
   sabe de cada grupo.
+- **Entrada parada em conta de custo** (`fix:credits`, D83). O cartão é prova por si —
+  crédito na fatura só pode ser estorno de compra. No banco, é devolução só se o pagamento
+  que ela reverte estiver na mesma categoria. Tirou R$ 218.800 de custo fantasma da DRE
+  sem mover o saldo.
 
 ### Importação
 
@@ -192,22 +198,25 @@ CDB como conta fora do relatório de caixa. É anterior a este trabalho — a co
 com saldo e nunca recebeu movimento; só ficou visível agora que há aplicação e resgate de
 verdade no razão.
 
-### 5.2 `PIX DEVOLVIDO RICARDO`, R$ 115.000
+### ~~5.2 `PIX DEVOLVIDO RICARDO`~~ e ~~5.3 categorias de custo recebendo entrada~~
 
-Entrada em 09/01/2026, classificada em **6.10 Freelancers** pela camada de histórico — e
-**não existe o pagamento de saída que ela estornaria**. Põe um crédito de R$ 115 mil na
-folha sem o débito correspondente, e é o que deixa o custo de janeiro/2026 negativo em
-R$ 54.680.
+**Resolvido em 18/08/2026.** Ver D82 e D83. As duas eram o mesmo defeito visto de ângulos
+diferentes: entrada parada numa conta de custo vira custo negativo, e isso só é verdade
+quando o pagamento estornado também está naquela categoria.
 
-**Como resolver:** se estornou um pagamento que não está no razão, deixe-o sem categoria.
-A correção é na tela de Lançamentos — tirar a categoria exige tirar o espelho de
-competência junto, e é ela que faz as duas coisas pelo caminho certo.
+Dez linhas perderam a categoria, R$ 218.800 — as duas devoluções do Ricardo (R$ 165.000,
+cuja perna de saída está dentro de um lote SISPAG) e oito recebimentos de cliente que a
+camada de identidade tinha arquivado em 8.03 Agência (R$ 53.800). Janeiro deixou de ter
+−R$ 115.000 de custo de freelancer, fevereiro −R$ 50.000, e o saldo da conta corrente não
+se moveu um centavo.
 
-### 5.3 Categorias de custo recebendo entrada
+Ficaram de pé, conferidos um a um: 18 estornos de cartão e a devolução do Inaldo, que tem
+o pagamento correspondente na mesma categoria no mesmo dia.
 
-No fluxo de caixa, **6.10 Freelancers (R$ 166.000)** e **8.03 Agência (R$ 53.800)**
-aparecem em ENTRADAS. São devoluções e estornos caindo em contas de despesa, e inflam o
-total de entradas sem serem receita. O 5.2 é o maior deles.
+> **O pedido era "apagar de tudo", e apagar teria sido errado.** A devolução é uma linha do
+> extrato: a conta corrente só fecha nos R$ 226.916,33 porque ela está lá. `npm run
+> fix:credits` nunca apaga `cash_entries` — tira a categoria, e o espelho de competência
+> sai junto pelo caminho que o `planCashMirror` já tinha.
 
 ---
 
@@ -215,16 +224,17 @@ total de entradas sem serem receita. O 5.2 é o maior deles.
 
 ### Depende de você
 
-Rode **`npm run pendencias`** — lista as 240 linhas sem conta agrupadas por contraparte,
+Rode **`npm run pendencias`** — lista as 250 linhas sem conta agrupadas por contraparte,
 ordenadas por dinheiro. Uma resposta sua costuma resolver várias linhas, porque a regra por
 documento pega todo o histórico daquela contraparte de uma vez.
 
 | | O que é | Como destrava |
 |---|---|---|
-| **SISPAG** | ~101 linhas, **R$ 2,9 mi**, sem contraparte nenhuma — cada uma é um lote pagando vários fornecedores | O **arquivo de retorno do SISPAG** (CNAB) ou o detalhe do lote no internet banking. Maior bloco isolado. |
+| **SISPAG** | ~101 linhas, **R$ 2,9 mi**, sem contraparte nenhuma — cada uma é um lote pagando vários fornecedores | O **arquivo de retorno do SISPAG** (CNAB) ou o detalhe do lote no internet banking. Maior bloco isolado. **Também é onde estão as duas pernas de saída do Ricardo** (D82). |
 | **`OP REC EXT`** | 5 entradas, ~R$ 470 mil | Parecem câmbio. Em qual receita caem é decisão. |
 | **Clientes fora da planilha** | A. F. Comércio, CN INC, Cidade Center Norte, Maruri, DB Genética, Brazil Wind, Ligavit, AIDC | Dizer quem é cada um. Vira uma regra por documento. |
 | **PDG IT, Hold Beauty, CSO, Hogrefe** | Têm contrato de projeto *e* de retainer, e o recebimento não sabe onde cair | `contracts.category_id` já existe — basta dizer qual contrato é qual. |
+| **Hold Beauty, Ciclo, Conexão** | 8 recebimentos, **R$ 53.800**, que estavam em 8.03 Agência e agora estão sem conta (D83) | Em qual receita caem. Hold Beauty e Ciclo já são clientes com contrato; Conexão Marketing não está cadastrada. |
 
 ### Depende de arquivo ou chave que não chegou
 
@@ -291,6 +301,12 @@ Aprendidos neste trabalho:
   banco, e o banco também é contraparte: linha que tem valor e saldo é movimento, quaisquer
   que sejam as palavras nela.
 - **Linha cujo saldo não anda não moveu dinheiro**, por mais que ela imprima um valor.
+- **Categoria errada se corrige tirando a categoria, nunca apagando o lançamento.** A linha
+  do extrato é o que faz a conta fechar; a categoria é opinião sobre ela. Apagar troca um
+  erro visível, que aparece em `pendencias`, por um razão que não bate mais com o banco.
+- **Identidade sozinha não sabe o sentido.** A D40 põe identidade acima de texto, e por
+  isso o `direction` das regras não teve voz quando a camada de identidade arquivou
+  recebimento de cliente na despesa que a empresa paga a esse mesmo cliente.
 - **Na tela de aprovação, clique por referência de elemento não submete o formulário.** Só
   coordenada funciona, e ela precisa vir de um screenshot tirado antes da chamada.
 
