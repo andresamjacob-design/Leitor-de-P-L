@@ -473,6 +473,31 @@ contraparte e arquivou pelo histórico dela, então o `direction` das regras (mi
 Efeito: janeiro/2026 deixou de ter −R$ 115.000 de custo de freelancer e fevereiro −R$
 50.000. O saldo da conta corrente não se moveu um centavo, medido antes e depois.
 
+### D84 — A perna que falta de uma transferência se deriva, não se espera
+A conta `Itaú — CDB DI` foi semeada com R$ 367.735,49 e nunca recebeu um lançamento. Todo
+movimento do CDB existe só na conta corrente, como transferência 99.03. Uma transferência
+com uma perna só mente duas vezes: o resgate de janeiro esvaziou o CDB para a conta
+corrente, então esse dinheiro está dentro dos R$ 226.916,33 **e** congelado na abertura do
+CDB; e os R$ 485.000 aplicados desde junho saíram da conta corrente e não chegaram a lugar
+nenhum.
+
+O handover anterior descrevia só a primeira metade. **Somadas, o sistema subestima o caixa
+em R$ 117.264,51**, não o contrário.
+
+→ `npm run propose:cdb` cria a contrapartida a partir das linhas que o banco já imprimiu —
+mesma data, mesmo valor, sentido oposto, outra conta — pelo mesmo mecanismo da tela
+(99.03 → `transfer_pairs.kind = 'investment'`). Não precisa do extrato do CDB. A aritmética
+fecha em número redondo, que é o sinal de que a leitura está certa:
+
+```
+367.735,49 − 367.735,49 + 485.000,00 = 485.000,00
+```
+
+**O limite, dito junto com o resultado:** rendimento que tenha ficado dentro do CDB em vez
+de ser varrido para a conta corrente não aparece. R$ 485.000,00 é o principal; só um
+extrato do CDB prova o centavo. Por isso o script não grava sem `--aplicar`, e em 18/08/2026
+ele **ainda não foi aplicado**.
+
 ---
 
 ## Parte 13 — Decisões da Fase 8

@@ -4,7 +4,7 @@ Onde tudo está, o que foi feito, e o que falta. Escrito para quem chega sem con
 nenhum, inclusive eu mesmo numa conversa nova.
 
 Leia junto quando precisar do detalhe: `docs/PLAN.md` (o roteiro original),
-`docs/DECISIONS.md` (decisões numeradas D1–D81 e pendências Q2–Q18) e `README.md`.
+`docs/DECISIONS.md` (decisões numeradas D1–D83 e pendências Q2–Q18) e `README.md`.
 
 ---
 
@@ -66,7 +66,7 @@ Todos os scripts que gravam têm dry run por padrão e pedem `--aplicar`. Vário
 
 ```
 npm run dev
-npm run check               # typecheck + lint + 327 testes
+npm run check               # typecheck + lint + 336 testes
 npm run test:e2e            # Playwright, 25 testes
 npm run db:migrate          # aplica migrations
 npm run db:seed             # 62 categorias × 2 entidades
@@ -79,6 +79,7 @@ npm run inspect:staged      # composição do que está parado
 npm run preview:categorize  # o que o "Categorizar" decidiria agora (--aplicar grava)
 
 npm run fix:credits         # entrada parada em conta de custo (--ensaio / --aplicar)
+npm run propose:cdb         # a perna que falta da conta CDB (§5.1)
 
 npm run propose:rules       # regras de texto vindas da planilha
 npm run propose:parties     # casa nome da planilha ↔ contraparte do extrato
@@ -108,7 +109,7 @@ npm run import:invoices     # faturas de cartão em massa
 | Conta | Tipo | Abertura | Lançamentos | Situação |
 |---|---|---|---|---|
 | Itaú — conta corrente | banco | 142.469,28 em 01/01/2026 | 461 | ✅ bate com o extrato |
-| Itaú — CDB DI | aplicação | 367.735,49 em 01/01/2026 | **0** | ⚠️ ver §5.1 |
+| Itaú — CDB DI | aplicação | 367.735,49 em 01/01/2026 | **0** | ⚠️ §5.1 — correção pronta, falta aplicar |
 | Contabilizei | banco | 0,00 | 0 | inativa |
 | Itaucard 5780 | cartão | 0,00 | 468 | |
 | Itaucard 8299 | cartão | 0,00 | 48 | |
@@ -193,10 +194,26 @@ congelado do CDB**. É dobra de R$ 367.735,49 no "Caixa hoje".
 Pelos números, o CDB deveria ter os R$ 485.000 aplicados depois. Não há extrato do CDB na
 pasta para confirmar.
 
-**Como resolver:** um extrato do CDB (importo e a conta ganha as duas pernas), ou tratar o
-CDB como conta fora do relatório de caixa. É anterior a este trabalho — a conta foi semeada
-com saldo e nunca recebeu movimento; só ficou visível agora que há aplicação e resgate de
-verdade no razão.
+**Há um terceiro caminho, e ele não precisa de arquivo nenhum: `npm run propose:cdb`.**
+Cada perna que falta está inteiramente determinada por uma linha que o banco já imprimiu —
+mesma data, mesmo valor, sentido oposto, outra conta. A conta fecha num número redondo, que
+é o sinal de que a leitura está certa:
+
+```
+367.735,49 − 367.735,49 + 485.000,00 = 485.000,00
+```
+
+O ensaio (transação revertida) mediu: CDB vai de R$ 367.735,49 para **R$ 485.000,00**, a
+conta corrente não se move, e o **caixa total sai de R$ 594.651,82 para R$ 711.916,33**.
+
+> A dobra era só metade do problema. Os R$ 485.000 aplicados desde junho saíram da conta
+> corrente e **não chegaram a lugar nenhum** — dinheiro que sumiu do relatório. O efeito
+> líquido é que o sistema hoje **subestima** o caixa em R$ 117.264,51, e não o contrário.
+
+**Falta sua palavra para aplicar.** O que a derivação não enxerga é rendimento que tenha
+ficado dentro do CDB em vez de ser varrido para a conta corrente — os R$ 485.000 são o
+principal, e só um extrato do CDB prova o centavo. Se preferir esperar o extrato, o script
+fica parado; ele não grava nada sem `--aplicar`.
 
 ### ~~5.2 `PIX DEVOLVIDO RICARDO`~~ e ~~5.3 categorias de custo recebendo entrada~~
 
