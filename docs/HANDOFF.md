@@ -97,7 +97,8 @@ entidades.
   conta corrente até 31/07 e trouxeram 35 linhas novas — 69 linhas se sobrepunham e
   vieram marcadas como duplicata, sozinhas, pelo hash de dedup.
 - **19 faturas de cartão**: 516 lançamentos, todas fechando contra o total impresso nelas.
-- **1.497 lançamentos no razão**, todos aprovados; 1.102 categorizados (73,6%).
+- **977 lançamentos no razão**, todos aprovados; 737 categorizados (75,4%). 2025 foi
+  removido em 18/08 (§4.10); restam dele só as compras de cartão.
 - Quatro contas: Itaú conta corrente (940 linhas, 01/2025 a 07/2026), Itaucard 5780 (468),
   Itaucard 8299 (48) e **Contabilizei** (41, 01 a 10/2025).
 - **492 linhas de espelho de custo** e 272 de receita na competência.
@@ -410,7 +411,47 @@ o fluxo de caixa mente pelo valor da abertura.
 
 O `verify:rls` foi rodado depois de tudo: 7/7, isolamento entre entidades íntegro.
 
-### 4.10 O que falta
+### 4.10 2025 removido do razão — 18/08/2026
+
+Decisão do usuário. Saíram as **duas importações de 17/08**: o extrato Itaú de 2025 (479
+linhas) e o da Contabilizei (41). Ficaram as **136 compras de cartão de 2025**, porque vêm
+de faturas e cinco delas continuam em 2026 — cortar só as linhas de 2025 dessas cinco
+deixaria faturas parciais que não fecham mais contra o próprio total impresso (D-B).
+
+Foram 520 lançamentos, 219 espelhos de competência, 520 linhas paradas e 2 importações.
+A abertura da conta corrente voltou para R$ 142.469,28 em 01/01/2026.
+
+**A melhor prova de que o corte estava certo é que o saldo não mudou**: 226.916,33 antes e
+depois. O saldo de abertura restaurado *é* a soma dos movimentos de 2025 que saíram, e as
+duas coisas se cancelam.
+
+A conta da Contabilizei ficou **cadastrada e inativa** — ela existe de verdade, e deixá-la
+ativa e vazia mostraria um saldo de R$ 45.999,99 que não corresponde a nada.
+
+A receita reconhecida não foi tocada: 284 linhas, R$ 3.556.736,91, ainda batendo com a
+planilha ao centavo.
+
+**Uma armadilha que isto ensinou:** `cash_entries.import_id` é `set null`, não `cascade`.
+Apagar a importação primeiro deixaria os lançamentos órfãos no razão em vez de removê-los.
+A ordem é lançamentos, depois importação.
+
+**E outra:** existe um gatilho `cash_entries_audit` que já registra toda exclusão com a
+linha inteira. Escrever auditoria à mão duplica o registro — o que se ganha escrevendo é
+só o *motivo*, e para isso basta uma linha do evento, não uma por lançamento.
+
+### 4.11 Achado que precisa da sua palavra
+
+**`PIX DEVOLVIDO RICARDO DE 09/01`, R$ 115.000,00 entrando em 09/01/2026**, está
+classificado em 6.10 Freelancers pela camada de histórico — e **não existe pagamento de
+saída correspondente no razão**. O resultado é um crédito de R$ 115 mil na folha sem o
+débito que ele estornaria, e é isso que deixa o custo de janeiro/2026 negativo em
+R$ 54.680.
+
+Não corrigi por SQL de propósito: tirar a categoria exige tirar o espelho de competência
+junto, e o caminho que faz as duas coisas é a tela de Lançamentos. Se aquele PIX estornou
+um pagamento que não está aqui, o certo é deixá-lo sem categoria.
+
+### 4.12 O que falta
 
 - **394 linhas sem conta.** Rode `npm run pendencias` — ele agrupa por contraparte,
   ordena por dinheiro e diz o que o sistema já sabe de cada grupo. **165 dos 197 grupos
@@ -421,8 +462,6 @@ O `verify:rls` foi rodado depois de tudo: 7/7, isolamento entre entidades ínteg
   por uma resposta sua e uma regra.
 - **`OP REC EXT`**, cinco entradas somando ~R$ 470 mil, sem contraparte. Parecem
   recebimentos de câmbio, mas em qual receita caem é decisão.
-- **Sem contratos de 2025.** A DRE daquele ano mostra custo e nenhuma receita, porque os
-  80 contratos lidos da planilha são todos de 2026.
 - **PDG IT, Hold Beauty, CSO e Hogrefe** têm contrato de projeto *e* de retainer, então o
   recebimento não sabe em qual receita cair. Agora dá para resolver: a coluna
   `contracts.category_id` existe, e basta dizer qual contrato é qual.
