@@ -388,7 +388,29 @@ saída para os dois lados.
 **Razão: 1.497 lançamentos, 1.058 categorizados (70,7%).** O percentual caiu porque 2025
 entrou inteiro e o histórico ainda não cobre aquele vocabulário.
 
-### 4.9 O que falta
+### 4.9 O saldo de abertura tinha de mudar com 2025 — 18/08/2026
+
+Importar 2025 quebrou uma premissa que ninguém tinha escrito: a conta corrente estava
+cadastrada com abertura de **R$ 142.469,28 em 01/01/2026**, e passou a ter 479 lançamentos
+*anteriores* a essa data. Aquele número é o fechamento de 2025 — o próprio extrato de 2025
+abre em 0,00 (traz `SALDO ANTERIOR 0,0` em 31/12/2024) e fecha em 142.469,28. Estava sendo
+contado duas vezes.
+
+Corrigido para **0,00 em 01/01/2025**. Com isso as duas contas de dinheiro batem com o
+banco ao centavo:
+
+| Conta | Saldo no sistema | O que o extrato declara |
+|---|---|---|
+| Itaú — conta corrente | 226.916,33 | 226.916,33 em 31/07/2026 |
+| Contabilizei | 0,00 | 0,00 no fim do período |
+
+**A lição para a próxima importação retroativa:** o saldo de abertura de uma conta é uma
+data, não só um número. Trazer período anterior à abertura exige mover as duas coisas, ou
+o fluxo de caixa mente pelo valor da abertura.
+
+O `verify:rls` foi rodado depois de tudo: 7/7, isolamento entre entidades íntegro.
+
+### 4.10 O que falta
 
 - **394 linhas sem conta.** Rode `npm run pendencias` — ele agrupa por contraparte,
   ordena por dinheiro e diz o que o sistema já sabe de cada grupo. **165 dos 197 grupos
