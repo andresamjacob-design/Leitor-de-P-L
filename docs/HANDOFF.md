@@ -4,7 +4,7 @@ Onde tudo está, o que foi feito, e o que falta. Escrito para quem chega sem con
 nenhum, inclusive eu mesmo numa conversa nova.
 
 Leia junto quando precisar do detalhe: `docs/PLAN.md` (o roteiro original),
-`docs/DECISIONS.md` (decisões numeradas D1–D83 e pendências Q2–Q18) e `README.md`.
+`docs/DECISIONS.md` (decisões numeradas D1–D85 e pendências Q2–Q18) e `README.md`.
 
 ---
 
@@ -66,20 +66,20 @@ Todos os scripts que gravam têm dry run por padrão e pedem `--aplicar`. Vário
 
 ```
 npm run dev
-npm run check               # typecheck + lint + 336 testes
+npm run check               # typecheck + lint + 346 testes
 npm run test:e2e            # Playwright, 25 testes
 npm run db:migrate          # aplica migrations
 npm run db:seed             # 62 categorias × 2 entidades
 
 npm run verify:import       # todos os arquivos reais reconciliam contra si mesmos
 npm run verify:rls          # SPEC §11 teste 6 — isolamento entre entidades, 7/7
+npm run verify:reconcile    # a DRE e o fluxo de caixa fecham? (--detalhe abre a ponte)
 
 npm run pendencias          # ← COMECE POR AQUI: o que falta decidir, por dinheiro
 npm run inspect:staged      # composição do que está parado
 npm run preview:categorize  # o que o "Categorizar" decidiria agora (--aplicar grava)
 
 npm run fix:credits         # entrada parada em conta de custo (--ensaio / --aplicar)
-npm run propose:cdb         # a perna que falta da conta CDB (§5.1)
 
 npm run propose:rules       # regras de texto vindas da planilha
 npm run propose:parties     # casa nome da planilha ↔ contraparte do extrato
@@ -94,8 +94,8 @@ npm run import:invoices     # faturas de cartão em massa
 
 | | |
 |---|---|
-| Razão de caixa | **977 lançamentos**, 06/08/2025 a 31/07/2026 |
-| Categorizados | **727 (74,4%)** — 250 sem conta |
+| Razão de caixa | **982 lançamentos**, 06/08/2025 a 31/07/2026 |
+| Categorizados | **732 (74,5%)** — 250 sem conta |
 | Competência | 284 linhas de receita + 577 de custo |
 | Receita reconhecida | **R$ 3.556.736,91** (jan–ago/2026) |
 | Contratos | 80 (65 ativos, 15 concluídos), 95 parcelas mensais |
@@ -109,17 +109,20 @@ npm run import:invoices     # faturas de cartão em massa
 | Conta | Tipo | Abertura | Lançamentos | Situação |
 |---|---|---|---|---|
 | Itaú — conta corrente | banco | 142.469,28 em 01/01/2026 | 461 | ✅ bate com o extrato |
-| Itaú — CDB DI | aplicação | 367.735,49 em 01/01/2026 | **0** | ⚠️ §5.1 — correção pronta, falta aplicar |
+| Itaú — CDB DI | aplicação | 367.735,49 em 01/01/2026 | 5 | ✅ as duas pernas existem (§5.1) |
 | Contabilizei | banco | 0,00 | 0 | inativa |
 | Itaucard 5780 | cartão | 0,00 | 468 | |
 | Itaucard 8299 | cartão | 0,00 | 48 | |
 
-**Duas conferências que fecham hoje:**
+**Três conferências que fecham hoje:**
 
 - A conta corrente marca **226.916,33**, que é o `SALDO TOTAL DISPONÍVEL` declarado pelo
   banco em 31/07/2026. Ao centavo.
 - A receita reconhecida bate com a planilha **mês a mês** — R$ 0,03 de diferença acumulada
   em oito meses, puro arredondamento dela mesma.
+- **A DRE e o fluxo de caixa fecham nos 13 meses, com resíduo zero** (`verify:reconcile`,
+  D85). Os dois razões não batem — não é para baterem —, mas toda diferença entre eles tem
+  nome.
 
 ---
 
@@ -171,49 +174,43 @@ npm run import:invoices     # faturas de cartão em massa
   competência nasceu só para as linhas com conta, que é a D2a exatamente como escrita.
 - **`verify:rls` 7/7** depois de todas as escritas.
 - **2025 removido do razão** a pedido, com o saldo provando o corte ao não mudar.
+- **A ponte entre os dois razões** (`verify:reconcile`, D85). Mês a mês, prova que o
+  resultado da DRE é o caixa operacional mais um conjunto de diferenças **todas nomeadas**,
+  e que não sobra centavo. Falha com código 1 se sobrar.
 
 ---
 
-## 5. O que está errado agora
+## 5. O que estava errado, e está consertado
 
-### 5.1 A conta CDB nunca se move ⚠️ **o maior**
+Os três defeitos que o handover anterior listava foram resolvidos em 18/08/2026, e o
+`verify:reconcile` passou a provar que não voltaram.
 
-O `Itaú — CDB DI` tem saldo de abertura de R$ 367.735,49 e **zero lançamentos**. Todos os
-movimentos do CDB estão só na conta corrente, como transferência 99.03:
+### ~~5.1 A conta CDB nunca se move~~
 
-| | |
-|---|---|
-| `APLICACAO CDB DI` | 4× saindo, R$ 485.000,00 |
-| `RESGATE CDB` | 1× entrando, R$ 367.735,49 |
-| `RENDIMENTOS` | 38× entrando, R$ 202,31 |
+**Resolvido em 18/08/2026.** Ver D84. O `Itaú — CDB DI` tinha saldo de abertura e **zero
+lançamentos**: todo movimento dele vivia só na conta corrente, como transferência 99.03.
+Uma transferência com uma perna só mente duas vezes — o resgate de janeiro ficava contado
+na conta corrente **e** congelado na abertura do CDB, e os R$ 485.000 aplicados desde junho
+saíam da conta corrente e não chegavam a lugar nenhum.
 
-**A transferência tem uma perna só.** O resgate de janeiro trouxe o CDB inteiro para a
-conta corrente — esse dinheiro já está nos 226.916,33 **e continua contado no saldo
-congelado do CDB**. É dobra de R$ 367.735,49 no "Caixa hoje".
-
-Pelos números, o CDB deveria ter os R$ 485.000 aplicados depois. Não há extrato do CDB na
-pasta para confirmar.
-
-**Há um terceiro caminho, e ele não precisa de arquivo nenhum: `npm run propose:cdb`.**
-Cada perna que falta está inteiramente determinada por uma linha que o banco já imprimiu —
-mesma data, mesmo valor, sentido oposto, outra conta. A conta fecha num número redondo, que
-é o sinal de que a leitura está certa:
+As cinco pernas que faltavam foram derivadas das linhas que o banco já imprimiu — mesma
+data, mesmo valor, sentido oposto, outra conta — pelo mesmo mecanismo da tela
+(`transfer_pairs.kind = 'investment'`). Não precisou do extrato do CDB. A conta fecha em
+número redondo, que é o sinal de que a leitura está certa:
 
 ```
 367.735,49 − 367.735,49 + 485.000,00 = 485.000,00
 ```
 
-O ensaio (transação revertida) mediu: CDB vai de R$ 367.735,49 para **R$ 485.000,00**, a
-conta corrente não se move, e o **caixa total sai de R$ 594.651,82 para R$ 711.916,33**.
+O CDB passou a marcar **R$ 485.000,00**, a conta corrente não se moveu, e o caixa total foi
+de R$ 594.651,82 para **R$ 711.916,33**.
 
-> A dobra era só metade do problema. Os R$ 485.000 aplicados desde junho saíram da conta
-> corrente e **não chegaram a lugar nenhum** — dinheiro que sumiu do relatório. O efeito
-> líquido é que o sistema hoje **subestima** o caixa em R$ 117.264,51, e não o contrário.
+> O handover anterior descrevia só metade do problema, a dobra. Somadas as duas pontas, o
+> sistema **subestimava** o caixa em R$ 117.264,51, e não o contrário.
 
-**Falta sua palavra para aplicar.** O que a derivação não enxerga é rendimento que tenha
-ficado dentro do CDB em vez de ser varrido para a conta corrente — os R$ 485.000 são o
-principal, e só um extrato do CDB prova o centavo. Se preferir esperar o extrato, o script
-fica parado; ele não grava nada sem `--aplicar`.
+**O que continua em aberto é pequeno e tem nome:** rendimento que tenha ficado dentro do
+CDB em vez de ser varrido para a conta corrente não aparece. R$ 485.000,00 é o principal;
+só um extrato do CDB prova o centavo.
 
 ### ~~5.2 `PIX DEVOLVIDO RICARDO`~~ e ~~5.3 categorias de custo recebendo entrada~~
 
@@ -234,6 +231,24 @@ o pagamento correspondente na mesma categoria no mesmo dia.
 > extrato: a conta corrente só fecha nos R$ 226.916,33 porque ela está lá. `npm run
 > fix:credits` nunca apaga `cash_entries` — tira a categoria, e o espelho de competência
 > sai junto pelo caminho que o `planCashMirror` já tinha.
+
+### 5.4 O que a ponte mostrou que ainda vai mexer no resultado
+
+Os dois razões fecham hoje, mas fechar não é o mesmo que estar completo. Somadas as
+diferenças dos 13 meses:
+
+| | |
+|---|---|
+| Receita reconhecida no mês | + R$ 3.556.736,91 |
+| Entradas de caixa sem competência | − R$ 2.995.308,69 |
+| **Saídas de caixa sem competência** | **+ R$ 1.281.607,12** |
+| Custo de compra no cartão | − R$ 147.685,31 |
+
+A linha do meio é a lista de tarefas em forma de número: **R$ 1,28 milhão que saiu do caixa
+e ainda não pesa na DRE**, porque essas linhas não têm categoria — em maioria os lotes
+SISPAG. Conforme forem categorizadas, o custo da DRE cresce e o resultado cai, sem que o
+caixa mude um centavo. Isso é esperado, e agora é visível antes de acontecer em vez de
+aparecer como surpresa no fechamento.
 
 ---
 

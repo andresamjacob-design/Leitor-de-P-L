@@ -495,8 +495,56 @@ fecha em número redondo, que é o sinal de que a leitura está certa:
 
 **O limite, dito junto com o resultado:** rendimento que tenha ficado dentro do CDB em vez
 de ser varrido para a conta corrente não aparece. R$ 485.000,00 é o principal; só um
-extrato do CDB prova o centavo. Por isso o script não grava sem `--aplicar`, e em 18/08/2026
-ele **ainda não foi aplicado**.
+extrato do CDB prova o centavo.
+
+**Aplicado em 18/08/2026.** O CDB passou a marcar R$ 485.000,00 e o caixa total foi de
+R$ 594.651,82 para R$ 711.916,33, com a conta corrente intocada. A dúvida sobre o
+rendimento não impedia a decisão: uma transferência com uma perna só não é questão de
+avaliação, é registro faltando, e o valor do principal não depende de saber o juro.
+
+### D85 — Os dois razões não batem; o que se verifica é que toda diferença tem nome
+Pedido: *"você precisa fazer os resultados baterem com o fluxo de caixa, para que
+futuramente não tenha nenhum problema"*.
+
+Fazer os dois **baterem** seria desfazer a D2. Caixa é quando o dinheiro se moveu,
+competência é quando o resultado aconteceu; forçar igualdade faria os dois relatórios
+concordarem por construção e destruiria o motivo de existirem dois. O que previne problema
+futuro é mais forte: **nenhuma diferença entre eles pode ser anônima**.
+
+→ `npm run verify:reconcile` escreve, mês a mês, a identidade
+
+```
+resultado da DRE = caixa operacional
+                 + receita reconhecida no mês
+                 − entradas de caixa sem competência
+                 + saídas de caixa sem competência
+                 + saídas cuja competência é de outro mês
+                 − entradas cuja competência é de outro mês
+                 − custo cujo caixa é de outro mês
+                 − custo de compra no cartão
+                 − custo sem caixa nenhum
+                 − ajuste manual em espelho
+```
+
+e exige **resíduo exatamente zero**. Sai com código 1 se algum mês não fechar.
+
+A decomposição é exaustiva de propósito, e é isso que dá sentido ao resíduo. Todo
+lançamento de caixa do mês, numa conta de caixa e fora de `transfer`, é espelhado no
+próprio mês, espelhado em outro, ou não espelhado. Toda linha de custo em competência é
+espelho de caixa do mesmo mês, de outro mês, de compra no cartão, ou não tem caixa nenhum.
+Os espelhos do próprio mês se cancelam contra o próprio caixa — é o único par que some da
+ponte. Resíduo, portanto, só pode ser defeito: espelho que não nasceu, espelho duplicado,
+espelho preso a um lançamento que virou transferência, custo contado duas vezes.
+
+Regra pura e testada em `src/lib/reconcile.ts` (10 testes). Um dos testes teve de ser
+reescrito a partir das primitivas: os baldes **não são livres**, e escolher números
+arbitrários para eles não fecha — o que é a melhor prova de que a identidade aperta.
+
+**Resultado em 18/08/2026: os 13 meses fecham, resíduo zero.** E a ponte entregou de brinde
+o número que interessa para o futuro: **R$ 1.281.607,12 de saídas de caixa sem
+competência** — dinheiro que saiu e ainda não pesa na DRE porque a linha não tem categoria,
+em maioria os lotes SISPAG. Conforme forem categorizadas, o custo cresce e o resultado cai,
+sem o caixa mudar. Fica previsto em vez de virar surpresa no fechamento.
 
 ---
 
