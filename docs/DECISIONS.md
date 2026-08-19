@@ -762,6 +762,33 @@ pessoa física continua barrada antes de qualquer regra ser olhada.
 
 Nos dois casos foi o dry run que pegou — que é exatamente para isso que ele existe.
 
+### D95 — O plano de contas não tem onde pôr dinheiro que entra e não é receita
+Andre confirmou em 19/08/2026 que o `PIX RECEBIDO KEEPCLE29/01` de **R$ 0,01** é teste de
+transferência. É uma linha só e não tem sequência. **Fica sem categoria de propósito**, e
+fica registrado aqui para ninguém reinvestigar.
+
+Recusei as saídas que o plano oferece, porque as duas seriam mentira: `10.05 Outros` é
+**despesa**, e entrada em conta de custo é exatamente o defeito da D83; `99.01 Transferência
+entre contas` é falso, porque o dinheiro veio de terceiro.
+
+O centavo não importa. O que ele revelou importa: **não existe conta para receita que não
+vem de cliente.** E já tem gente morando nesse vazio —
+
+> **Os rendimentos de aplicação estão em `99.03 Aplicação e resgate automático`**, que é
+> conta de **transferência**: 38 linhas, R$ 202,31, **fora da DRE inteira**. Rendimento
+> financeiro classificado como movimentação entre contas próprias.
+
+Em R$ 202 é irrelevante. Deixa de ser porque **o CDB passou a ter R$ 485.000 aplicados**
+(D84) — esse rendimento cresce, e hoje não aparece no resultado.
+
+**Pendência para o Andre, e é uma decisão só:** criar uma conta de receita financeira — algo
+como `3.05 Receita financeira` — e, se sim, em qual grupo da DRE ela entra. Pôr em
+`receita_bruta` infla a receita de serviço e distorce o OPBB, então provavelmente pede um
+grupo próprio, não operacional. É pergunta de contador, não de programador.
+
+Enquanto não houver resposta, o rendimento continua onde está — visível, nomeado e errado
+de um jeito que está escrito.
+
 ---
 
 ## Parte 13 — Decisões da Fase 8
