@@ -36,9 +36,12 @@ pôr dado real dentro do que já existe, e consertar o que só aparece quando o 
 | **Worktree em disco** | `/Users/andre/financeiro/.claude/worktrees/auto-categorizacao` |
 | **Checkout principal** | `/Users/andre/financeiro` |
 
-> ⚠️ **`origin/main` está em `60ad19f` ("fase 2")** — muito atrás. O main local tem oito
-> fases que nunca foram empurradas. Abrir PR desta branch contra `main` mostraria um diff
-> gigante. **Empurre o main primeiro.**
+> ✅ **`origin/main` foi empurrado em 18/08/2026**, de `60ad19f` ("fase 2") para `aa9250d` —
+> 16 commits, avanço limpo, sem force. As oito fases estão no GitHub. Conferido antes:
+> `docs/reference/` e `.env` nunca entraram no histórico.
+>
+> A branch `worktree-auto-categorizacao` tem o trabalho posterior a isso e ainda não foi
+> mesclada; agora um PR dela contra `main` mostra só o que ela realmente mudou.
 
 ### Os dados reais
 
