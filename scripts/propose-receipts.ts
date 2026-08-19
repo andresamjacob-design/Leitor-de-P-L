@@ -38,7 +38,12 @@ import postgres from "postgres";
 import { loadEnvLocal } from "./load-env.ts";
 import { formatBRL, fromNumeric } from "@/lib/money";
 import { judgeReceipt, VERDICT_LABEL } from "@/lib/receipts";
-import type { ClientContract, KnownClient, ReceiptVerdict } from "@/lib/receipts";
+import type {
+  ClientContract,
+  DocumentRule,
+  KnownClient,
+  ReceiptVerdict,
+} from "@/lib/receipts";
 
 loadEnvLocal();
 
@@ -131,6 +136,24 @@ try {
     clientsByDocument.set(row.doc, existing);
   }
 
+  // Regras por documento: decisão humana já registrada sobre um CNPJ. Existem porque uma
+  // empresa pode pagar de mais de um CNPJ e `clients.tax_id` guarda um só (Center Norte).
+  const ruleRows = await sql<
+    { doc: string; client_id: string; client_name: string; category_id: string }[]
+  >`
+    select regexp_replace(r.counterparty_tax_id, '\D', '', 'g') as doc,
+           r.client_id, cl.name as client_name, r.category_id
+    from categorization_rules r
+    join clients cl on cl.id = r.client_id
+    where r.counterparty_tax_id is not null and r.client_id is not null and r.active`;
+
+  const rulesByDocument = new Map<string, DocumentRule>(
+    ruleRows.map((row) => [
+      row.doc,
+      { clientId: row.client_id, clientName: row.client_name, categoryId: row.category_id },
+    ]),
+  );
+
   const [semDoc] = await sql<{ n: string }[]>`
     select count(*) as n from clients where tax_id is null or tax_id = ''`;
   const semDocumento = Number(semDoc?.n ?? 0);
@@ -154,6 +177,7 @@ try {
         occurredOn: iso(row.occurred_on),
       },
       clientsByDocument,
+      rulesByDocument,
     ),
   }));
 

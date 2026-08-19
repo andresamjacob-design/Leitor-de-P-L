@@ -53,7 +53,61 @@ const CONFIRMADOS: readonly { cliente: string; contraparte: string; porque: stri
     contraparte: "CICLO INTELIGENCIA%",
     porque: "Ciclo é CICLO INTELIGENCIA EM E - COMMERCE; também é fornecedora, ver D83",
   },
+  // Confirmados pelo Andre em 19/08/2026. Nenhum era cliente novo: todos já estavam
+  // cadastrados sem documento, que é exatamente o motivo de o script não adivinhar (D87).
+  {
+    cliente: "FK Partners",
+    contraparte: "A. F. COMERCIO DE LIVROS%",
+    porque: "razão social da FK Partners",
+  },
+  { cliente: "Danbred", contraparte: "DB GENETICA SUINA%", porque: "razão social da Danbred" },
+  {
+    cliente: "Center Norte",
+    contraparte: "CN INC 01 EMPREENDIMENTOS%",
+    porque:
+      "SPE do grupo Center Norte. O cliente já carrega o CNPJ da Associação dos Lojistas, " +
+      "então este entra como regra por documento — ver o comentário sobre segundo CNPJ",
+  },
+  {
+    cliente: "Liga Vitoria",
+    contraparte: "LIGAVIT CORRETORA%",
+    porque: "Ligavit é a razão social da Liga Vitoria",
+  },
+  {
+    cliente: "Match",
+    contraparte: "FULANO MARKETING%",
+    porque: "razão social da Match Marketdata",
+  },
+  {
+    cliente: "Smartbrain",
+    contraparte: "BRAIN SOLUCOES INTEGRADAS%",
+    porque: "razão social da Smartbrain",
+  },
+  {
+    cliente: "Sewe Consultoria",
+    contraparte: "SW SERVICOS%",
+    porque: "razão social da Sewe Consultoria",
+  },
+  {
+    cliente: "UMI SAN",
+    contraparte: "UMI SAN SERVICOS%",
+    porque: "mesmo nome, só a razão social é mais longa",
+  },
 ];
+
+/**
+ * Uma empresa pode pagar de mais de um CNPJ — SPE, holding, associação de lojistas — e
+ * `clients.tax_id` guarda um só. Quando o cliente já tem documento e o extrato traz outro,
+ * sobrescrever perderia o primeiro; criar um cliente novo duplicaria a margem.
+ *
+ * O caminho certo já existe no projeto: **regra por documento** (D40). `categorization_rules`
+ * carrega `counterparty_tax_id`, `client_id` e `category_id` juntos, que é exatamente
+ * "esse CNPJ é desse cliente e cai nessa conta". É o que o `propose-parties` cria.
+ *
+ * Só funciona quando o cliente tem uma conta de receita única — com projeto e retainer ao
+ * mesmo tempo a regra não saberia qual escolher, e aí para.
+ */
+const SEGUNDO_CNPJ_VIRA_REGRA = true;
 
 const url = process.env.DATABASE_URL;
 if (!url) throw new Error("DATABASE_URL não definido — veja o README.");
@@ -64,10 +118,20 @@ try {
   console.log(`\n${BOLD}${CONFIRMADOS.length} vínculos confirmados${RESET}\n`);
 
   const pendentes: { id: string; cliente: string; documento: string }[] = [];
+  const regrasNovas: {
+    entityId: string;
+    clientId: string;
+    cliente: string;
+    documento: string;
+    categoryId: string;
+    conta: string;
+  }[] = [];
 
   for (const link of CONFIRMADOS) {
-    const [cliente] = await sql<{ id: string; name: string; tax_id: string | null }[]>`
-      select id, name, tax_id from clients where name = ${link.cliente}`;
+    const [cliente] = await sql<
+      { id: string; name: string; tax_id: string | null; entity_id: string }[]
+    >`
+      select id, name, tax_id, entity_id from clients where name = ${link.cliente}`;
 
     if (!cliente) {
       console.log(`  ${YELLOW}?${RESET} cliente “${link.cliente}” não existe — nada a fazer`);
@@ -130,11 +194,59 @@ try {
       const atual = cliente.tax_id.replace(/\D/g, "");
       if (atual === doc) {
         console.log(`     ${GREEN}já vinculado${RESET}\n`);
-      } else {
-        console.log(
-          `     ${YELLOW}já tem outro documento (…${atual.slice(-6)}) — não será sobrescrito${RESET}\n`,
-        );
+        continue;
       }
+
+      console.log(
+        `     ${YELLOW}o cliente já tem outro CNPJ (…${atual.slice(-6)})${RESET} — nunca sobrescrito`,
+      );
+
+      if (!SEGUNDO_CNPJ_VIRA_REGRA) {
+        console.log("");
+        continue;
+      }
+
+      // Uma conta de receita única, ou a regra não saberia qual escolher.
+      const contas = await sql<{ id: string; code: string; name: string }[]>`
+        select distinct c.id, c.code, c.name
+        from contracts ct
+        join categories c on c.id = coalesce(
+          ct.category_id,
+          (select c2.id from categories c2
+            where c2.entity_id = ct.entity_id
+              and c2.code = case ct.type when 'retainer' then '3.01' else '3.02' end
+            limit 1))
+        where ct.client_id = ${cliente.id}`;
+
+      if (contas.length !== 1) {
+        console.log(
+          `     ${YELLOW}o cliente alcança ${contas.length} contas de receita — a regra não saberia qual usar${RESET}\n`,
+        );
+        continue;
+      }
+
+      const conta = contas[0]!;
+      const [jaExiste] = await sql<{ id: string }[]>`
+        select id from categorization_rules
+        where regexp_replace(coalesce(counterparty_tax_id, ''), '\D', '', 'g') = ${doc}`;
+
+      if (jaExiste) {
+        console.log(`     ${GREEN}já existe regra por documento para esse CNPJ${RESET}\n`);
+        continue;
+      }
+
+      regrasNovas.push({
+        entityId: cliente.entity_id,
+        clientId: cliente.id,
+        cliente: cliente.name,
+        documento: doc,
+        categoryId: conta.id,
+        conta: `${conta.code} ${conta.name}`,
+      });
+      console.log(
+        `     ${GREEN}vira regra por documento${RESET} → ${conta.code} ${conta.name}` +
+          `  ${DIM}(segundo CNPJ do mesmo cliente)${RESET}\n`,
+      );
       continue;
     }
 
@@ -142,17 +254,36 @@ try {
     console.log(`     ${GREEN}vai receber o documento${RESET}\n`);
   }
 
-  if (pendentes.length === 0) {
+  if (pendentes.length === 0 && regrasNovas.length === 0) {
     console.log(`${DIM}nada a fazer.${RESET}\n`);
   } else if (!APPLY) {
-    console.log(`${DIM}nada foi gravado. Rode com --aplicar.${RESET}\n`);
+    console.log(
+      `${DIM}nada foi gravado — ${pendentes.length} documentos e ${regrasNovas.length} regras.` +
+        ` Rode com --aplicar.${RESET}\n`,
+    );
   } else {
     await sql.begin(async (db) => {
       for (const item of pendentes) {
         await db`update clients set tax_id = ${item.documento} where id = ${item.id}`;
       }
+      for (const regra of regrasNovas) {
+        // `pattern: '*'` é a convenção do projeto para regra que casa por documento e
+        // ignora a descrição — a mesma que o `propose-parties` grava.
+        await db`insert into categorization_rules ${db({
+          entity_id: regra.entityId,
+          priority: 50,
+          match_type: "contains",
+          pattern: "*",
+          counterparty_tax_id: regra.documento,
+          category_id: regra.categoryId,
+          client_id: regra.clientId,
+        })}`;
+      }
     });
-    console.log(`${GREEN}${BOLD}${pendentes.length} clientes ganharam documento.${RESET}`);
+    console.log(
+      `${GREEN}${BOLD}${pendentes.length} clientes ganharam documento` +
+        `${regrasNovas.length > 0 ? `, ${regrasNovas.length} regra(s) por documento criada(s)` : ""}.${RESET}`,
+    );
     console.log(
       `${DIM}Rode ${RESET}npm run propose:receipts${DIM} — a contraparte agora é reconhecida, e a\n` +
         `conta de receita sai junto quando os contratos do cliente apontam todos para a mesma.${RESET}\n`,

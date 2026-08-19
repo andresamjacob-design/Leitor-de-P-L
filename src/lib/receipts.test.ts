@@ -87,6 +87,49 @@ describe("judgeReceipt", () => {
   });
 });
 
+describe("regra por documento", () => {
+  it("vence a inferência, mesmo com o cliente ambíguo por contrato", () => {
+    // Center Norte: paga pela Associação dos Lojistas e pela CN INC 01. O segundo CNPJ
+    // vira regra, porque `clients.tax_id` guarda um documento só.
+    const conhecidos = new Map([
+      [CNPJ, client({ id: "cn", name: "Center Norte", contracts: [
+        contract({ id: "a", revenueCategoryId: "3.01" }),
+        contract({ id: "b", revenueCategoryId: "3.02" }),
+      ] })],
+    ]);
+    const regras = new Map([
+      [CNPJ, { clientId: "cn", clientName: "Center Norte", categoryId: "3.01" }],
+    ]);
+
+    expect(judgeReceipt(receipt(), conhecidos, regras)).toEqual({
+      kind: "cliente-conhecido",
+      clientId: "cn",
+      clientName: "Center Norte",
+      categoryId: "3.01",
+      basis: "regra-por-documento",
+    });
+  });
+
+  it("alcança um CNPJ que nenhum cliente carrega", () => {
+    const regras = new Map([
+      [CNPJ, { clientId: "cn", clientName: "Center Norte", categoryId: "3.01" }],
+    ]);
+    expect(judgeReceipt(receipt(), nenhumCliente, regras)).toMatchObject({
+      kind: "cliente-conhecido",
+      basis: "regra-por-documento",
+    });
+  });
+
+  it("não salva CPF: pessoa física continua fora antes de qualquer regra", () => {
+    const regras = new Map([
+      [CPF, { clientId: "x", clientName: "Qualquer", categoryId: "3.01" }],
+    ]);
+    expect(judgeReceipt(receipt({ document: CPF }), nenhumCliente, regras)).toEqual({
+      kind: "pessoa-fisica",
+    });
+  });
+});
+
 describe("resolveRevenueCategory", () => {
   it("contratos todos na mesma conta decidem sozinhos", () => {
     const alvo = client({

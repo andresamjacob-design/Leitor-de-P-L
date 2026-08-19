@@ -699,6 +699,69 @@ Efeito: as 8 entradas dos dois (R$ 56.400) ganharam conta **sozinhas**, sem ning
 Projeto; Ciclo em **3.03 Referral**, coerente com ela ser parceira e pagadora ao mesmo tempo.
 Cobertura foi de 741 para **749 de 982 (76,3%)**.
 
+### D93 — Nenhum era cliente novo, e é por isso que o script não adivinhava
+Andre respondeu os CNPJs em 19/08/2026, e a resposta valida a D87 inteira: **nenhum dos que
+ele nomeou era cliente novo.** Todos já estavam cadastrados, sem documento, com nome
+comercial em vez de razão social.
+
+| Extrato | Cliente | |
+|---|---|---|
+| A. F. COMERCIO DE LIVROS E CURSOS | **FK Partners** | R$ 213.400 |
+| DB GENETICA SUINA | **Danbred** | R$ 66.500 |
+| CN INC 01 EMPREENDIMENTOS | **Center Norte** | R$ 65.400,48 |
+| LIGAVIT CORRETORA DE SEGUROS | **Liga Vitoria** | R$ 28.000 |
+| FULANO MARKETING E TECNOLOGIA | **Match** (Marketdata) | R$ 21.000 |
+| BRAIN SOLUCOES INTEGRADAS | **Smartbrain** | R$ 15.313 |
+| SW SERVICOS | **Sewe Consultoria** | R$ 15.000 |
+| UMI SAN SERVICOS | **UMI SAN** | R$ 9.300 |
+
+Cadastrar pelo nome legal do extrato — que era o plano inicial — teria criado **oito
+clientes duplicados**, e a margem por cliente passaria a mentir sem nenhum sinal.
+
+Vale registrar o que o casamento automático teria acertado e errado: acertaria
+`Ligavit` → `Liga Vitoria` e `Brain` → `Smartbrain`; **erraria feio** em
+`FULANO MARKETING E TECNOLOGIA` → `MS Tecnologia` (casa em "TECNOLOGIA", são empresas
+diferentes); e **não teria como acertar** `A. F. COMERCIO DE LIVROS` → `FK Partners`,
+`DB GENETICA` → `Danbred`, `SW SERVICOS` → `Sewe`. Não existe casador que resolva isso: a
+informação não está no nome.
+
+Efeito: **20 entradas ganharam conta, cobertura de 749 para 769 de 982 (78,3%).**
+
+⚠️ **O cadastro já tinha cinco pares duplicados de antes deste trabalho:** Danke, Enutri,
+Medcom, RiHappy e Santa Lucia aparecem duas vezes cada, um com documento e outro sem. Não
+mexi — juntar cliente é decisão do Andre.
+
+### D94 — Um cliente pode pagar de mais de um CNPJ
+O **Center Norte** já carregava o CNPJ da `ASSOCIAÇÃO DOS LOJISTAS DO CENTER NORTE`
+(R$ 130.800,96), e o extrato trouxe um segundo: `CN INC 01 EMPREENDIMENTOS`, uma SPE do
+grupo. `clients.tax_id` guarda um documento só.
+
+Sobrescrever perderia o primeiro; cadastrar de novo duplicaria o cliente. As duas saídas
+óbvias estavam erradas.
+
+→ O segundo CNPJ vira **regra por documento**. `categorization_rules` já carrega
+`counterparty_tax_id`, `client_id` e `category_id` juntos, que é exatamente a frase "esse
+CNPJ é desse cliente e cai nessa conta" — é o que o `propose-parties` grava. O `vincular`
+detecta o conflito sozinho e escolhe esse caminho, exigindo que o cliente tenha **uma conta
+de receita única**: com projeto e retainer ao mesmo tempo, a regra não saberia qual usar, e
+aí para.
+
+`judgeReceipt` ganhou `rulesByDocument`, consultado **antes de tudo** — uma regra é decisão
+humana já registrada, e vence qualquer inferência, pelo mesmo motivo da D40. Não salva CPF:
+pessoa física continua barrada antes de qualquer regra ser olhada.
+
+> Isso não é caso isolado. Holding, SPE e associação de lojistas são comuns, e agora o
+> mecanismo existe para o próximo.
+
+### Duas correções minhas, registradas porque quase viraram dado errado
+- **Digitei CNPJ à mão** na primeira versão do `vincular`, inventando dígitos que eu só
+  tinha visto mascarados. O documento passou a ser **lido do extrato** pelo nome da
+  contraparte.
+- **Contei movimento pelo nome, não pelo documento.** A Ciclo aparece com quatro grafias sob
+  o mesmo CNPJ, e o dry run reportou um terço do movimento dela.
+
+Nos dois casos foi o dry run que pegou — que é exatamente para isso que ele existe.
+
 ---
 
 ## Parte 13 — Decisões da Fase 8

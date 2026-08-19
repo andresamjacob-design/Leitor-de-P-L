@@ -4,7 +4,7 @@ Onde tudo está, o que foi feito, e o que falta. Escrito para quem chega sem con
 nenhum, inclusive eu mesmo numa conversa nova.
 
 Leia junto quando precisar do detalhe: `docs/PLAN.md` (o roteiro original),
-`docs/DECISIONS.md` (decisões numeradas D1–D91 e pendências Q2–Q18) e `README.md`.
+`docs/DECISIONS.md` (decisões numeradas D1–D94 e pendências Q2–Q18) e `README.md`.
 
 ---
 
@@ -69,7 +69,7 @@ Todos os scripts que gravam têm dry run por padrão e pedem `--aplicar`. Vário
 
 ```
 npm run dev
-npm run check               # typecheck + lint + 370 testes
+npm run check               # typecheck + lint + 373 testes
 npm run test:e2e            # Playwright, 25 testes
 npm run db:migrate          # aplica migrations
 npm run db:seed             # 62 categorias × 2 entidades
@@ -101,7 +101,7 @@ npm run import:invoices     # faturas de cartão em massa
 | | |
 |---|---|
 | Razão de caixa | **982 lançamentos**, 06/08/2025 a 31/07/2026 |
-| Categorizados | **749 (76,3%)** — 233 sem conta |
+| Categorizados | **769 (78,3%)** — 213 sem conta |
 | Competência | 284 linhas de receita + 577 de custo |
 | Receita reconhecida | **R$ 3.556.736,91** (jan–ago/2026) |
 | Contratos | 80 (65 ativos, 15 concluídos), 95 parcelas mensais |

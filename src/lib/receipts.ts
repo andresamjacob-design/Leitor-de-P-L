@@ -95,11 +95,30 @@ export function documentKind(document: string): "cnpj" | "cpf" | "vazio" | "inva
 }
 
 export type Basis =
+  | "regra-por-documento"
   | "conta-unica"
   | "unico-contrato-vigente"
   | "valor-bate-com-mensalidade"
   | "ambiguo"
   | "sem-contrato";
+
+/**
+ * Uma decisão já tomada sobre um CNPJ: de quem ele é e em que conta cai.
+ *
+ * Existe porque **uma empresa pode pagar de mais de um CNPJ** — SPE, holding, associação
+ * de lojistas — e `clients.tax_id` guarda um só. O Center Norte paga pela Associação dos
+ * Lojistas *e* pela `CN INC 01 EMPREENDIMENTOS`; sobrescrever o documento perderia o
+ * primeiro, e cadastrar de novo duplicaria o cliente.
+ *
+ * `categorization_rules` já carrega `counterparty_tax_id`, `client_id` e `category_id`
+ * juntos, que é exatamente essa frase. Vem antes de tudo pelo mesmo motivo que na D40:
+ * nada é mais específico do que "esse CNPJ".
+ */
+export type DocumentRule = {
+  clientId: string;
+  clientName: string;
+  categoryId: string;
+};
 
 /**
  * Qual conta de receita a entrada alcança, ou `null` quando o cliente tem contratos que
@@ -157,12 +176,25 @@ export function resolveRevenueCategory(
 export function judgeReceipt(
   receipt: Receipt,
   clientsByDocument: ReadonlyMap<string, KnownClient>,
+  rulesByDocument: ReadonlyMap<string, DocumentRule> = new Map(),
 ): ReceiptVerdict {
   const kind = documentKind(receipt.document);
 
   if (kind === "vazio") return { kind: "sem-identidade", reason: "sem-documento" };
   if (kind === "invalido") return { kind: "sem-identidade", reason: "documento-invalido" };
   if (kind === "cpf") return { kind: "pessoa-fisica" };
+
+  // Uma regra por documento é decisão humana já registrada, e vence qualquer inferência.
+  const rule = rulesByDocument.get(receipt.document);
+  if (rule) {
+    return {
+      kind: "cliente-conhecido",
+      clientId: rule.clientId,
+      clientName: rule.clientName,
+      categoryId: rule.categoryId,
+      basis: "regra-por-documento",
+    };
+  }
 
   const client = clientsByDocument.get(receipt.document);
   if (client) {
@@ -189,6 +221,7 @@ export const VERDICT_LABEL: Record<string, string> = {
   "sem-documento": "o extrato não nomeia ninguém — nenhuma regra de texto resolve",
   "documento-invalido": "documento com tamanho que não é CPF nem CNPJ",
   "pessoa-fisica": "CPF — é pessoa, não cliente; a entrada não é receita",
+  "regra-por-documento": "regra por CNPJ — decisão já registrada, vence qualquer inferência",
   "conta-unica": "todos os contratos do cliente apontam para a mesma conta",
   "unico-contrato-vigente":
     "só um contrato já tinha começado nessa data — dinheiro não paga contrato que não existia",
