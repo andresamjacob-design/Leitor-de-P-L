@@ -4,7 +4,7 @@ Onde tudo está, o que foi feito, e o que falta. Escrito para quem chega sem con
 nenhum, inclusive eu mesmo numa conversa nova.
 
 Leia junto quando precisar do detalhe: `docs/PLAN.md` (o roteiro original),
-`docs/DECISIONS.md` (decisões numeradas D1–D95 e pendências Q2–Q18) e `README.md`.
+`docs/DECISIONS.md` (decisões numeradas D1–D96 e pendências Q2–Q18) e `README.md`.
 
 ---
 
@@ -69,7 +69,7 @@ Todos os scripts que gravam têm dry run por padrão e pedem `--aplicar`. Vário
 
 ```
 npm run dev
-npm run check               # typecheck + lint + 373 testes
+npm run check               # typecheck + lint + 387 testes
 npm run test:e2e            # Playwright, 25 testes
 npm run db:migrate          # aplica migrations
 npm run db:seed             # 62 categorias × 2 entidades
@@ -286,7 +286,7 @@ por documento pega todo o histórico daquela contraparte de uma vez.
 
 | | O que é | Como destrava |
 |---|---|---|
-| **SISPAG** ← *o próximo passo* | 34 linhas, **R$ 1.221.679,97** — **95% de todo o custo que ainda falta na DRE**. Cada uma é um lote pagando vários fornecedores, e o extrato não nomeia nenhum | O **arquivo de retorno do SISPAG** (CNAB) ou o detalhe do lote no internet banking. Nenhuma regra, camada de identidade ou IA resolve: **a informação não está no arquivo que temos**. **Também é onde estão as duas pernas de saída do Ricardo** (D82). |
+| **SISPAG** ✅ *resolvido — falta importar* | 34 linhas, **R$ 1.221.679,97**. O PDF `Janeiro ate março`, que a Q13 dava como ilegível, decompõe os lotes: **19 de 19 datas fecham ao centavo** (D96). São 116 pagamentos com nome e documento, 49 contrapartes. | Não depende mais de arquivo nenhum. **Falta sua palavra para trocar as 34 linhas do razão pelas 116** — e cadastrar 23 contrapartes novas (R$ 346.265,97). R$ 95.950 em 8 pagamentos o PDF também não nomeia. |
 | **12 CNPJs sem dono** | 26 entradas, R$ 463.513,49 — A. F. Comércio (R$ 213 mil), DB Genética, CN INC, Ligavit, Fulano, Brain, SW, ISM, UMI SAN, Conexão, Mara Thaysa, Keepclear | Dizer se cada um é cliente novo ou um dos **39 clientes que já existem sem documento**. O script não decide isso sozinho de propósito (D87): casar nome de empresa duplica cliente. |
 | **`OP REC EXT`** | 4 entradas, ~R$ 408 mil, sem documento | Parecem câmbio. Em qual receita caem é decisão. |
 | **PDG IT, Hold Beauty, CSO, Hogrefe** | 13 entradas, R$ 150.400 — têm contrato de projeto *e* de retainer, e o recebimento não sabe onde cair | `contracts.category_id` já existe — basta dizer qual contrato é qual. As duas em que o valor bate com a mensalidade já foram resolvidas sozinhas. |
@@ -299,7 +299,7 @@ por documento pega todo o histórico daquela contraparte de uma vez.
 |---|---|
 | **Q18** | `ANTHROPIC_API_KEY` existe no `.env.local` mas está **vazia**. Todo o caminho de IA está testado com modelo mockado; nenhuma chamada real aconteceu. |
 | **Q15** | Fatura de junho/2026 da conta 8384 não está na pasta. |
-| **Q13** | Os três PDFs **têm** texto (26 mil chars), mas a fonte é subconjunto sem mapa Unicode — cada glifo vem como código arbitrário, em substituição específica do documento. Reexportar do banco resolve. Cobrem jan–jul/2026, já importado por outra via. |
+| ~~**Q13**~~ | **Resolvido em 19/08/2026 (D96).** O `/ToUnicode` do PDF é que estava errado, não a fonte. `readItauStatementPdf` lê esses arquivos, e o de jan–mar decompõe o SISPAG inteiro. Não precisa reexportar. |
 | **NFs** | Zero cadastradas. A Fase 5 concilia NF contra caixa e não tem dado nenhum. |
 | **Q2** | Nada chegou da entidade Gabriel Sampaio Jacob. |
 | — | **Extrato do CDB**, que resolve o §5.1. |

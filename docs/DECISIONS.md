@@ -789,6 +789,53 @@ grupo próprio, não operacional. É pergunta de contador, não de programador.
 Enquanto não houver resposta, o rendimento continua onde está — visível, nomeado e errado
 de um jeito que está escrito.
 
+### D96 — O PDF "ilegível" era legível, e ele contém o SISPAG inteiro
+A Q13 dava três PDFs como perdidos: *"têm texto, mas a fonte é subconjunto sem mapa
+Unicode; cada glifo vem como código arbitrário"*. A conclusão estava errada, e o diagnóstico
+também — pela metade.
+
+A fonte embutida é mesmo um subset **sem tabela `cmap`**. O que ninguém tinha visto é pior:
+
+> **O `/ToUnicode` do próprio arquivo está incorreto.** Ele declara `<001c><0025><0030>` —
+> que os glifos `0x1c`–`0x25` são os dígitos `0`–`9`. Texto conhecido prova que são as
+> letras `G`–`P`. O arquivo mente sobre si mesmo, e é por isso que toda ferramenta falha:
+> quem confia no mapa erra, e quem o ignora fica sem mapa nenhum.
+
+O mapa real é trivial depois de visto — `0x06`–`0x0f` são os dígitos, `0x16`–`0x2f` são
+`A`–`Z`, contíguos, mais a pontuação. Derivado casando texto que já se sabia estar ali:
+`PAGAMENTOS A FORNECEDORES` (25 letras, 25 glifos, zero conflito) e `RICARDO DE CARVALHO
+CUSTODIO JUNIOR`. A prova independente é o documento da contraparte sair formatado sozinho:
+`398.805.388-03`, um CPF com pontos e traço nos lugares certos, que nenhuma tabela errada
+produz por acaso.
+
+**Duas armadilhas de leitura, ambas achadas errando primeiro:**
+
+- **O pdf.js não serve aqui, e não por bug dele.** Com o `/ToUnicode` aplicado, a letra `G`
+  e o dígito `0` chegam como o mesmo caractere — indistinguíveis. Sem ele, o pdf.js recorre
+  a heurística de fonte padrão e inventa outra coisa. A leitura correta só existe uma camada
+  abaixo, nos CIDs do content stream (`itau-pdf-cids.ts`).
+- **A linha não é uma linha.** O nome da contraparte quebra em duas, *centralizado
+  verticalmente* sobre a transação: metade acima do `y` da data, metade abaixo. Agrupar por
+  `y` — o reflexo óbvio — fez **14 dos 19 lotes fecharem e 5 não**. A montagem certa é por
+  proximidade: cada fragmento pertence à data mais próxima.
+- **A árvore de páginas aninha.** O root aponta para dois nós, e ler só o primeiro `/Kids`
+  perdia a última página — justamente onde estavam as transações do maior lote.
+
+**Resultado, conferido contra o razão: 19 de 19 datas fecham exatamente.**
+R$ 1.221.679,97 no razão contra R$ 1.221.679,97 no PDF, diferença **R$ 0,00**. Os 34 lotes
+anônimos viram **116 pagamentos com nome e documento**, 49 contrapartes distintas — 26 já
+cadastradas como pessoa ou cliente, 23 por cadastrar (R$ 346.265,97).
+
+Sobram **R$ 95.950,00 em 8 pagamentos que o PDF também não nomeia**. Esses continuam
+anônimos, e nenhum arquivo do Itaú vai resolvê-los.
+
+> Isso muda o maior item aberto do projeto. O SISPAG deixou de depender de um arquivo que o
+> chefe do Andre ia buscar: **o dado já estava aqui**, dentro de um PDF marcado como
+> ilegível desde 13/08.
+
+⚠️ **Nada foi importado ainda.** Trocar 34 linhas do razão por 116 é operação grande e é
+decisão do Andre — ver a pendência no handover.
+
 ---
 
 ## Parte 13 — Decisões da Fase 8
