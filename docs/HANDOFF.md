@@ -327,7 +327,7 @@ o histórico daquela contraparte, e o `recategorize` a aplica ao razão inteiro.
 |---|---|---|
 | **24 contrapartes sem dono** ← *o próximo passo* | R$ 314 mil do lado dos **pagamentos** (Santa Monica Criação R$ 84.620, Aparecido Ribeiro R$ 62.472, ETG R$ 60.000, Maruri R$ 45.000, Taliêco R$ 36.000…) e R$ 30 mil do lado dos recebimentos (ISM, Mara Thaysa, Conexão). Eram 31; a D98 resolveu 7 sozinha, lendo o razão. | Dizer quem é cada uma. Se for um dos **32 clientes que já existem sem documento**, o certo é pôr o CNPJ nele — casar nome duplica cliente (D87). Depois: `npm run vincular` e `npm run recategorize`. **Três já têm evidência forte** — ver abaixo. |
 | **`OP REC EXT`** | 4 entradas, ~R$ 408 mil, sem documento nenhum | Parecem câmbio. Em qual receita caem é decisão. |
-| **31 linhas que o histórico resolveria** | R$ 187.245. O motor sabe a resposta, mas por inferência, não por regra | Estão paradas de propósito (D97). `npm run recategorize -- --aplicar --incluir-historico` se você quiser que entrem. |
+| **42 linhas que o histórico resolveria** | R$ 302.845,97. O motor sabe a resposta, mas por inferência, não por regra | Estão paradas de propósito (D97). **Ainda não recomendo aplicar em bloco:** a D99 mostrou que, barrado o palpite errado, a Ciclo cai em `6.10 Freelancers` quando é `8.03 Agência` — total certo, linha errada. E as 6 linhas de receita (Hogrefe, Hold Beauty, PDG IT) respondem sozinhas a pergunta que o `decisoes` §2 diz estar em aberto. |
 | **`PAGAMENTOS A FORNECEDORES SISPAG`** | 8 saídas, **R$ 95.950** | **Nenhum arquivo do Itaú resolve**: o próprio PDF itemizado não nomeia essas oito. Só o detalhe do lote no internet banking. |
 | **PDG IT, Hold Beauty, Hogrefe** | 6 recebimentos, R$ 73.400 — projeto *e* retainer vigentes ao mesmo tempo | Dizer qual contrato é qual. A vigência já resolveu 7 dos 13 sozinha (D89). |
 | **`BOLETOS RECEBIDOS`** | 8 entradas, R$ 43.100, sem documento | O extrato não nomeia o sacado. |
@@ -348,11 +348,15 @@ evidência está fechada, e conferir cada uma é olhar uma célula.
   **5.000 + 3.242 + 6.347 = R$ 14.589,00**, que é exatamente o `- Juridico` de **janeiro**
   na planilha; e o pagamento de março, R$ 5.000, é o `- Juridico` de **fevereiro**. A
   competência anda um mês à frente do caixa, e com esse deslocamento os dois lados fecham.
-- **`ATTENTIVE` → `8.01 Contabilidade`, por texto.** `npm run propose:rules` já propõe a
-  regra e mede **9 linhas**; ela nunca foi gravada. Junto vêm `Tarefy → 7.08` (3 linhas),
-  `ESCOLAI → 7.09` (4) e `CICLO → 8.03` (1, com **4 barradas** pelo guarda de sentido, que é
-  a D82 funcionando). São 38 regras alcançando 465 das 1.064 linhas. **Não apliquei**: são
-  regras de **texto**, e a D40 põe identidade acima de texto — vale você olhar a lista antes.
+- ~~**`ATTENTIVE` por texto**~~ — **eu tinha entendido errado, e o `--aplicar` provou:
+  0 regras criadas.** As 49 regras de texto da planilha **já estavam todas gravadas**, e
+  já funcionaram: toda linha cuja descrição nomeia o fornecedor (`BOLETO PAGO ATTENTIVE
+  CO`, `BOLETO PAGO TAREFY GESTA`, `BOLETO PAGO ESCOLAI SERV`) está categorizada.
+
+  O que sobra é o que **regra de texto não alcança por definição**: as linhas vindas do
+  SISPAG, cuja descrição é o rótulo do lote — `PAGAMENTOS A FORNECEDORES`. O nome do
+  fornecedor não está na descrição, está no `counterparty_tax_id`. Para essas, o caminho é
+  **regra por documento**, que é a forma forte da D40 — não texto.
 
 ### Depende de arquivo ou chave que não chegou
 
@@ -444,6 +448,13 @@ Aprendidos neste trabalho:
 - **Identidade sozinha não sabe o sentido.** A D40 põe identidade acima de texto, e por
   isso o `direction` das regras não teve voz quando a camada de identidade arquivou
   recebimento de cliente na despesa que a empresa paga a esse mesmo cliente.
+- **Trava de sentido tem duas pontas, e é fácil travar só uma.** A D86 impediu **entrada em
+  conta de custo** e deixou **saída em conta de receita** passar — mesma causa, mesmo
+  contribuinte dos dois lados do balcão, e três pagamentos viravam R$ 12.000 de receita
+  (D99). Depois de travar um sentido, escreva o teste do sentido oposto no mesmo dia.
+- **Um ensaio vale mais que uma leitura.** A D99 não apareceu lendo o motor; apareceu ao
+  rodar `--incluir-historico --ensaio` e estranhar uma **conta de receita** numa lista que
+  só deveria ter custo. O ensaio é revertido: olhar sai de graça.
 - **Na tela de aprovação, clique por referência de elemento não submete o formulário.** Só
   coordenada funciona, e ela precisa vir de um screenshot tirado antes da chamada.
 - **"Ilegível" costuma ser diagnóstico, não fato.** Três PDFs ficaram cinco dias marcados

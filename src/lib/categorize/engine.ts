@@ -62,6 +62,16 @@ export type EngineInput = {
    * Opcional para não quebrar quem chama sem ela; sem o conjunto, nada é bloqueado.
    */
   costCategoryIds?: ReadonlySet<string>;
+  /**
+   * As contas de receita, para a trava simétrica (D99): o histórico não pode mandar uma
+   * **saída** para uma conta de **receita**.
+   *
+   * Mesma forma da `costCategoryIds`, e pela mesma razão — a Ciclo é cliente e fornecedora
+   * sob um CNPJ só, e sem isto três pagamentos dela viravam R$ 12.000 de receita.
+   *
+   * Opcional para não quebrar quem chama sem ela; sem o conjunto, nada é bloqueado.
+   */
+  revenueCategoryIds?: ReadonlySet<string>;
 };
 
 // ---------------------------------------------------------------------------
@@ -197,23 +207,46 @@ export function indexHistory(history: readonly HistoryEntry[]): HistoryIndex {
 // ---------------------------------------------------------------------------
 
 /**
- * O histórico pode mandar esta entrada para esta conta?
+ * O histórico pode mandar este lançamento para esta conta?
  *
- * Não, quando a entrada cairia numa conta de custo (D83). Ver `costCategoryIds`.
+ * O histórico aprende com o passado e **não sabe nada sobre sentido**: ele só sabe que
+ * aquele documento já caiu naquela conta. Quando a contraparte está dos dois lados do
+ * balcão, isso quebra nas duas direções, e cada uma inventa dinheiro que não existe:
+ *
+ * - **entrada em conta de custo** vira custo negativo (D83). Era a devolução do Ricardo,
+ *   R$ 115.000 voltando para a folha.
+ * - **saída em conta de receita** vira receita do nada (D99). É a Ciclo, que paga referral
+ *   todo mês *e* é a agência que a empresa contrata — um CNPJ só. Três pagamentos de
+ *   R$ 4.000 viravam R$ 12.000 de receita.
+ *
+ * A simetria não é elegância: é que a D86 travou uma ponta e deixou a outra aberta, e a
+ * ponta aberta só apareceu quando o `--incluir-historico` foi medido num ensaio.
+ *
+ * As duas travas são **opt-in**. Sem o conjunto correspondente, nada é bloqueado — e uma
+ * **regra explícita** nunca passa por aqui, porque ela tem `direction` para dizer que quis.
  */
 function learnedSuggestionIsAllowed(
   subject: Subject,
   categoryId: string,
   costCategoryIds: ReadonlySet<string> | undefined,
+  revenueCategoryIds: ReadonlySet<string> | undefined,
 ): boolean {
-  if (!costCategoryIds) return true;
-  if (subject.direction !== "in") return true;
-  return !costCategoryIds.has(categoryId);
+  if (subject.direction === "in") {
+    return !costCategoryIds || !costCategoryIds.has(categoryId);
+  }
+  return !revenueCategoryIds || !revenueCategoryIds.has(categoryId);
 }
 
 export function suggestCategory(
   subject: Subject,
-  { rules, history, people, payrollCategoryId = null, costCategoryIds }: EngineInput,
+  {
+    rules,
+    history,
+    people,
+    payrollCategoryId = null,
+    costCategoryIds,
+    revenueCategoryIds,
+  }: EngineInput,
 ): Suggestion | null {
   const matches = matchRules(rules, subject);
 
@@ -253,7 +286,15 @@ export function suggestCategory(
   // 3. The same counterparty, categorised before.
   if (subject.counterpartyTaxId) {
     const previous = index.byTaxId.get(normalizeTaxId(subject.counterpartyTaxId));
-    if (previous && learnedSuggestionIsAllowed(subject, previous.categoryId, costCategoryIds)) {
+    if (
+      previous &&
+      learnedSuggestionIsAllowed(
+        subject,
+        previous.categoryId,
+        costCategoryIds,
+        revenueCategoryIds,
+      )
+    ) {
       return {
         categoryId: previous.categoryId,
         clientId: previous.clientId,
@@ -268,7 +309,10 @@ export function suggestCategory(
 
   // 4. The same description, categorised before.
   const seen = index.byDescription.get(normalizeDescription(subject.description));
-  if (seen && learnedSuggestionIsAllowed(subject, seen.categoryId, costCategoryIds)) {
+  if (
+    seen &&
+    learnedSuggestionIsAllowed(subject, seen.categoryId, costCategoryIds, revenueCategoryIds)
+  ) {
     return {
       categoryId: seen.categoryId,
       clientId: seen.clientId,

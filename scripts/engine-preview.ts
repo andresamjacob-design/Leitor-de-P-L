@@ -55,6 +55,13 @@ export async function runPreview(sql: Sql, entityId: string): Promise<Preview> {
       .map((category) => category.id),
   );
 
+  // D99: e nem uma saída numa conta de receita — a mesma trava, do outro lado.
+  const revenueCategoryIds = new Set(
+    categories
+      .filter((category) => category.kind === "revenue")
+      .map((category) => category.id),
+  );
+
   const ruleRows = await sql<Record<string, string | number | boolean | null>[]>`
     select id, priority, match_type, pattern, counterparty_tax_id, direction,
            amount_min::text as amount_min, amount_max::text as amount_max,
@@ -92,7 +99,14 @@ export async function runPreview(sql: Sql, entityId: string): Promise<Preview> {
     where entity_id = ${entityId} and category_id is not null
     order by occurred_on desc limit 5000`;
 
-  const input: EngineInput = { rules, history, people, payrollCategoryId, costCategoryIds };
+  const input: EngineInput = {
+    rules,
+    history,
+    people,
+    payrollCategoryId,
+    costCategoryIds,
+    revenueCategoryIds,
+  };
 
   // Only what is still pending: a line already approved or rejected is a decision someone
   // made, and re-deciding it is the behaviour that makes an automatic system untrustworthy.

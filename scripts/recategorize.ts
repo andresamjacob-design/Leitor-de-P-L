@@ -59,6 +59,8 @@ const RESET = "[0m";
 const FROM_RULE = new Set(["rule_tax_id", "rule_text"]);
 const PAYROLL_CODE = "6.02";
 const COST_KINDS: CategoryKind[] = ["cost", "expense", "tax"];
+/** O outro lado da mesma trava: o histórico não põe saída em conta de receita (D99). */
+const REVENUE_KINDS: CategoryKind[] = ["revenue"];
 
 const url = process.env.DATABASE_URL;
 if (!url) throw new Error("DATABASE_URL não definido — veja o README.");
@@ -77,6 +79,9 @@ try {
   const byId = new Map(categories.map((c) => [c.id, c]));
   const costCategoryIds = new Set(
     categories.filter((c) => COST_KINDS.includes(c.kind)).map((c) => c.id),
+  );
+  const revenueCategoryIds = new Set(
+    categories.filter((c) => REVENUE_KINDS.includes(c.kind)).map((c) => c.id),
   );
 
   const ruleRows = await sql<Record<string, string | number | boolean | null>[]>`
@@ -123,6 +128,7 @@ try {
     people,
     payrollCategoryId: categories.find((c) => c.code === PAYROLL_CODE)?.id ?? null,
     costCategoryIds,
+    revenueCategoryIds,
   };
 
   const pendentes = await sql<

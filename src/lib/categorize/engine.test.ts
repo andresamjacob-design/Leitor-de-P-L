@@ -382,6 +382,88 @@ describe("o histórico não põe entrada em conta de custo (D83)", () => {
       }),
     ).toBeNull();
   });
+});
+
+describe("o histórico também não põe saída em conta de receita (D99)", () => {
+  const CUSTO = new Set(["freelancers", "agencia"]);
+  const RECEITA = new Set(["referral", "projeto"]);
+
+  // Um só CNPJ dos dois lados do balcão. A Ciclo é cliente — paga referral todo mês — e é
+  // fornecedora, a agência que a empresa contrata. O mesmo documento, o mesmo nome.
+  const historico = [
+    {
+      description: "PIX RECEBIDO CICLO -12/05",
+      counterpartyTaxId: "11222333000109",
+      categoryId: "referral",
+      clientId: "ciclo",
+      personId: null,
+      occurredOn: "2026-05-11",
+    },
+  ];
+
+  it("o pagamento à Ciclo não vira receita pela camada de histórico", () => {
+    // Sem a trava, `history_tax_id` transformava três pagamentos de R$ 4.000 em
+    // R$ 12.000 de *receita* — medido no ensaio do `recategorize --incluir-historico`.
+    const pagamento = subject({
+      description: "PAGAMENTOS A FORNECEDORES",
+      direction: "out",
+      amount: parseMoney("4.000,00"),
+      counterpartyTaxId: "11222333000109",
+    });
+
+    expect(
+      suggestCategory(pagamento, {
+        ...EMPTY,
+        history: historico,
+        costCategoryIds: CUSTO,
+        revenueCategoryIds: RECEITA,
+      }),
+    ).toBeNull();
+  });
+
+  it("a entrada do mesmo CNPJ continua indo para a receita", () => {
+    const recebimento = subject({
+      description: "PIX RECEBIDO CICLO -09/06",
+      direction: "in",
+      counterpartyTaxId: "11222333000109",
+    });
+
+    expect(
+      suggestCategory(recebimento, {
+        ...EMPTY,
+        history: historico,
+        costCategoryIds: CUSTO,
+        revenueCategoryIds: RECEITA,
+      })?.categoryId,
+    ).toBe("referral");
+  });
+
+  it("sem o conjunto de contas de receita, nada é bloqueado — a trava é opt-in", () => {
+    const pagamento = subject({
+      description: "PAGAMENTOS A FORNECEDORES",
+      direction: "out",
+      counterpartyTaxId: "11222333000109",
+    });
+
+    expect(
+      suggestCategory(pagamento, { ...EMPTY, history: historico, costCategoryIds: CUSTO })
+        ?.categoryId,
+    ).toBe("referral");
+  });
+
+  it("uma regra explícita continua podendo — ela tem `direction` para dizer que quis", () => {
+    const pagamento = subject({ description: "BOLETO PAGO CICLO INTELI", direction: "out" });
+    const regra = rule({ pattern: "CICLO INTELI", categoryId: "referral" });
+
+    expect(
+      suggestCategory(pagamento, {
+        ...EMPTY,
+        rules: [regra],
+        costCategoryIds: CUSTO,
+        revenueCategoryIds: RECEITA,
+      })?.categoryId,
+    ).toBe("referral");
+  });
 
   it("entrada numa conta que não é de custo passa normalmente", () => {
     const receita = [

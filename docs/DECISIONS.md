@@ -915,7 +915,50 @@ continua com 1.064 linhas. Cobertura: 832 → **841 de 1.064 (79,0%)**.
 
 ---
 
-## Parte 13 — Decisões da Fase 8
+### D99 — A D86 travou uma ponta e deixou a outra aberta
+Pedido para aplicar as regras de texto, o `--aplicar` respondeu **0 regras criadas**: as 49
+já estavam gravadas e já tinham funcionado. O que sobrava não era regra faltando — era o
+que **regra de texto não alcança por definição**. As linhas do SISPAG têm por descrição o
+rótulo do lote, `PAGAMENTOS A FORNECEDORES`; o nome do fornecedor mora no documento, não no
+texto.
+
+Sobrou então medir o `--incluir-historico` num ensaio, e o ensaio mostrou outra coisa:
+
+```
+3.03 Receita — Referral        3 linhas       R$ 12.000,00
+```
+
+**Três pagamentos de R$ 4.000 virando receita.** É a Ciclo, que é cliente — paga referral
+todo mês — *e* é a agência que a empresa contrata, sob **um CNPJ só** (…001-09). O
+`history_tax_id` viu "esse documento já caiu em 3.03" e mandou para lá uma **saída**.
+
+A trava da D86 existia e não pegou, porque ela olha uma direção só:
+
+```ts
+if (subject.direction !== "in") return true;   // ← saída passa sempre
+```
+
+A D83/D86 travou **entrada em conta de custo** — custo negativo, a devolução do Ricardo. O
+espelho disso, **saída em conta de receita**, ficou aberto. O histórico não sabe nada sobre
+sentido: quando a contraparte está dos dois lados do balcão, ele erra nas duas direções, e
+cada erro inventa dinheiro que não existe.
+
+→ `learnedSuggestionIsAllowed` passa a receber também `revenueCategoryIds`, e recusa saída
+em conta de receita pela mesma regra e com as mesmas condições: **opt-in** (sem o conjunto,
+nada é bloqueado) e **regra explícita continua podendo**, porque regra tem `direction` para
+declarar intenção e histórico não tem. Quatro testes novos, 387 → **391**.
+
+Medido depois, a linha de receita **desaparece do ensaio** e os R$ 12.000 vão para o custo.
+
+**Mas não vão para a conta certa**, e isso é o argumento contra aplicar o histórico em
+bloco: barrado o `history_tax_id`, a linha cai no `history_description`, que só enxerga
+`PAGAMENTOS A FORNECEDORES` e responde **6.10 Freelancers**. A Ciclo é `8.03 Agência` — é o
+que a planilha chama `- Agência Ciclo`, R$ 4.000 por mês. O total da DRE fica certo e a
+linha fica errada.
+
+O remédio exato para ela é uma **regra por documento** no CNPJ …001-09 com `direction =
+'out'` → 8.03, que é identidade *mais* sentido, a forma forte da D40. Não criei: é decisão
+de identidade, e identidade é do Andre (D87).
 
 ### D68 — Escritor de XLSX próprio, com entradas sem compressão
 Mesma razão do leitor (D34): a biblioteca autorizada não abre os arquivos que este sistema

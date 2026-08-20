@@ -24,6 +24,9 @@ const PAYROLL_CODE = "6.02";
  */
 const COST_KINDS = ["cost", "expense", "tax"];
 
+/** O outro lado da mesma trava: o histórico não põe saída em conta de receita (D99). */
+const REVENUE_KINDS = ["revenue"];
+
 export async function loadEngineInput(entityIds: string[]): Promise<EngineInput> {
   const [rules, history, people, categories] = await Promise.all([
     listRules(entityIds),
@@ -39,12 +42,19 @@ export async function loadEngineInput(entityIds: string[]): Promise<EngineInput>
       .map((category) => category.id),
   );
 
+  const revenueCategoryIds = new Set(
+    categories
+      .filter((category) => REVENUE_KINDS.includes(category.kind))
+      .map((category) => category.id),
+  );
+
   return {
     rules,
     history,
     people,
     payrollCategoryId: payroll?.id ?? null,
     costCategoryIds,
+    revenueCategoryIds,
   };
 }
 
