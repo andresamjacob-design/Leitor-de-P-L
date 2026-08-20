@@ -94,28 +94,35 @@ try {
   >`
     with mov as (
       select regexp_replace(e.counterparty_tax_id, '\D', '', 'g') as doc,
-             e.counterparty_name, e.direction, e.amount, e.occurred_on
+             e.counterparty_name, e.direction, e.amount, e.occurred_on, e.category_id
       from cash_entries e
       join accounts a on a.id = e.account_id
       where a.type in ('bank', 'cash', 'investment')
         and e.counterparty_tax_id is not null
-        and length(regexp_replace(e.counterparty_tax_id, '\D', '', 'g')) = 14
+        and length(regexp_replace(e.counterparty_tax_id, '\D', '', 'g')) in (11, 14)
     ),
+    -- Um documento entra na lista quando sobra lançamento sem conta e o sistema não sabe
+    -- de quem ele é: nem cliente, nem pessoa, nem regra por documento. Os dois sentidos
+    -- contam — desde o SISPAG itemizado (D96), o maior bloco desconhecido é de pagamento.
     alvo as (
-      select distinct doc from mov m
-      join cash_entries e2 on regexp_replace(coalesce(e2.counterparty_tax_id,''),'\D','','g') = m.doc
-      where m.direction = 'in' and e2.category_id is null and e2.direction = 'in'
+      select distinct m.doc from mov m
+      where m.category_id is null
         and not exists (
           select 1 from clients c
-          where regexp_replace(coalesce(c.tax_id,''), '\D', '', 'g') = m.doc
-        )
+          where regexp_replace(coalesce(c.tax_id,''), '\D', '', 'g') = m.doc)
+        and not exists (
+          select 1 from people p
+          where regexp_replace(coalesce(p.tax_id,''), '\D', '', 'g') = m.doc)
+        and not exists (
+          select 1 from categorization_rules r
+          where regexp_replace(coalesce(r.counterparty_tax_id,''), '\D', '', 'g') = m.doc)
     )
     select m.doc,
            max(m.counterparty_name) as nome,
            count(*) filter (where m.direction = 'in')                    as entradas,
            coalesce(sum(m.amount) filter (where m.direction = 'in'), 0)  as total_entrada,
-           min(m.occurred_on) filter (where m.direction = 'in')          as primeira,
-           max(m.occurred_on) filter (where m.direction = 'in')          as ultima,
+           min(m.occurred_on)                                            as primeira,
+           max(m.occurred_on)                                            as ultima,
            array_agg(m.amount::text order by m.occurred_on)
              filter (where m.direction = 'in')                           as valores,
            count(*) filter (where m.direction = 'out')                   as saidas,
@@ -123,21 +130,24 @@ try {
     from mov m
     join alvo on alvo.doc = m.doc
     group by m.doc
-    order by 4 desc`;
+    order by coalesce(sum(m.amount), 0) desc`;
 
   const candidatos = await sql<{ id: string; name: string }[]>`
     select id, name from clients where tax_id is null or tax_id = '' order by name`;
 
   console.log(
-    `\n${BOLD}════ 1. ${semDono.length} CNPJs que mandaram dinheiro e não têm cliente ════${RESET}`,
+    `\n${BOLD}════ 1. ${semDono.length} contrapartes que o sistema não conhece ════${RESET}`,
   );
   console.log(
-    `${DIM}Para cada um: é cliente novo, ou é um dos ${candidatos.length} clientes que já existem\n` +
-      `sem documento? Cadastrar por semelhança de nome duplica cliente (D87), então aqui\n` +
-      `vão candidatos, não escolhas.${RESET}\n`,
+    `${DIM}Documento que aparece em lançamento sem conta e não é cliente, nem pessoa, nem\n` +
+      `regra. Para cada um: quem é? Se for um dos ${candidatos.length} clientes que já existem sem\n` +
+      `documento, o certo é pôr o CNPJ nele — cadastrar por semelhança de nome duplica\n` +
+      `cliente (D87), então aqui vão candidatos, não escolhas.${RESET}\n`,
   );
 
   for (const row of semDono) {
+    // `valores` só traz as entradas; para contraparte que só recebe pagamento, a cadência
+    // se lê na coluna de saída, e o relatório não a calcula — o que importa ali é quem é.
     const valores = (row.valores ?? []).map((v) => fromNumeric(v));
     const distintos = new Set(valores.map(String));
     const fixo = distintos.size === 1 && valores.length >= 2;
@@ -166,7 +176,7 @@ try {
       );
     }
 
-    if (Number(row.saidas) > 0) {
+    if (Number(row.saidas) > 0 && Number(row.entradas) > 0) {
       console.log(
         `   ${RED}⚠ dinheiro anda nos dois sentidos${RESET} ${DIM}— fornecedor e cliente ao mesmo tempo.` +
           ` A regra vai precisar de \`direction\`, ou repete a D83.${RESET}`,

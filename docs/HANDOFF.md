@@ -1,4 +1,4 @@
-# Handover — 18/08/2026
+# Handover — 20/08/2026
 
 Onde tudo está, o que foi feito, e o que falta. Escrito para quem chega sem contexto
 nenhum, inclusive eu mesmo numa conversa nova.
@@ -136,65 +136,85 @@ npm run import:invoices     # faturas de cartão em massa
 
 ## 4. O que foi feito
 
-29 commits, de `2bb994e` a `aab0730`. Por tema, não por ordem.
+**42 commits** na branch, de `aa9250d` (onde o `main` está) a `efc0fa7`. Por tema, não por
+ordem — e o fio que liga quase tudo é o mesmo: **o dado real chegou e mostrou onde o
+sistema mentia.**
+
+### O SISPAG, que era o maior buraco do projeto
+
+De janeiro a março de 2026 o extrato em XLSX entregava os pagamentos **agregados em lotes**:
+34 linhas de `SISPAG FORNECEDORES` somando **R$ 1.221.679,97**, sem contraparte nenhuma. Era
+95% de todo o custo que não aparecia na DRE, e nenhuma regra resolvia — o nome não estava no
+arquivo.
+
+- **O PDF "ilegível" era legível** (D96). A Q13 dava três PDFs como perdidos por "fonte sem
+  mapa Unicode". A fonte é mesmo um subset sem `cmap`, mas o problema real é outro: **o
+  `/ToUnicode` do próprio arquivo está errado** — declara que os glifos `0x1c`–`0x25` são os
+  dígitos `0`–`9`, e são as letras `G`–`P`. O arquivo mente sobre si mesmo, e é por isso que
+  toda ferramenta falha. O mapa verdadeiro é contíguo e trivial depois de visto.
+- **A decomposição fecha ao centavo.** 19 de 19 datas, R$ 1.221.679,97 contra
+  R$ 1.221.679,97. Os 34 lotes viraram **116 pagamentos com nome e CPF/CNPJ**, 49
+  contrapartes. O saldo da conta corrente não se moveu.
+- **O motor alcançou o razão** (D97). As 63 regras por documento que o Andre respondeu uma a
+  uma não chegavam nas linhas já aprovadas (D88). `recategorize` resolveu isso separando
+  **regra de palpite**: regra entra com `--aplicar`, histórico exige `--incluir-historico`.
+  Aplicadas as 63 → **R$ 863.414 de custo entrando na DRE**, todas em 6.10 Freelancers, que
+  é o que os lotes sempre foram: a folha de terceiros.
+
+### A ponte entre os dois razões
+
+- **`verify:reconcile`** (D85). Mês a mês, prova que o resultado da DRE é o caixa
+  operacional mais um conjunto de diferenças **todas nomeadas**, e que não sobra centavo.
+  Sai com código 1 se sobrar. Os dois razões não batem — não é para baterem —, mas nenhuma
+  diferença entre eles é anônima.
+- Foi a ponte que **previu** o efeito do SISPAG antes de ele acontecer, e que **provou**
+  depois que nada se perdeu: a linha "saídas de caixa sem competência" caiu exatamente os
+  R$ 863.414.
 
 ### Categorização determinística
 
 - **Regra por sentido** (migration `0004`). A regra `CICLO` → Agência pegava cinco
-  recebimentos da Ciclo: receita virando despesa. `categorization_rules.direction` resolve,
-  e é o mesmo problema da Salesforce, que é cliente e fornecedora ao mesmo tempo.
-- **Casamento por documento** (`propose-parties`): liga o nome da planilha ao nome legal do
-  extrato e daí ao CNPJ/CPF. Trata ambiguidade como motivo para não propor.
-- **Duas classes de falha de texto:** truncamento (`ATTENTIVE CONTABILIDADE` chega como
-  `ATTENTIVE CO`) e separador (`Escola.i` ≠ `ESCOLAI`; `Enutri` ≠ `E NUTRI`).
-- **Casamento aproximado com corte em seis letras.** Um token de 6+ a uma letra de
-  distância é evidência; cinco letras é coincidência. Foi o que deixou Pasolini, Medcom e
-  Migani entrarem e manteve `SANTA MONICA` × `Santa Lucia` de fora.
-- **Relatório `pendencias`**, que ordena o que falta por dinheiro e diz o que o sistema já
-  sabe de cada grupo.
-- **Entrada parada em conta de custo** (`fix:credits`, D83). O cartão é prova por si —
-  crédito na fatura só pode ser estorno de compra. No banco, é devolução só se o pagamento
-  que ela reverte estiver na mesma categoria. Tirou R$ 218.800 de custo fantasma da DRE
-  sem mover o saldo.
+  recebimentos da Ciclo: receita virando despesa. É o mesmo problema da Salesforce, que é
+  cliente e fornecedora ao mesmo tempo.
+- **Entrada parada em conta de custo** (`fix:credits`, D83). No cartão, um crédito só pode
+  ser estorno de compra. No banco, é devolução só se o pagamento que ela reverte estiver na
+  mesma categoria. Tirou **R$ 218.800 de custo fantasma** da DRE sem mover o saldo.
 - **Trava no motor para o defeito não voltar** (D86). Medindo o que o motor decidiria para
-  as linhas sem conta, ele decidiria 5 — e as 5 eram exatamente as que a D83 corrigira,
-  pela camada de histórico. O histórico aprende com o passado e não sabe nada sobre
-  sentido, então perdeu o direito de pôr uma **entrada** numa conta de custo. Regra
-  explícita continua podendo, porque tem `direction` para dizer que quis. De 5 sugestões
+  as linhas sem conta, ele decidiria 5 — e as 5 eram exatamente as que a D83 tinha acabado
+  de corrigir, pela camada de histórico. O histórico aprende com o passado e não sabe nada
+  sobre sentido, então perdeu o direito de pôr **entrada** em conta de custo. De 5 sugestões
   erradas para 0.
-- **De quem é o dinheiro que entrou** (`propose:receipts`, D87). Identidade por documento,
-  com duas recusas deliberadas: **CPF nunca é cliente** (são as devoluções do Ricardo, e
-  tratá-las como recebimento inventaria R$ 170 mil de receita), e **o script não cadastra
-  cliente** — o dry run mostrou a Ciclo a caminho de ser duplicada.
+- **Identidade por documento** (`propose:receipts`, D87/D89/D94), com recusas deliberadas:
+  **CPF nunca é cliente**; o script **não cadastra cliente** (o dry run mostrou a Ciclo a
+  caminho de ser duplicada); e o desempate mais forte entre contratos é a **vigência** —
+  dinheiro não paga contrato que ainda não existia.
+- **Um cliente pode pagar de mais de um CNPJ** (D94). Center Norte paga pela Associação dos
+  Lojistas *e* por uma SPE. `clients.tax_id` guarda um; o segundo vira **regra por
+  documento**, que já era o mecanismo do projeto para isso.
+- **Casamento aproximado com corte em seis letras.** Token de 6+ a uma letra de distância é
+  evidência; cinco letras é coincidência.
 
 ### Importação
 
-- **19 faturas de cartão** (516 lançamentos) em massa, com identidade lida de dentro do PDF
-  e dedup por conteúdo.
-- **Leitor da Contabilizei** (`src/lib/import/contabilizei-statement.ts`, 7 testes) — uma
-  terceira conta bancária que ninguém tinha citado, achada procurando nota fiscal. Confere
-  de três jeitos independentes.
-- Dois extratos curtos de julho/agosto, com 69 duplicatas detectadas sozinhas pelo hash.
+- **19 faturas de cartão** (516 lançamentos) em massa, identidade lida de dentro do PDF.
+- **Leitor da Contabilizei** — uma terceira conta bancária que ninguém tinha citado, achada
+  procurando nota fiscal.
+- **Leitor do extrato em PDF** (`itau-statement-pdf.ts`), que só existe por causa do SISPAG.
 
 ### Competência
 
-- **80 contratos** lidos do bloco de receita da planilha, fechando com o total do ano
-  declarado nela (R$ 5.033.061,88 contra 5.033.061,87).
-- **Contrato pode declarar sua conta de receita** (migration `0005`). O tipo tem dois
-  valores e o plano tem quatro receitas; `contracts.category_id` vence o tipo. Sem isso,
-  R$ 378.848 de indicação e parceria cairiam em suporte contínuo.
-- **`recognize-manual`** grava o plano mês a mês dos contratos cujo valor varia — o motor
-  não gera nada para método `manual`, e sem isso metade do ano ficava invisível.
+- **80 contratos** lidos da planilha, fechando com o total do ano declarado nela.
+- **Contrato pode declarar sua conta de receita** (migration `0005`).
+- **`recognize-manual`** grava o plano mês a mês dos contratos de valor variável.
 
 ### Diligência
 
-- **Q11 exercitada**: o caminho de escrita do razão rodou pela primeira vez, e o espelho de
-  competência nasceu só para as linhas com conta, que é a D2a exatamente como escrita.
-- **`verify:rls` 7/7** depois de todas as escritas.
+- **A conta CDB ganhou as duas pernas** (D84). Tinha saldo de abertura e zero lançamentos;
+  o caixa total estava **subestimado em R$ 117.264,51**, não superestimado como o handover
+  anterior dizia.
+- **`verify:rls` 7/7** depois de cada escrita, sem exceção.
+- **`origin/main` empurrado**, de `60ad19f` ("fase 2") para `aa9250d`.
 - **2025 removido do razão** a pedido, com o saldo provando o corte ao não mudar.
-- **A ponte entre os dois razões** (`verify:reconcile`, D85). Mês a mês, prova que o
-  resultado da DRE é o caixa operacional mais um conjunto de diferenças **todas nomeadas**,
-  e que não sobra centavo. Falha com código 1 se sobrar.
 
 ---
 
@@ -250,7 +270,7 @@ o pagamento correspondente na mesma categoria no mesmo dia.
 > fix:credits` nunca apaga `cash_entries` — tira a categoria, e o espelho de competência
 > sai junto pelo caminho que o `planCashMirror` já tinha.
 
-### 5.4 O que a ponte mostrou que ainda vai mexer no resultado
+### 5.4 O que a ponte mostra que ainda vai mexer no resultado
 
 Os dois razões fecham hoje, mas fechar não é o mesmo que estar completo. Somadas as
 diferenças dos 13 meses:
@@ -259,14 +279,15 @@ diferenças dos 13 meses:
 |---|---|
 | Receita reconhecida no mês | + R$ 3.556.736,91 |
 | Entradas de caixa sem competência | − R$ 2.995.308,69 |
-| **Saídas de caixa sem competência** | **+ R$ 1.281.607,12** |
+| **Saídas de caixa sem competência** | **+ R$ 418.193,12** |
 | Custo de compra no cartão | − R$ 147.685,31 |
 
-A linha do meio é a lista de tarefas em forma de número: **R$ 1,28 milhão que saiu do caixa
-e ainda não pesa na DRE**, porque essas linhas não têm categoria — em maioria os lotes
-SISPAG. Conforme forem categorizadas, o custo da DRE cresce e o resultado cai, sem que o
-caixa mude um centavo. Isso é esperado, e agora é visível antes de acontecer em vez de
-aparecer como surpresa no fechamento.
+A linha do meio é a lista de tarefas em forma de número: **R$ 418 mil que saiu do caixa e
+ainda não pesa na DRE**, porque essas linhas não têm categoria. Conforme forem
+categorizadas, o custo cresce e o resultado cai, **sem o caixa mudar um centavo**.
+
+> Ela era **R$ 1.281.607,12** até 20/08. O SISPAG levou R$ 863.414 embora de uma vez — e
+> essa queda, medida na ponte, é a prova de que o import não perdeu nada pelo caminho.
 
 ---
 
@@ -274,26 +295,28 @@ aparecer como surpresa no fechamento.
 
 ### Depende de você
 
-Rode **`npm run decisoes`** — ele lista cada pergunta em aberto com a evidência do lado,
-e é feito para você responder de uma sentada. `npm run pendencias` dá o quadro por dinheiro. Uma resposta sua costuma resolver várias linhas, porque a regra
-por documento pega todo o histórico daquela contraparte de uma vez.
+Rode **`npm run decisoes`** — lista cada pergunta em aberto com a evidência do lado, feito
+para você responder de uma sentada. `npm run pendencias` dá o quadro por dinheiro.
 
-> ⚠️ **O motor não alcança o que já está no razão** (D88). Ele só roda sobre
-> `staged_transactions`, e o staging está vazio porque tudo foi aprovado. Toda regra criada
-> depois da aprovação é peso morto para essas 248 linhas — não adianta criar regra
-> esperando que elas sejam pegas sozinhas. Recategorizar em massa foi medido e recuperaria
-> 2%; antes da D86, os 2% eram justamente as sugestões erradas.
+Uma resposta sua costuma resolver várias linhas de uma vez: a regra por documento pega todo
+o histórico daquela contraparte, e o `recategorize` a aplica ao razão inteiro.
+
+> ℹ️ **O motor não roda sozinho sobre o razão** (D88): ele só olha `staged_transactions`, e
+> o staging está vazio porque tudo foi aprovado. Isso deixou de ser bloqueio — **`npm run
+> recategorize` aplica o motor ao razão** (D97), separando regra de palpite. Depois de
+> responder qualquer coisa abaixo, é ele que entrega o resultado.
 
 **Na ordem do dinheiro:**
 
 | | O que é | Como destrava |
 |---|---|---|
-| ~~**SISPAG**~~ ✅ **resolvido e importado em 20/08/2026** | Os 34 lotes viraram **116 pagamentos com nome e documento** (D96), e **63 deles já ganharam conta pelas regras por documento** — R$ 863.414 de custo entrando na DRE (D97). | O que sobra: **23 contrapartes por cadastrar** (R$ 346.265,97) e **R$ 95.950 em 8 pagamentos que o próprio PDF não nomeia**. Rode `npm run decisoes`. |
-| **12 CNPJs sem dono** | 26 entradas, R$ 463.513,49 — A. F. Comércio (R$ 213 mil), DB Genética, CN INC, Ligavit, Fulano, Brain, SW, ISM, UMI SAN, Conexão, Mara Thaysa, Keepclear | Dizer se cada um é cliente novo ou um dos **39 clientes que já existem sem documento**. O script não decide isso sozinho de propósito (D87): casar nome de empresa duplica cliente. |
-| **`OP REC EXT`** | 4 entradas, ~R$ 408 mil, sem documento | Parecem câmbio. Em qual receita caem é decisão. |
-| **PDG IT, Hold Beauty, CSO, Hogrefe** | 13 entradas, R$ 150.400 — têm contrato de projeto *e* de retainer, e o recebimento não sabe onde cair | `contracts.category_id` já existe — basta dizer qual contrato é qual. As duas em que o valor bate com a mensalidade já foram resolvidas sozinhas. |
+| **31 contrapartes sem dono** ← *o próximo passo* | R$ 346 mil do lado dos **pagamentos** (Santa Monica Criação R$ 84.620, Aparecido Ribeiro R$ 62.472, ETG R$ 60.000, Maruri R$ 45.000, Taliêco R$ 36.000…) e R$ 30 mil do lado dos recebimentos (ISM, Mara Thaysa, Conexão). Quase todas vieram do SISPAG itemizado. | Dizer quem é cada uma. Se for um dos **32 clientes que já existem sem documento**, o certo é pôr o CNPJ nele — casar nome duplica cliente (D87). Depois: `npm run vincular` e `npm run recategorize`. |
+| **`OP REC EXT`** | 4 entradas, ~R$ 408 mil, sem documento nenhum | Parecem câmbio. Em qual receita caem é decisão. |
+| **31 linhas que o histórico resolveria** | R$ 187.245. O motor sabe a resposta, mas por inferência, não por regra | Estão paradas de propósito (D97). `npm run recategorize -- --aplicar --incluir-historico` se você quiser que entrem. |
+| **`PAGAMENTOS A FORNECEDORES SISPAG`** | 8 saídas, **R$ 95.950** | **Nenhum arquivo do Itaú resolve**: o próprio PDF itemizado não nomeia essas oito. Só o detalhe do lote no internet banking. |
+| **PDG IT, Hold Beauty, Hogrefe** | 6 recebimentos, R$ 73.400 — projeto *e* retainer vigentes ao mesmo tempo | Dizer qual contrato é qual. A vigência já resolveu 7 dos 13 sozinha (D89). |
 | **`BOLETOS RECEBIDOS`** | 8 entradas, R$ 43.100, sem documento | O extrato não nomeia o sacado. |
-| **Conta de receita financeira** | Não existe no plano. Os rendimentos de aplicação (38 linhas, R$ 202,31) estão em `99.03`, que é **transferência**, e ficam fora da DRE — com R$ 485.000 no CDB isso cresce (D95) | Criar `3.05 Receita financeira`? E em qual grupo da DRE — `receita_bruta` infla o OPBB, então provavelmente um grupo não operacional. |
+| **Conta de receita financeira** | Não existe no plano. Os rendimentos de aplicação (38 linhas, R$ 202,31) estão em `99.03`, que é **transferência**, e ficam fora da DRE — com R$ 485.000 no CDB isso cresce (D95) | Criar `3.05 Receita financeira`? E em qual grupo da DRE — `receita_bruta` infla o OPBB, então provavelmente um grupo não operacional. É pergunta de contador. |
 
 ### Depende de arquivo ou chave que não chegou
 
@@ -301,16 +324,34 @@ por documento pega todo o histórico daquela contraparte de uma vez.
 |---|---|
 | **Q18** | `ANTHROPIC_API_KEY` existe no `.env.local` mas está **vazia**. Todo o caminho de IA está testado com modelo mockado; nenhuma chamada real aconteceu. |
 | **Q15** | Fatura de junho/2026 da conta 8384 não está na pasta. |
-| ~~**Q13**~~ | **Resolvido em 19/08/2026 (D96).** O `/ToUnicode` do PDF é que estava errado, não a fonte. `readItauStatementPdf` lê esses arquivos, e o de jan–mar decompõe o SISPAG inteiro. Não precisa reexportar. |
 | **NFs** | Zero cadastradas. A Fase 5 concilia NF contra caixa e não tem dado nenhum. |
 | **Q2** | Nada chegou da entidade Gabriel Sampaio Jacob. |
-| — | **Extrato do CDB**, que resolve o §5.1. |
+| — | **Extrato do CDB** — confirmaria se houve rendimento retido dentro dele. R$ 485.000 é o principal (D84). |
+| — | **Detalhe do lote SISPAG** no internet banking, só para as 8 saídas de R$ 95.950 que nem o PDF nomeia. |
+
+> ~~**Q13**~~ **fechada em 19/08/2026** (D96): o `/ToUnicode` do PDF é que estava errado, não
+> a fonte. `readItauStatementPdf` lê esses arquivos, e o de jan–mar decompôs o SISPAG
+> inteiro. Não precisa reexportar nada.
 
 ### Decisões antigas ainda abertas
 
 `Q4` (metas na tela), `Q8` (a aba `Vendas e Perdas` é um CRM — 6 negócios ganhos, R$ 221
 mil; nenhuma fase cobre), `Q9` (documento escolar alheio na pasta — apagar?), `Q16`
 (contratos), `Q17` (arquivo do contrato no Storage).
+
+### Se for fazer só três coisas
+
+1. **Responder as 31 contrapartes** (`npm run decisoes`). É o maior bloco que não depende de
+   arquivo nenhum, e a maioria provavelmente já está cadastrada sem documento — como
+   aconteceu com as oito de 19/08, em que **nenhuma era cliente novo**.
+2. **Rodar `npm run vincular` e `npm run recategorize`** depois de responder. É o que
+   converte resposta em custo na DRE.
+3. **Decidir a conta de receita financeira** com o contador, junto de `OP REC EXT`. São as
+   duas únicas pendências que mexem em como o resultado é *estruturado*, não só em quanto
+   ele é.
+
+O que **não** vale a pena esperar: o retorno CNAB do SISPAG. Ele resolveria R$ 95.950 de 8
+linhas, e o resto já entrou pelo PDF.
 
 ---
 
@@ -368,6 +409,21 @@ Aprendidos neste trabalho:
   recebimento de cliente na despesa que a empresa paga a esse mesmo cliente.
 - **Na tela de aprovação, clique por referência de elemento não submete o formulário.** Só
   coordenada funciona, e ela precisa vir de um screenshot tirado antes da chamada.
+- **"Ilegível" costuma ser diagnóstico, não fato.** Três PDFs ficaram cinco dias marcados
+  como perdidos por uma explicação que estava meio certa. O `/ToUnicode` deles era **falso**,
+  não ausente — e quem confia num mapa errado erra com mais confiança do que quem não tem
+  mapa. Antes de aceitar que um arquivo não dá, vale abrir a estrutura dele.
+- **Ferramenta boa atrapalha quando o arquivo mente.** O pdf.js aplica o `/ToUnicode` e faz
+  a letra `G` virar o dígito `0`; sem ele, cai numa heurística de fonte padrão e inventa
+  outra coisa. Nos dois casos o texto sai errado **parecendo certo**. A leitura correta
+  estava uma camada abaixo, nos CIDs do content stream.
+- **Agrupar por coordenada `y` parte a linha ao meio.** O nome da contraparte quebra em duas
+  e fica *centralizado* sobre a transação: metade acima do `y` da data, metade abaixo.
+  Agrupar por `y` fez 14 dos 19 lotes fecharem e 5 não. A montagem certa é por proximidade.
+- **A árvore de páginas de um PDF aninha.** Ler só o primeiro `/Kids` perdeu a última
+  página, justamente onde estavam as transações do maior lote.
+- **Conferir contra o razão foi o que achou os três erros acima.** Cada um produzia saída
+  plausível; o que os expôs foi somar por data e exigir que fechasse ao centavo.
 
 ---
 
