@@ -873,6 +873,48 @@ Ficaram **31 linhas por histórico, R$ 187.245,00**, esperando uma decisão expl
 
 ---
 
+### D98 — A D88 não era só do motor: quem propõe também lia só o staging
+A D97 consertou o motor, que enxergava apenas `staged_transactions`. Ficou faltando notar
+que **os dois scripts que propõem** liam da mesma tabela — `propose:parties` na linha do
+casamento de partes, `propose:rules` na hora de medir o alcance de cada regra.
+
+Enquanto todo import passava pelo staging, staging e razão diziam a mesma coisa. O
+`import:sispag` (D96) quebrou isso de propósito: ele troca um lote pelos pagamentos de
+dentro e escreve **direto no razão**. Resultado medido: 102 documentos no staging contra
+115 no razão — **13 contrapartes existiam e eram invisíveis para quem deveria identificá-las**,
+enquanto apareciam em `pendencias` como "não cadastrada".
+
+**O silêncio não foi o pior.** Sete das treze eram colaboradores que a aba `Colaboradores`
+nomeia. Sem o documento verdadeiro no universo, o casamento estrito não achava nada, e a
+parte caía na regra aproximada — que exige **um** token distintivo e ignora os outros. Aí
+`Vitor Oliveira`, `Anna Flavia de Oliveira` e `Jonailson Junior` foram todos reivindicar
+`ROBERTO PASCOAL DE OLIVEIRA JUNIOR`, pelo sobrenome, e o relatório imprimiu uma **disputa
+de três vias que nunca existiu**. É a lição da D96 outra vez: evidência ausente não se lê
+como ausente — se lê como uma resposta errada dada com confiança.
+
+Com o razão no universo, os sete casam estritamente com o próprio documento e **a disputa
+desaparece sozinha** — o estrito ganha do aproximado, como a regra já dizia.
+
+**`status = 'pending'` é o que impede a dupla contagem**, e diz a coisa exata: um staged
+*approved* já **é** uma linha de `cash_entries`; um `duplicate` ou `rejected` nunca foi
+dinheiro. Hoje são 1.064 linhas de razão e nada pendente, contra as 1.046 que o staging
+oferecia — 977 aprovadas e **69 duplicatas que estavam sendo contadas como alcance**.
+
+**Uma armadilha nova, e cara, no meio do caminho:** as duas tabelas não concordam sobre o
+que é sinal. `staged_transactions.amount` é **assinado**, como o extrato imprime;
+`cash_entries` guarda **magnitude** e põe o sentido em `direction`. Unir as duas lendo o
+valor do razão como se fosse assinado transformou os **15 pagamentos do CUSTODIO em 26
+recebimentos** e levantou `sentido invertido` na folha inteira. Sentido é exatamente o que
+a D82 e a D86 existem para proteger, e ele se restaura no `case`, nunca se presume.
+
+**Aplicado em 20/08/2026:** 7 partes cadastradas, 7 regras por documento, e o
+`recategorize` levou **9 lançamentos, R$ 32.370,00**, todos em 6.10 Freelancers. Na ponte,
+"saídas de caixa sem competência" caiu de R$ 418.193,12 para **R$ 385.823,12** — os mesmos
+R$ 32.370 —, os 13 meses continuam com resíduo zero, o `verify:rls` deu 7/7 e o razão
+continua com 1.064 linhas. Cobertura: 832 → **841 de 1.064 (79,0%)**.
+
+---
+
 ## Parte 13 — Decisões da Fase 8
 
 ### D68 — Escritor de XLSX próprio, com entradas sem compressão

@@ -359,21 +359,66 @@ try {
     select id, code, name from categories where entity_id = ${entity.id}`;
   const byCode = new Map(categories.map((category) => [category.code, category]));
 
+  // Where a counterparty is allowed to come from: the ledger first, staging only for what
+  // has not reached it.
+  //
+  // Reading `staged_transactions` alone was the same blind spot D88 records about the
+  // engine, one table over. Staging is what an import *proposes*; the ledger is what the
+  // company actually paid, and the two stopped agreeing the moment a script wrote straight
+  // to the ledger. `import:sispag` (D96) does exactly that — it replaces a batch line with
+  // the payments inside it — so its 116 payments and their documents never passed through
+  // staging, and thirteen counterparties were invisible here while sitting in plain sight
+  // in `pendencias`.
+  //
+  // The damage was not only the silence. A collaborator whose real document is missing from
+  // the universe finds no strict match, falls through to the approximate rule, and gets
+  // claimed by whatever surname is one letter away: `Vitor Oliveira`, `Anna Flavia de
+  // Oliveira` and `Jonailson Junior` all landed on `ROBERTO PASCOAL DE OLIVEIRA JUNIOR`
+  // and were reported as a three-way dispute that never existed. Absent evidence does not
+  // read as absent — it reads as a wrong answer held confidently, which is the D96 lesson
+  // again.
+  //
+  // `status = 'pending'` is what keeps the counts honest, and it says the thing exactly: an
+  // *approved* staged row already **is** a `cash_entries` row, so counting both would double
+  // every piece of evidence printed below, and a `duplicate` or `rejected` row was never
+  // money to begin with. Today that reads 1.064 ledger lines plus nothing pending.
+  //
   // Grouped by document, never by name: the same company arrives spelled two ways —
   // `PDGIT SOLUCOES EM TECNOLOGIA LTDA` and `PDGIT SOLUCOES` are one CNPJ — and counting
   // them apart both undercounts the lines and invents an ambiguity that is not there.
   // The longest spelling wins as the label, being the one that carries the most evidence.
   const counterparties = await sql<Counterparty[]>`
+    with linhas as (
+      -- The two tables do not agree on what a sign means, and the disagreement is silent.
+      -- staged_transactions.amount is signed, the way the statement prints it;
+      -- cash_entries.amount is a magnitude and the way the money went lives in direction.
+      -- Reading the ledger amount as if it were signed makes every row an entrada -- the
+      -- first run of this query turned CUSTODIO's 15 payments into 26 receipts and raised
+      -- "sentido invertido" on the whole payroll. Direction is the one fact D82 and D86
+      -- exist to protect, so it is restored here rather than assumed.
+      select
+        counterparty_name,
+        counterparty_tax_id,
+        case when direction = 'out' then -amount else amount end as amount
+      from cash_entries
+      where entity_id = ${entity.id}
+        and counterparty_tax_id is not null
+        and counterparty_name is not null
+      union all
+      select counterparty_name, counterparty_tax_id, amount
+      from staged_transactions
+      where entity_id = ${entity.id}
+        and status = 'pending'
+        and counterparty_tax_id is not null
+        and counterparty_name is not null
+    )
     select
       (array_agg(counterparty_name order by length(counterparty_name) desc))[1] as name,
       regexp_replace(counterparty_tax_id, '\\D', '', 'g') as "taxId",
       count(*)::int                                      as lines,
       count(*) filter (where amount > 0)::int            as incoming,
       count(*) filter (where amount < 0)::int            as outgoing
-    from staged_transactions
-    where entity_id = ${entity.id}
-      and counterparty_tax_id is not null
-      and counterparty_name is not null
+    from linhas
     group by 2
     order by 3 desc`;
 

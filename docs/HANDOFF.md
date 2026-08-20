@@ -103,12 +103,12 @@ npm run import:invoices     # faturas de cartão em massa
 | | |
 |---|---|
 | Razão de caixa | **1.064 lançamentos**, 06/08/2025 a 31/07/2026 |
-| Categorizados | **832 (78,2%)** — 232 sem conta |
+| Categorizados | **841 (79,0%)** — 223 sem conta |
 | Competência | 284 linhas de receita + 640 de custo |
 | Receita reconhecida | **R$ 3.556.736,91** (jan–ago/2026) |
 | Contratos | 80 (65 ativos, 15 concluídos), 95 parcelas mensais |
-| Clientes / pessoas | 72 / 33 |
-| Regras | 111 |
+| Clientes / pessoas | 72 / 40 |
+| Regras | 118 |
 | Importações | 23 |
 | Notas fiscais | **0** |
 
@@ -136,7 +136,7 @@ npm run import:invoices     # faturas de cartão em massa
 
 ## 4. O que foi feito
 
-**42 commits** na branch, de `aa9250d` (onde o `main` está) a `efc0fa7`. Por tema, não por
+**44 commits** na branch, de `aa9250d` (onde o `main` está). Por tema, não por
 ordem — e o fio que liga quase tudo é o mesmo: **o dado real chegou e mostrou onde o
 sistema mentia.**
 
@@ -160,6 +160,20 @@ arquivo.
   **regra de palpite**: regra entra com `--aplicar`, histórico exige `--incluir-historico`.
   Aplicadas as 63 → **R$ 863.414 de custo entrando na DRE**, todas em 6.10 Freelancers, que
   é o que os lotes sempre foram: a folha de terceiros.
+
+### A D88 tinha um segundo andar: quem propõe também lia só o staging
+
+- **Sete colaboradores estavam invisíveis** (D98). A D97 consertou o motor; ficaram
+  `propose:parties` e `propose:rules`, que liam da mesma `staged_transactions`. Como o
+  `import:sispag` escreve **direto no razão**, 13 contrapartes existiam sem que quem deveria
+  identificá-las pudesse vê-las — 102 documentos no staging contra 115 no razão.
+- **O silêncio não foi o pior.** Sem o documento verdadeiro no universo, o casamento estrito
+  não achava nada e a parte caía na regra aproximada, que exige **um** token distintivo.
+  `Vitor Oliveira`, `Anna Flavia de Oliveira` e `Jonailson Junior` foram todos reivindicar
+  `ROBERTO PASCOAL DE OLIVEIRA JUNIOR`, pelo sobrenome, e o relatório imprimiu uma **disputa
+  de três vias que nunca existiu**. Com o razão no universo, ela desaparece sozinha.
+- **Resultado:** 7 partes cadastradas, 7 regras por documento, e o `recategorize` levou
+  **9 lançamentos, R$ 32.370,00** para 6.10 Freelancers. Cobertura 78,2% → **79,0%**.
 
 ### A ponte entre os dois razões
 
@@ -279,15 +293,16 @@ diferenças dos 13 meses:
 |---|---|
 | Receita reconhecida no mês | + R$ 3.556.736,91 |
 | Entradas de caixa sem competência | − R$ 2.995.308,69 |
-| **Saídas de caixa sem competência** | **+ R$ 418.193,12** |
+| **Saídas de caixa sem competência** | **+ R$ 385.823,12** |
 | Custo de compra no cartão | − R$ 147.685,31 |
 
-A linha do meio é a lista de tarefas em forma de número: **R$ 418 mil que saiu do caixa e
+A linha do meio é a lista de tarefas em forma de número: **R$ 386 mil que saiu do caixa e
 ainda não pesa na DRE**, porque essas linhas não têm categoria. Conforme forem
 categorizadas, o custo cresce e o resultado cai, **sem o caixa mudar um centavo**.
 
-> Ela era **R$ 1.281.607,12** até 20/08. O SISPAG levou R$ 863.414 embora de uma vez — e
-> essa queda, medida na ponte, é a prova de que o import não perdeu nada pelo caminho.
+> Ela era **R$ 1.281.607,12** até 20/08. O SISPAG levou R$ 863.414 embora de uma vez, e a
+> D98 mais R$ 32.370 — e essas quedas, medidas na ponte, são a prova de que nada se perdeu
+> pelo caminho.
 
 ---
 
@@ -310,13 +325,34 @@ o histórico daquela contraparte, e o `recategorize` a aplica ao razão inteiro.
 
 | | O que é | Como destrava |
 |---|---|---|
-| **31 contrapartes sem dono** ← *o próximo passo* | R$ 346 mil do lado dos **pagamentos** (Santa Monica Criação R$ 84.620, Aparecido Ribeiro R$ 62.472, ETG R$ 60.000, Maruri R$ 45.000, Taliêco R$ 36.000…) e R$ 30 mil do lado dos recebimentos (ISM, Mara Thaysa, Conexão). Quase todas vieram do SISPAG itemizado. | Dizer quem é cada uma. Se for um dos **32 clientes que já existem sem documento**, o certo é pôr o CNPJ nele — casar nome duplica cliente (D87). Depois: `npm run vincular` e `npm run recategorize`. |
+| **24 contrapartes sem dono** ← *o próximo passo* | R$ 314 mil do lado dos **pagamentos** (Santa Monica Criação R$ 84.620, Aparecido Ribeiro R$ 62.472, ETG R$ 60.000, Maruri R$ 45.000, Taliêco R$ 36.000…) e R$ 30 mil do lado dos recebimentos (ISM, Mara Thaysa, Conexão). Eram 31; a D98 resolveu 7 sozinha, lendo o razão. | Dizer quem é cada uma. Se for um dos **32 clientes que já existem sem documento**, o certo é pôr o CNPJ nele — casar nome duplica cliente (D87). Depois: `npm run vincular` e `npm run recategorize`. **Três já têm evidência forte** — ver abaixo. |
 | **`OP REC EXT`** | 4 entradas, ~R$ 408 mil, sem documento nenhum | Parecem câmbio. Em qual receita caem é decisão. |
 | **31 linhas que o histórico resolveria** | R$ 187.245. O motor sabe a resposta, mas por inferência, não por regra | Estão paradas de propósito (D97). `npm run recategorize -- --aplicar --incluir-historico` se você quiser que entrem. |
 | **`PAGAMENTOS A FORNECEDORES SISPAG`** | 8 saídas, **R$ 95.950** | **Nenhum arquivo do Itaú resolve**: o próprio PDF itemizado não nomeia essas oito. Só o detalhe do lote no internet banking. |
 | **PDG IT, Hold Beauty, Hogrefe** | 6 recebimentos, R$ 73.400 — projeto *e* retainer vigentes ao mesmo tempo | Dizer qual contrato é qual. A vigência já resolveu 7 dos 13 sozinha (D89). |
 | **`BOLETOS RECEBIDOS`** | 8 entradas, R$ 43.100, sem documento | O extrato não nomeia o sacado. |
 | **Conta de receita financeira** | Não existe no plano. Os rendimentos de aplicação (38 linhas, R$ 202,31) estão em `99.03`, que é **transferência**, e ficam fora da DRE — com R$ 485.000 no CDB isso cresce (D95) | Criar `3.05 Receita financeira`? E em qual grupo da DRE — `receita_bruta` infla o OPBB, então provavelmente um grupo não operacional. É pergunta de contador. |
+
+### Três que a planilha praticamente já respondeu
+
+Não apliquei nenhuma: todas as três são identidade, e identidade é sua (D87). Mas a
+evidência está fechada, e conferir cada uma é olhar uma célula.
+
+- **Maruri → `11.03 Multas e acordos`.** A linha `- Penalties & Settlements` da `DRE Geral`
+  vale **R$ 45.000,00, só em fevereiro, e R$ 45.000 no ano inteiro**. No razão há um único
+  pagamento à Maruri, de **R$ 45.000,00, em 09/02/2026**. Valor exato, mês exato, único dos
+  dois lados — e a Maruri aparece na aba `Vendas e Perdas`, que é onde um acordo com um
+  negócio perdido apareceria. A conta já existe no plano.
+- **Danillo → `8.02 Jurídico`.** São duas contrapartes com o mesmo sobrenome, a
+  advocacia (CNPJ) e a pessoa (CPF). O caixa de fevereiro soma
+  **5.000 + 3.242 + 6.347 = R$ 14.589,00**, que é exatamente o `- Juridico` de **janeiro**
+  na planilha; e o pagamento de março, R$ 5.000, é o `- Juridico` de **fevereiro**. A
+  competência anda um mês à frente do caixa, e com esse deslocamento os dois lados fecham.
+- **`ATTENTIVE` → `8.01 Contabilidade`, por texto.** `npm run propose:rules` já propõe a
+  regra e mede **9 linhas**; ela nunca foi gravada. Junto vêm `Tarefy → 7.08` (3 linhas),
+  `ESCOLAI → 7.09` (4) e `CICLO → 8.03` (1, com **4 barradas** pelo guarda de sentido, que é
+  a D82 funcionando). São 38 regras alcançando 465 das 1.064 linhas. **Não apliquei**: são
+  regras de **texto**, e a D40 põe identidade acima de texto — vale você olhar a lista antes.
 
 ### Depende de arquivo ou chave que não chegou
 
@@ -341,9 +377,10 @@ mil; nenhuma fase cobre), `Q9` (documento escolar alheio na pasta — apagar?), 
 
 ### Se for fazer só três coisas
 
-1. **Responder as 31 contrapartes** (`npm run decisoes`). É o maior bloco que não depende de
+1. **Responder as 24 contrapartes** (`npm run decisoes`). É o maior bloco que não depende de
    arquivo nenhum, e a maioria provavelmente já está cadastrada sem documento — como
-   aconteceu com as oito de 19/08, em que **nenhuma era cliente novo**.
+   aconteceu com as oito de 19/08, em que **nenhuma era cliente novo**. Comece pelas três
+   que a planilha já respondeu (Maruri, Danillo, Attentive), acima.
 2. **Rodar `npm run vincular` e `npm run recategorize`** depois de responder. É o que
    converte resposta em custo na DRE.
 3. **Decidir a conta de receita financeira** com o contador, junto de `OP REC EXT`. São as
@@ -424,6 +461,21 @@ Aprendidos neste trabalho:
   página, justamente onde estavam as transações do maior lote.
 - **Conferir contra o razão foi o que achou os três erros acima.** Cada um produzia saída
   plausível; o que os expôs foi somar por data e exigir que fechasse ao centavo.
+- **As duas tabelas não concordam sobre o que é sinal.** `staged_transactions.amount` é
+  **assinado**, como o extrato imprime; `cash_entries` guarda **magnitude** e põe o sentido
+  em `direction`. Unir as duas lendo o valor do razão como assinado transformou os 15
+  pagamentos do CUSTODIO em 26 recebimentos e levantou `sentido invertido` na folha inteira.
+  Sentido é o que a D82 e a D86 existem para proteger: restaure no `case`, nunca presuma.
+- **Quem lê `staged_transactions` está lendo o passado.** Desde que o `import:sispag`
+  escreve direto no razão, staging e razão divergem — e a divergência é silenciosa, porque
+  a consulta continua devolvendo linhas. Ao unir os dois, `status = 'pending'` é o que
+  impede a dupla contagem *e* exclui `duplicate`/`rejected`, que nunca foram dinheiro.
+- **Evidência ausente não se lê como ausente — se lê como resposta errada, com confiança.**
+  Faltando o documento verdadeiro, o casamento estrito falha, a regra aproximada assume, e
+  um sobrenome comum vira identificação. Foi assim que três pessoas diferentes
+  reivindicaram o mesmo CPF. É a mesma lição do `/ToUnicode` mentiroso da D96.
+- **Backtick dentro de comentário SQL fecha o template literal.** Comentar `--` dentro de
+  uma query em template string é seguro; citar um nome de coluna com crase, não.
 
 ---
 

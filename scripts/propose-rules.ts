@@ -254,8 +254,33 @@ try {
     select id, code, name from categories where entity_id = ${entity.id}`;
   const byCode = new Map(categories.map((category) => [category.code, category]));
 
+  // Every line the company actually has, which is the ledger plus whatever staging still
+  // holds — the same correction the party matcher needed, and for the same reason:
+  // `import:sispag` (D96) writes straight to `cash_entries`, so a rule measured against
+  // staging alone reports a reach short by every line that never passed through it. The
+  // rules proposed do not change — they are read from the sheet — but the count printed
+  // beside each one is the evidence a human uses to accept it, and understated evidence
+  // argues for the wrong answer.
+  //
+  // `status = 'pending'` is what keeps the two from overlapping, and it says the thing
+  // exactly: an *approved* staged row already **is** a `cash_entries` row, and a
+  // `duplicate` or `rejected` one never was money at all. Today that reads 1.064 ledger
+  // lines plus nothing pending, where staging alone offered 1.046 — 977 approved and 69
+  // duplicates, the duplicates counted as reach they never had.
+  //
+  // The sign has to be restored on the ledger side: `staged_transactions.amount` is signed,
+  // while `cash_entries` keeps a magnitude and puts the way the money went in `direction`.
+  // `directionOf` below reads the sign and nothing else.
   const staged = await sql<{ description: string; amount: string }[]>`
-    select description, amount::text from staged_transactions where entity_id = ${entity.id}`;
+    select
+      description,
+      (case when direction = 'out' then -amount else amount end)::text as amount
+    from cash_entries
+    where entity_id = ${entity.id}
+    union all
+    select description, amount::text
+    from staged_transactions
+    where entity_id = ${entity.id} and status = 'pending'`;
 
   const proposals = proposalsFrom(readSheetLines());
 
