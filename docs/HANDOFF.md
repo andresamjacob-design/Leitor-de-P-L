@@ -506,3 +506,44 @@ Dois efeitos que valem saber:
 
 O `eslint.config.mjs` passou a ignorar esses diretórios — os helpers em CommonJS quebravam
 o `npm run check`, que é o portão do projeto.
+
+### O estado real do ruflo, conferido em 20/08/2026
+
+**As ferramentas do ruflo não são chamáveis nesta sessão**, e vale saber por quê antes de
+alguém reinvestigar. São **dois servidores**, com dois problemas diferentes:
+
+| | |
+|---|---|
+| `claude-flow` (o do `.mcp.json`) | **⏸ pending approval** — tem `autoStart: false` e nunca foi aprovado |
+| `plugin:ruflo-core:ruflo` | **✔ conectado**, serve ~60 ferramentas |
+
+O plugin responde de verdade — sondando o stdio dele direto vêm `memory_store`,
+`swarm_init`, `agent_spawn`, `hooks_route`, `task_*`, `workflow_*`. **Mesmo assim o
+`ToolSearch` não as encontra**, nem por `+ruflo` nem por `select:memory_store`. Elas não
+entram no conjunto chamável, então não dá para usá-las mesmo querendo.
+
+**São dois portões, e só um está aberto.** O `~/.claude/settings.json` já tem
+`"mcp__claude-flow__*"` em `permissions.allow` — isso é permissão de **uso da ferramenta**.
+O que trava é a **aprovação do servidor**: em `~/.claude.json`, `enabledMcpjsonServers` está
+`[]` em todo projeto. Um não substitui o outro.
+
+**Não existe "aprovar `.mcp.json` para todos os projetos"**, e é de propósito: um
+`.mcp.json` viaja dentro do repositório, então aprovar globalmente deixaria qualquer repo
+clonado rodar comando na primeira abertura. Existe `enableAllProjectMcpServers: true`
+(confirmado no binário 2.1.238), que faz isso e derruba justamente essa proteção.
+
+**Recomendação, e é a razão de nada ter sido mudado:** o caminho limpo para os outros
+projetos é `claude mcp add --scope local ...` em cada um que realmente quiser, e **não**
+`--scope user` — escopo de usuário ligaria o ruflo aqui também. Este repositório é dos
+piores casos para swarm: o trabalho é investigação serial sobre dinheiro real, cada achado
+(D96, D98, D99) veio de ler uma coisa com atenção e testar contra o banco, e o `CLAUDE.md`
+do projeto proíbe a parte perigosa — *"Never allow two writers in one worktree."* Memória
+vetorial também não ajuda: o `DECISIONS.md` é uma versão melhor dela, e foi lendo o
+raciocínio da D86 em prosa que a D99 apareceu.
+
+Comandos úteis: `claude mcp list`, `claude mcp get <nome>`,
+`claude mcp reset-project-choices`, `claude mcp remove <nome>`.
+
+> O processo `claude daemon run` que aparece no `ps` é o **daemon do próprio Claude Code**
+> sustentando o job em background, não o daemon do ruflo. `workers: {}` — não há sweep
+> gastando token.
