@@ -4,7 +4,7 @@ Onde tudo está, o que foi feito, e o que falta. Escrito para quem chega sem con
 nenhum, inclusive eu mesmo numa conversa nova.
 
 Leia junto quando precisar do detalhe: `docs/PLAN.md` (o roteiro original),
-`docs/DECISIONS.md` (decisões numeradas D1–D96 e pendências Q2–Q18) e `README.md`.
+`docs/DECISIONS.md` (decisões numeradas D1–D97 e pendências Q2–Q18) e `README.md`.
 
 ---
 
@@ -86,6 +86,8 @@ npm run fix:credits         # entrada parada em conta de custo (--ensaio / --apl
 npm run propose:receipts    # de quem é o dinheiro que entrou (--ensaio / --aplicar)
 npm run decisoes            # ← o que falta decidir, com a evidência de cada caso
 npm run vincular            # põe o CNPJ do extrato no cliente que já existe (--aplicar)
+npm run import:sispag       # troca os lotes SISPAG pelos pagamentos de dentro (D96)
+npm run recategorize        # aplica o motor ao que já está no razão (D97)
 
 npm run propose:rules       # regras de texto vindas da planilha
 npm run propose:parties     # casa nome da planilha ↔ contraparte do extrato
@@ -100,21 +102,21 @@ npm run import:invoices     # faturas de cartão em massa
 
 | | |
 |---|---|
-| Razão de caixa | **982 lançamentos**, 06/08/2025 a 31/07/2026 |
-| Categorizados | **769 (78,3%)** — 213 sem conta |
-| Competência | 284 linhas de receita + 577 de custo |
+| Razão de caixa | **1.064 lançamentos**, 06/08/2025 a 31/07/2026 |
+| Categorizados | **832 (78,2%)** — 232 sem conta |
+| Competência | 284 linhas de receita + 640 de custo |
 | Receita reconhecida | **R$ 3.556.736,91** (jan–ago/2026) |
 | Contratos | 80 (65 ativos, 15 concluídos), 95 parcelas mensais |
 | Clientes / pessoas | 72 / 33 |
-| Regras | 110 |
-| Importações | 22 |
+| Regras | 111 |
+| Importações | 23 |
 | Notas fiscais | **0** |
 
 ### Contas
 
 | Conta | Tipo | Abertura | Lançamentos | Situação |
 |---|---|---|---|---|
-| Itaú — conta corrente | banco | 142.469,28 em 01/01/2026 | 461 | ✅ bate com o extrato |
+| Itaú — conta corrente | banco | 142.469,28 em 01/01/2026 | 543 | ✅ bate com o extrato |
 | Itaú — CDB DI | aplicação | 367.735,49 em 01/01/2026 | 5 | ✅ as duas pernas existem (§5.1) |
 | Contabilizei | banco | 0,00 | 0 | inativa |
 | Itaucard 5780 | cartão | 0,00 | 468 | |
@@ -286,7 +288,7 @@ por documento pega todo o histórico daquela contraparte de uma vez.
 
 | | O que é | Como destrava |
 |---|---|---|
-| **SISPAG** ✅ *resolvido — falta importar* | 34 linhas, **R$ 1.221.679,97**. O PDF `Janeiro ate março`, que a Q13 dava como ilegível, decompõe os lotes: **19 de 19 datas fecham ao centavo** (D96). São 116 pagamentos com nome e documento, 49 contrapartes. | Não depende mais de arquivo nenhum. **Falta sua palavra para trocar as 34 linhas do razão pelas 116** — e cadastrar 23 contrapartes novas (R$ 346.265,97). R$ 95.950 em 8 pagamentos o PDF também não nomeia. |
+| ~~**SISPAG**~~ ✅ **resolvido e importado em 20/08/2026** | Os 34 lotes viraram **116 pagamentos com nome e documento** (D96), e **63 deles já ganharam conta pelas regras por documento** — R$ 863.414 de custo entrando na DRE (D97). | O que sobra: **23 contrapartes por cadastrar** (R$ 346.265,97) e **R$ 95.950 em 8 pagamentos que o próprio PDF não nomeia**. Rode `npm run decisoes`. |
 | **12 CNPJs sem dono** | 26 entradas, R$ 463.513,49 — A. F. Comércio (R$ 213 mil), DB Genética, CN INC, Ligavit, Fulano, Brain, SW, ISM, UMI SAN, Conexão, Mara Thaysa, Keepclear | Dizer se cada um é cliente novo ou um dos **39 clientes que já existem sem documento**. O script não decide isso sozinho de propósito (D87): casar nome de empresa duplica cliente. |
 | **`OP REC EXT`** | 4 entradas, ~R$ 408 mil, sem documento | Parecem câmbio. Em qual receita caem é decisão. |
 | **PDG IT, Hold Beauty, CSO, Hogrefe** | 13 entradas, R$ 150.400 — têm contrato de projeto *e* de retainer, e o recebimento não sabe onde cair | `contracts.category_id` já existe — basta dizer qual contrato é qual. As duas em que o valor bate com a mensalidade já foram resolvidas sozinhas. |

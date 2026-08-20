@@ -34,7 +34,9 @@
     "verify:reconcile": "vite-node --config vitest.config.ts scripts/verify-reconcile.ts",
     "propose:receipts": "vite-node --config vitest.config.ts scripts/propose-receipts.ts",
     "decisoes": "vite-node --config vitest.config.ts scripts/decisoes.ts",
-    "vincular": "vite-node --config vitest.config.ts scripts/vincular-clientes.ts"
+    "vincular": "vite-node --config vitest.config.ts scripts/vincular-clientes.ts",
+    "import:sispag": "vite-node --config vitest.config.ts scripts/import-sispag.ts",
+    "recategorize": "vite-node --config vitest.config.ts scripts/recategorize.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.4",

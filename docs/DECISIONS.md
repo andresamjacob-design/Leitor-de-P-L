@@ -836,6 +836,41 @@ anônimos, e nenhum arquivo do Itaú vai resolvê-los.
 ⚠️ **Nada foi importado ainda.** Trocar 34 linhas do razão por 116 é operação grande e é
 decisão do Andre — ver a pendência no handover.
 
+### D97 — Regra é decisão já tomada; histórico é palpite. Só a primeira entra sozinha
+Com o SISPAG itemizado (D96), a D88 deixou de ser curiosidade e virou obstáculo: o motor só
+roda sobre `staged_transactions`, e as **63 regras por documento que o Andre respondeu uma a
+uma** não alcançavam as linhas que já estavam no razão.
+
+Medido antes e depois, e a diferença é a história inteira deste trabalho:
+
+| | o motor decidiria |
+|---|---|
+| antes da D86 e do SISPAG | **5 linhas (2%)** — e as 5 eram as sugestões erradas que a D83 tinha acabado de corrigir |
+| agora | **94 linhas (31,9%)**, R$ 1.050.659,00 — 63 delas por regra explícita |
+
+→ `npm run recategorize` aplica o motor ao razão, **separando o que é regra do que é
+inferência**:
+
+- **`rule_tax_id` e `rule_text` entram com `--aplicar`.** Vêm de uma regra que alguém
+  escreveu; aplicar é entregar o que já foi decidido, não decidir.
+- **`history_tax_id` e `history_description` exigem `--incluir-historico`.** Dizem "esse
+  documento já foi categorizado assim antes". Costumam acertar, e foi exatamente o que
+  errou na D83.
+
+**Aplicado em 20/08/2026: 63 lançamentos, R$ 863.414,00, todos em 6.10 Freelancers** — que
+é o que os lotes SISPAG sempre foram, a folha de terceiros. Nasceram com espelho de
+competência pelo `planCashMirror`, o mesmo plano da tela, sem regra paralela.
+
+**O resultado acumulado caiu de R$ 2.121.919,59 para R$ 1.258.505,59.** Não é perda nova: é
+custo que estava só no caixa passando a pesar na DRE, exatamente o que a D85 previu ao
+nomear a diferença.
+
+A prova de que nada se perdeu no caminho está na ponte: **a linha "saídas de caixa sem
+competência" caiu de R$ 1.281.607,12 para R$ 418.193,12**, os mesmos R$ 863.414, e os 13
+meses continuam fechando com resíduo zero. O saldo da conta corrente não se moveu.
+
+Ficaram **31 linhas por histórico, R$ 187.245,00**, esperando uma decisão explícita.
+
 ---
 
 ## Parte 13 — Decisões da Fase 8
