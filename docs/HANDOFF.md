@@ -1,10 +1,10 @@
-# Handover — 20/08/2026
+# Handover — 21/08/2026
 
 Onde tudo está, o que foi feito, e o que falta. Escrito para quem chega sem contexto
 nenhum, inclusive eu mesmo numa conversa nova.
 
 Leia junto quando precisar do detalhe: `docs/PLAN.md` (o roteiro original),
-`docs/DECISIONS.md` (decisões numeradas D1–D97 e pendências Q2–Q18) e `README.md`.
+`docs/DECISIONS.md` (decisões numeradas D1–D100 e pendências Q2–Q18) e `README.md`.
 
 ---
 
@@ -69,7 +69,7 @@ Todos os scripts que gravam têm dry run por padrão e pedem `--aplicar`. Vário
 
 ```
 npm run dev
-npm run check               # typecheck + lint + 387 testes
+npm run check               # typecheck + lint + 391 testes
 npm run test:e2e            # Playwright, 25 testes
 npm run db:migrate          # aplica migrations
 npm run db:seed             # 62 categorias × 2 entidades
@@ -91,6 +91,7 @@ npm run recategorize        # aplica o motor ao que já está no razão (D97)
 
 npm run propose:rules       # regras de texto vindas da planilha
 npm run propose:parties     # casa nome da planilha ↔ contraparte do extrato
+npm run propose:suppliers   # promove a documento a conta que o razão já decidiu (D100)
 npm run propose:contracts   # contratos do bloco de receita
 npm run recognize:manual    # plano mensal dos contratos manuais
 npm run import:invoices     # faturas de cartão em massa
@@ -103,12 +104,12 @@ npm run import:invoices     # faturas de cartão em massa
 | | |
 |---|---|
 | Razão de caixa | **1.064 lançamentos**, 06/08/2025 a 31/07/2026 |
-| Categorizados | **841 (79,0%)** — 223 sem conta |
+| Categorizados | **858 (80,6%)** — 206 sem conta |
 | Competência | 284 linhas de receita + 640 de custo |
 | Receita reconhecida | **R$ 3.556.736,91** (jan–ago/2026) |
 | Contratos | 80 (65 ativos, 15 concluídos), 95 parcelas mensais |
 | Clientes / pessoas | 72 / 40 |
-| Regras | 118 |
+| Regras | 123 |
 | Importações | 23 |
 | Notas fiscais | **0** |
 
@@ -174,6 +175,20 @@ arquivo.
   de três vias que nunca existiu**. Com o razão no universo, ela desaparece sozinha.
 - **Resultado:** 7 partes cadastradas, 7 regras por documento, e o `recategorize` levou
   **9 lançamentos, R$ 32.370,00** para 6.10 Freelancers. Cobertura 78,2% → **79,0%**.
+
+### O que o razão já sabia, mas não alcançava
+
+- **Promover ao documento a decisão já tomada** (D100). Regra de texto nunca vai alcançar
+  uma linha cuja descrição é `PAGAMENTOS A FORNECEDORES` — o nome do fornecedor não está
+  ali. Mas o mesmo CNPJ aparece em linhas que o banco *nomeou*, já categorizadas há tempo
+  pela regra de texto da planilha. `propose:suppliers` promove essa conta a **regra por
+  documento**: 5 regras, **17 lançamentos, R$ 27.945**.
+- **A guarda que torna isso seguro** é exigir que uma **regra explícita** já explique as
+  linhas decididas. Sem ela, o script lavaria palpite do histórico em regra. Ela reteve
+  sozinha `Hold Beauty` e `Hogrefe` — que são justamente as perguntas de contrato em aberto
+  no `decisoes` §2 — e marcou o `PDG IT` como ambíguo.
+- As três linhas da **Ciclo** foram para **8.03 Agência**, a conta certa. O histórico as
+  mandaria para 6.10, que é o erro que a D99 mediu.
 
 ### A ponte entre os dois razões
 
@@ -293,16 +308,16 @@ diferenças dos 13 meses:
 |---|---|
 | Receita reconhecida no mês | + R$ 3.556.736,91 |
 | Entradas de caixa sem competência | − R$ 2.995.308,69 |
-| **Saídas de caixa sem competência** | **+ R$ 385.823,12** |
+| **Saídas de caixa sem competência** | **+ R$ 357.878,12** |
 | Custo de compra no cartão | − R$ 147.685,31 |
 
-A linha do meio é a lista de tarefas em forma de número: **R$ 386 mil que saiu do caixa e
+A linha do meio é a lista de tarefas em forma de número: **R$ 358 mil que saiu do caixa e
 ainda não pesa na DRE**, porque essas linhas não têm categoria. Conforme forem
 categorizadas, o custo cresce e o resultado cai, **sem o caixa mudar um centavo**.
 
-> Ela era **R$ 1.281.607,12** até 20/08. O SISPAG levou R$ 863.414 embora de uma vez, e a
-> D98 mais R$ 32.370 — e essas quedas, medidas na ponte, são a prova de que nada se perdeu
-> pelo caminho.
+> Ela era **R$ 1.281.607,12** até 20/08. O SISPAG levou R$ 863.414 embora de uma vez, a
+> D98 mais R$ 32.370 e a D100 mais R$ 27.945 — e essas quedas, medidas na ponte, são a
+> prova de que nada se perdeu pelo caminho.
 
 ---
 
@@ -325,17 +340,17 @@ o histórico daquela contraparte, e o `recategorize` a aplica ao razão inteiro.
 
 | | O que é | Como destrava |
 |---|---|---|
-| **24 contrapartes sem dono** ← *o próximo passo* | R$ 314 mil do lado dos **pagamentos** (Santa Monica Criação R$ 84.620, Aparecido Ribeiro R$ 62.472, ETG R$ 60.000, Maruri R$ 45.000, Taliêco R$ 36.000…) e R$ 30 mil do lado dos recebimentos (ISM, Mara Thaysa, Conexão). Eram 31; a D98 resolveu 7 sozinha, lendo o razão. | Dizer quem é cada uma. Se for um dos **32 clientes que já existem sem documento**, o certo é pôr o CNPJ nele — casar nome duplica cliente (D87). Depois: `npm run vincular` e `npm run recategorize`. **Três já têm evidência forte** — ver abaixo. |
+| **20 contrapartes sem dono** ← *o próximo passo* | R$ 314 mil do lado dos **pagamentos** (Santa Monica Criação R$ 84.620, Aparecido Ribeiro R$ 62.472, ETG R$ 60.000, Maruri R$ 45.000, Taliêco R$ 36.000…) e R$ 30 mil do lado dos recebimentos (ISM, Mara Thaysa, Conexão). Eram **31**: a D98 resolveu 7 lendo o razão, e a D100 mais 4 — inclusive a **Senseilabs, que era o CNPJ do Escola.i**. | Dizer quem é cada uma. Se for um dos **32 clientes que já existem sem documento**, o certo é pôr o CNPJ nele — casar nome duplica cliente (D87). Depois: `npm run vincular` e `npm run recategorize`. **Duas já têm evidência forte** — ver abaixo. |
 | **`OP REC EXT`** | 4 entradas, ~R$ 408 mil, sem documento nenhum | Parecem câmbio. Em qual receita caem é decisão. |
-| **42 linhas que o histórico resolveria** | R$ 302.845,97. O motor sabe a resposta, mas por inferência, não por regra | Estão paradas de propósito (D97). **Ainda não recomendo aplicar em bloco:** a D99 mostrou que, barrado o palpite errado, a Ciclo cai em `6.10 Freelancers` quando é `8.03 Agência` — total certo, linha errada. E as 6 linhas de receita (Hogrefe, Hold Beauty, PDG IT) respondem sozinhas a pergunta que o `decisoes` §2 diz estar em aberto. |
+| **25 linhas que o histórico resolveria** | R$ 274.900,97. O motor sabe a resposta, mas por inferência, não por regra | Estão paradas de propósito (D97). Eram 42; a D100 tirou 17 de lá promovendo-as a **decisão**. **Ainda não recomendo aplicar o resto em bloco:** as 6 linhas de receita (Hogrefe, Hold Beauty, PDG IT) responderiam sozinhas a pergunta que o `decisoes` §2 diz estar em aberto. |
 | **`PAGAMENTOS A FORNECEDORES SISPAG`** | 8 saídas, **R$ 95.950** | **Nenhum arquivo do Itaú resolve**: o próprio PDF itemizado não nomeia essas oito. Só o detalhe do lote no internet banking. |
 | **PDG IT, Hold Beauty, Hogrefe** | 6 recebimentos, R$ 73.400 — projeto *e* retainer vigentes ao mesmo tempo | Dizer qual contrato é qual. A vigência já resolveu 7 dos 13 sozinha (D89). |
 | **`BOLETOS RECEBIDOS`** | 8 entradas, R$ 43.100, sem documento | O extrato não nomeia o sacado. |
 | **Conta de receita financeira** | Não existe no plano. Os rendimentos de aplicação (38 linhas, R$ 202,31) estão em `99.03`, que é **transferência**, e ficam fora da DRE — com R$ 485.000 no CDB isso cresce (D95) | Criar `3.05 Receita financeira`? E em qual grupo da DRE — `receita_bruta` infla o OPBB, então provavelmente um grupo não operacional. É pergunta de contador. |
 
-### Três que a planilha praticamente já respondeu
+### Duas que a planilha praticamente já respondeu
 
-Não apliquei nenhuma: todas as três são identidade, e identidade é sua (D87). Mas a
+Não apliquei nenhuma: as duas são identidade, e identidade é sua (D87). Mas a
 evidência está fechada, e conferir cada uma é olhar uma célula.
 
 - **Maruri → `11.03 Multas e acordos`.** A linha `- Penalties & Settlements` da `DRE Geral`
@@ -348,15 +363,11 @@ evidência está fechada, e conferir cada uma é olhar uma célula.
   **5.000 + 3.242 + 6.347 = R$ 14.589,00**, que é exatamente o `- Juridico` de **janeiro**
   na planilha; e o pagamento de março, R$ 5.000, é o `- Juridico` de **fevereiro**. A
   competência anda um mês à frente do caixa, e com esse deslocamento os dois lados fecham.
-- ~~**`ATTENTIVE` por texto**~~ — **eu tinha entendido errado, e o `--aplicar` provou:
-  0 regras criadas.** As 49 regras de texto da planilha **já estavam todas gravadas**, e
-  já funcionaram: toda linha cuja descrição nomeia o fornecedor (`BOLETO PAGO ATTENTIVE
-  CO`, `BOLETO PAGO TAREFY GESTA`, `BOLETO PAGO ESCOLAI SERV`) está categorizada.
-
-  O que sobra é o que **regra de texto não alcança por definição**: as linhas vindas do
-  SISPAG, cuja descrição é o rótulo do lote — `PAGAMENTOS A FORNECEDORES`. O nome do
-  fornecedor não está na descrição, está no `counterparty_tax_id`. Para essas, o caminho é
-  **regra por documento**, que é a forma forte da D40 — não texto.
+- ~~**`ATTENTIVE` por texto**~~ — **resolvido pela D100.** As 49 regras de texto da planilha
+  já estavam todas gravadas e já funcionavam; o que faltava era **alcance**, não regra. As
+  linhas do SISPAG têm por descrição o rótulo do lote, `PAGAMENTOS A FORNECEDORES`, e regra
+  de texto não as alcança por definição. `npm run propose:suppliers` promoveu a conta a
+  **regra por documento** e fechou Attentive, Tarefy, Ciclo e Escola.i — 17 linhas.
 
 ### Depende de arquivo ou chave que não chegou
 

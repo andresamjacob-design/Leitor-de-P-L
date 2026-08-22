@@ -960,6 +960,61 @@ O remédio exato para ela é uma **regra por documento** no CNPJ …001-09 com `
 'out'` → 8.03, que é identidade *mais* sentido, a forma forte da D40. Não criei: é decisão
 de identidade, e identidade é do Andre (D87).
 
+---
+
+### D100 — Promover ao documento a decisão que o razão já carrega
+A D99 fechou a pergunta errada e abriu a certa: as linhas do SISPAG imprimem
+`PAGAMENTOS A FORNECEDORES`, o rótulo do lote. **Regra de texto não as alcança e nunca vai
+alcançar** — o nome do fornecedor não está na string, está no `counterparty_tax_id`.
+
+Mas o razão quase sempre já sabe a resposta. O mesmo CNPJ também aparece em linhas que o
+banco *nomeou* — `BOLETO PAGO ATTENTIVE CO` —, e essas foram categorizadas há tempo por uma
+regra de texto lida do bloco de custo da planilha. A conta não está em dúvida; o **alcance**
+está. → `npm run propose:suppliers` promove essa conta a **regra por documento**, que é a
+forma forte da D40 e chega no lote.
+
+Três guardas, e a do meio é a razão de isto ser seguro:
+
+- **Unânime.** Toda linha categorizada daquele documento *naquele sentido* tem de concordar
+  numa conta só. Uma divergente e vira relatório, não regra.
+- **Explicada por regra explícita.** Alguma regra que alguém escreveu já tem de casar com
+  aquelas linhas. Sem isso o script lavaria os **palpites do histórico** em regras — palpite
+  vestido de decisão, exatamente a linha que a D97 traçou e o erro que a D83 pagou.
+- **Com sentido.** A regra carrega `direction`, porque contraparte fica dos dois lados do
+  balcão. A Ciclo é o caso da D99.
+
+**A guarda do meio se provou sozinha.** Ela reteve `Hold Beauty` e `Hogrefe`, cujas linhas
+de receita o razão concorda em 3.02 — mas nenhuma regra explica, porque **são justamente as
+perguntas de contrato que o `decisoes` §2 diz estarem em aberto**. Sem a guarda, o script
+teria respondido sozinho o que o Andre não respondeu. Reteve também ETG, Taliêco, Aparecido
+e Conex & Result, todos vindos de aprovação manual ou do histórico. E marcou o `PDG IT` como
+ambíguo, com 3.01 e 3.02 no mesmo sentido.
+
+**Aplicado em 21/08/2026:** 5 regras por documento → 17 lançamentos, **R$ 27.945,00**, em
+8.03 Agência (3), 8.01 Contabilidade (9), 7.08 Tarefy (3) e 7.09 Escola.i (2). As três da
+Ciclo foram para **8.03**, a conta certa — o histórico as mandaria para 6.10, que é o que a
+D99 mediu. O histórico caiu de 42 para 25 linhas: dezessete saíram de palpite para decisão.
+
+Na ponte, "saídas de caixa sem competência" caiu de R$ 385.823,12 para **R$ 357.878,12** —
+os mesmos R$ 27.945 —, os 13 meses seguem com resíduo zero e o `verify:rls` deu 7/7.
+Cobertura 79,0% → **80,6% (858 de 1.064)**.
+
+> **Uma identificação de brinde:** o `SENSEILABS SERVICOS EDUCACIONAIS LTDA` estava na lista
+> de contrapartes desconhecidas do `decisoes`. Ele é o CNPJ por trás do **Escola.i** — as
+> linhas nomeadas dele já caíam em 7.09 pela regra `ESCOLAI`. Uma das 24 se respondeu
+> sozinha, sem ninguém adivinhar nome.
+
+> **Armadilha paga escrevendo isto:** ao investigar, casei contraparte por **nome**
+> (`ilike '%ATTENTIVE%'`) e "achei" uma regra →6.10 conflitando com o 8.01 do razão. Não
+> havia conflito: o documento era o **CPF do Jorge Freitag**, cuja linha no extrato vem
+> escrita `JORGE HENRIQUE DOMINGUES FREITAG ATTENTIVE SERVICOS` — o banco concatena o nome
+> do freelancer com o serviço. É a D40 cobrando de novo, agora de quem investiga: **consulta
+> de diagnóstico também tem de casar por documento.**
+
+---
+
+## Parte 13 — Decisões da Fase 8
+
 ### D68 — Escritor de XLSX próprio, com entradas sem compressão
 Mesma razão do leitor (D34): a biblioteca autorizada não abre os arquivos que este sistema
 importa. O escritor usa `node:zlib` só para o CRC32 e grava as entradas **stored**, sem
