@@ -4,7 +4,7 @@ Onde tudo está, o que foi feito, e o que falta. Escrito para quem chega sem con
 nenhum, inclusive eu mesmo numa conversa nova.
 
 Leia junto quando precisar do detalhe: `docs/PLAN.md` (o roteiro original),
-`docs/DECISIONS.md` (decisões numeradas D1–D102 e pendências Q2–Q18) e `README.md`.
+`docs/DECISIONS.md` (decisões numeradas D1–D103 e pendências Q2–Q18) e `README.md`.
 
 ---
 
@@ -104,12 +104,12 @@ npm run import:invoices     # faturas de cartão em massa
 | | |
 |---|---|
 | Razão de caixa | **1.064 lançamentos**, 06/08/2025 a 31/07/2026 |
-| Categorizados | **875 (82,2%)** — 189 sem conta |
+| Categorizados | **877 (82,4%)** — 187 sem conta |
 | Competência | 284 linhas de receita + 640 de custo |
 | Receita reconhecida | **R$ 3.556.736,91** (jan–ago/2026) |
 | Contratos | 80 (65 ativos, 15 concluídos), 95 parcelas mensais |
 | Clientes / pessoas | 73 / 40 |
-| Regras | 130 |
+| Regras | 131 |
 | Importações | 23 |
 | Notas fiscais | **0** |
 
@@ -279,6 +279,14 @@ de R$ 594.651,82 para **R$ 711.916,33**.
 CDB em vez de ser varrido para a conta corrente não aparece. R$ 485.000,00 é o principal;
 só um extrato do CDB prova o centavo.
 
+> **Fechado de vez em 24/08/2026 (D103).** A D83 tirou a categoria das duas devoluções do
+> Ricardo porque a perna de saída estava dentro de um lote SISPAG e a condição que ela mesma
+> escreveu — *"é devolução só se o pagamento que ela reverte estiver na mesma categoria"* —
+> era **inverificável**. O `import:sispag` abriu os lotes e mostrou **pagamento em
+> duplicidade**: 115.000 saiu duas vezes em 08/01 e uma voltou; 50.000 saiu duas vezes em
+> 09/02 e uma voltou. Confirmado pelo Andre. Com a regra por documento em `direction = 'in'`
+> → 6.10, o resultado **subiu R$ 165.000** — custo que a empresa nunca teve.
+
 ### ~~5.2 `PIX DEVOLVIDO RICARDO`~~ e ~~5.3 categorias de custo recebendo entrada~~
 
 **Resolvido em 18/08/2026.** Ver D82 e D83. As duas eram o mesmo defeito visto de ângulos
@@ -307,7 +315,7 @@ diferenças dos 13 meses:
 | | |
 |---|---|
 | Receita reconhecida no mês | + R$ 3.556.736,91 |
-| Entradas de caixa sem competência | − R$ 2.995.308,69 |
+| Entradas de caixa sem competência | − R$ 2.830.308,69 |
 | **Saídas de caixa sem competência** | **+ R$ 285.384,67** |
 | Custo de compra no cartão | − R$ 147.685,31 |
 

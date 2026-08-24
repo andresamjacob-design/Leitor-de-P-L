@@ -109,6 +109,32 @@ const CONFIRMADOS: { taxId: string; code: string; why: string }[] = [
     code: "8.02",
     why: "Juridico: os 6.347,00 compõem os 14.589,00 de fevereiro",
   },
+  {
+    // A devolução do Ricardo, do outro lado da D83.
+    //
+    // A D83 tirou a categoria destas duas linhas porque, na época, **o pagamento que elas
+    // revertiam estava dentro de um lote SISPAG** e ninguém conseguia vê-lo. A regra que ela
+    // escreveu era condicional: no banco, um crédito só é devolução se o pagamento que ele
+    // estorna estiver na mesma categoria. A condição não podia ser testada; agora pode.
+    //
+    // O `import:sispag` (D96) abriu os lotes, e o que apareceu foi:
+    //
+    //   08/01  saiu 115.000,00  ·  saiu 115.000,00  ·  voltou 115.000,00
+    //   09/02  saiu  50.000,00  ·  saiu  50.000,00  ·  voltou  50.000,00
+    //
+    // As quatro saídas estão em 6.10. Pagamento em duplicidade, confirmado pelo Andre em
+    // 24/08/2026, com uma perna devolvida no mesmo dia. Sem esta regra a DRE conta as duas
+    // saídas e ignora o retorno — R$ 165.000 de custo que a empresa não teve.
+    //
+    // É **entrada em conta de custo**, exatamente o que a D86 barra no histórico. E é
+    // exatamente a exceção que ela deixa escrita: regra explícita pode, porque tem
+    // `direction` para declarar que quis. O histórico nunca chegaria aqui sozinho.
+    taxId: "39880538803",
+    code: "6.10",
+    why:
+      "devolução de pagamento em duplicidade — as 4 saídas correspondentes já estão em 6.10; " +
+      "confirmado pelo Andre em 24/08/2026",
+  },
 ];
 
 type Candidate = {
@@ -205,11 +231,23 @@ try {
     const category = byCode.get(code);
     if (!category) continue;
 
-    // Already a document rule on this CNPJ? Then there is nothing to promote.
+    /**
+     * Already a document rule reaching this document *in this direction*? Then nothing to
+     * promote.
+     *
+     * Per direction, not per document, and that is the D99 lesson written as a query: the
+     * engine itself refuses a rule whose `direction` disagrees with the line, so a rule for
+     * the payments **does not** cover the receipts. Ricardo Custodio is the case — payments
+     * to him were already ruled to 6.10, and the two returns needed their own rule. Guarding
+     * by document alone would have declared that settled and skipped it in silence.
+     *
+     * A rule with `direction is null` deliberately covers both, so it still blocks.
+     */
     const [existing] = await sql<{ n: number }[]>`
       select count(*)::int as n from categorization_rules
       where entity_id = ${entityId}
-        and regexp_replace(counterparty_tax_id, '\\D', '', 'g') = ${row.taxId}`;
+        and regexp_replace(counterparty_tax_id, '\\D', '', 'g') = ${row.taxId}
+        and (direction is null or direction = ${row.direction})`;
     if ((existing?.n ?? 0) > 0) continue;
 
     /**
@@ -260,12 +298,7 @@ try {
       continue;
     }
 
-    const [existing] = await sql<{ n: number }[]>`
-      select count(*)::int as n from categorization_rules
-      where entity_id = ${entityId}
-        and regexp_replace(counterparty_tax_id, '\\D', '', 'g') = ${item.taxId}`;
-    if ((existing?.n ?? 0) > 0) continue;
-
+    // O sentido tem de vir antes da trava, porque a trava é por documento **e sentido**.
     const [agg] = await sql<
       { name: string; direction: "in" | "out"; pending: number; pendingTotal: string }[]
     >`
@@ -279,6 +312,13 @@ try {
         and regexp_replace(counterparty_tax_id, '\\D', '', 'g') = ${item.taxId}
       group by direction`;
     if (!agg) continue;
+
+    const [existing] = await sql<{ n: number }[]>`
+      select count(*)::int as n from categorization_rules
+      where entity_id = ${entityId}
+        and regexp_replace(counterparty_tax_id, '\\D', '', 'g') = ${item.taxId}
+        and (direction is null or direction = ${agg.direction})`;
+    if ((existing?.n ?? 0) > 0) continue;
 
     confirmed.push({
       taxId: item.taxId,

@@ -1109,6 +1109,53 @@ meses completos depois sem repetição; retainer não se comporta assim.
 
 ---
 
+### D103 — A condição que a D83 escreveu e não podia testar
+A D83 tirou a categoria de duas devoluções do Ricardo Custodio, R$ 165.000, e escreveu a
+regra que justificava isso: **no banco, um crédito só é devolução se o pagamento que ele
+estorna estiver na mesma categoria**. Na época a condição era **inverificável** — a perna de
+saída estava dentro de um lote SISPAG e ninguém conseguia vê-la.
+
+O `import:sispag` (D96) abriu os lotes, e o que apareceu foi:
+
+```
+08/01   saiu 115.000,00  ·  saiu 115.000,00  ·  voltou 115.000,00
+09/02   saiu  50.000,00  ·  saiu  50.000,00  ·  voltou  50.000,00
+```
+
+**Pagamento em duplicidade com uma perna devolvida no mesmo dia**, confirmado pelo Andre em
+24/08/2026. As quatro saídas já estavam em 6.10. A condição da D83 passou a valer, e o que
+faltava era alguém poder responder — a soma do SISPAG fecha ao centavo (D96), então as
+saídas dobradas são reais, não duplicata de importação.
+
+Sem a categoria nas devoluções, **a DRE contava as duas saídas e ignorava o retorno**:
+R$ 165.000 de custo que a empresa não teve.
+
+→ Regra por documento no CPF, `direction = 'in'` → 6.10. É **entrada em conta de custo**,
+exatamente o que a D86 barra — e exatamente a exceção que ela deixa escrita: regra explícita
+pode, porque tem `direction` para declarar que quis. O histórico nunca chegaria aqui sozinho,
+e não deveria.
+
+**Duas correções que este caso obrigou:**
+
+- **A trava de "já existe regra" era por documento; passou a ser por documento *e* sentido.**
+  O motor recusa regra cujo `direction` discorda da linha (`engine.ts:117`), então a regra
+  dos **pagamentos** ao Ricardo nunca alcançaria as **devoluções**. Guardar só por documento
+  teria declarado o caso resolvido e pulado em silêncio. É a D99 escrita como consulta.
+- **O `recategorize` dizia "o resultado caiu R$ -165.000,00".** Quase sempre o que entra é
+  custo e o resultado cai; um estorno faz o contrário. Agora ele diz **"o resultado subiu"**,
+  porque pedir para alguém ler o sinal de um negativo num número difícil é como se erra.
+
+**Aplicado:** 2 lançamentos, **R$ 165.000,00**, e o resultado acumulado **subiu** de
+R$ 1.125.697,14 para R$ 1.290.697,14. Na ponte, "entradas de caixa sem competência" caiu de
+R$ 2.995.308,69 para **R$ 2.830.308,69** — os mesmos R$ 165.000 —, os 13 meses seguem com
+resíduo zero e o `verify:rls` deu 7/7. Cobertura 82,2% → **82,4% (877 de 1.064)**, e o que
+falta decidir caiu de R$ 1.090.411,72 para **R$ 925.411,72**.
+
+> O saldo da conta corrente não se moveu, e não podia: as linhas sempre estiveram no extrato.
+> O que mudou foi a opinião sobre elas — que é toda a diferença entre a D83 e apagar a linha.
+
+---
+
 ## Parte 13 — Decisões da Fase 8
 
 ### D68 — Escritor de XLSX próprio, com entradas sem compressão

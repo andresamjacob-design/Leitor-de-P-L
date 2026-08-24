@@ -284,8 +284,15 @@ try {
     );
     console.log(`  resultado acumulado antes .... ${formatBRL(antes)}`);
     console.log(`  resultado acumulado depois ... ${formatBRL(out.depois)}`);
+    // Quase sempre o que entra é custo e o resultado cai. Mas uma **entrada** categorizada
+    // numa conta de custo é um estorno, e aí o custo diminui e o resultado sobe — foi o que
+    // aconteceu com as devoluções do Ricardo (D103). Dizer "caiu R$ -165.000,00" é pedir
+    // para alguém ler o sinal errado num número que já é difícil.
+    const delta = antes - out.depois;
     console.log(
-      `  ${YELLOW}o resultado caiu ${formatBRL(antes - out.depois)}${RESET} ${DIM}— é custo que estava só no caixa entrando na DRE${RESET}`,
+      delta >= 0
+        ? `  ${YELLOW}o resultado caiu ${formatBRL(delta)}${RESET} ${DIM}— é custo que estava só no caixa entrando na DRE${RESET}`
+        : `  ${YELLOW}o resultado subiu ${formatBRL(-delta)}${RESET} ${DIM}— é estorno tirando custo que a empresa não teve${RESET}`,
     );
     if (!REHEARSE) {
       console.log(`\n${DIM}Rode ${RESET}npm run verify:reconcile${DIM} para confirmar que a ponte continua em zero.${RESET}\n`);
