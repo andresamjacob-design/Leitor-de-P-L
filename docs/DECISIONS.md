@@ -1156,6 +1156,59 @@ falta decidir caiu de R$ 1.090.411,72 para **R$ 925.411,72**.
 
 ---
 
+### D104 — A pergunta era qual conta é o pagamento, não qual conta é o cliente
+Lote de respostas do Andre em 24/08/2026. Duas mudaram o desenho, não só o dado.
+
+**Quem paga não é quem contrata.** Três casos na mesma sessão, e nenhum casamento automático
+chegaria em qualquer um deles:
+
+- **`APARECIDO JESUS MANOEL RIBEIRO` é o João Beato** — ele recebe pela conta do Aparecido.
+- **`ETG` é o CNPJ do Esdras.** A aba `Colaboradores` traz `Esdras` a **R$ 20.000/mês**, e o
+  razão tem exatamente 2× R$ 20.000 em 04/02 e 04/03. Bate ao centavo, sem ter sido procurado.
+- **`MARA THAYSA` pagou pela Iled** e **`ROBERTO PASCOAL` pela B2B Câmbio.** O segundo é um
+  CPF, e a D94 continua valendo: o que o CPF ganha não é a condição de cliente, é o vínculo
+  com um que já existe — dito pelo Andre, não deduzido. A planilha nova reforça sem provar:
+  o contato da B2B Câmbio é `roberto.pascoal@b2bcambio.com.br`, NF em 15/06, dinheiro em 19/07.
+
+**E a pergunta dos contratos estava mal feita.** `decisoes` §2 listava Hold Beauty, Hogrefe e
+PDG IT como indecidíveis porque cada um tinha retainer e projeto vigentes ao mesmo tempo.
+Estava certo em recusar e errado na pergunta: não é *qual conta é esse cliente* — é **qual
+conta é esse recebimento**, e os dois primeiros caem **nas duas**.
+
+A seção `Pagamento de NF` da planilha nova responde, porque ela é sobre dinheiro *recebido*,
+que é o que o razão tem. Por valor e mês:
+
+| recebimento | linha | conta |
+|---|---|---|
+| Hold Beauty 07/05, R$ 4.500 | 117 Projeto | 3.02 |
+| Hold Beauty 26/06 e 27/07, R$ 17.200 | 161 Ongoing | 3.01 |
+| Hogrefe 15/07, R$ 10.000 | 122 Projeto | 3.02 |
+| Hogrefe 15/07, R$ 9.000 | 162 Ongoing | 3.01 |
+| PDG IT 11/06, R$ 15.000 | 104 Projeto | 3.02 |
+
+→ `CONFIRMADOS` ganhou um **`amount` opcional**, que vira faixa fechada (mínimo = máximo) na
+regra. O motor confere a faixa **antes** da identidade (`applies`), então documento + valor +
+sentido decidem juntos, e duas regras do mesmo documento convivem sem ambiguidade.
+
+**É proposital que isso envelheça mal.** A planilha mostra o retainer da Hold Beauty caindo
+para R$ 7.200 em agosto; quando esse pagamento chegar, nenhuma regra casa e ele aparece no
+`decisoes` pedindo decisão — em vez de entrar calado na conta errada. Regra presa a valor
+falha para o lado seguro.
+
+**Também confirmado:** `CONEX & RESULT` é contabilidade (8.01).
+
+**Aplicado:** 8 regras por documento e 2 vínculos de cliente → **12 lançamentos,
+R$ 135.300,00**, em 6.10 (4), 3.01 (3), 3.02 (3) e 8.01 (2). Cobertura 82,4% → **83,6%
+(890 de 1.064)**. Contrapartes desconhecidas **12 → 7**, e os clientes com contrato
+indecidível foram de 3 para **zero**. Os 13 meses seguem com resíduo zero, `verify:rls` 7/7.
+
+> **Um susto que não era susto:** 78 dos 80 contratos estão com `category_id` nulo, e por um
+> momento pareceu buraco. Não é — a coluna é *override* (migration 0005) e o
+> `propose:receipts` deriva do **tipo** quando ela é nula: `retainer`→3.01, `project`→3.02.
+> Foi assim que Iled e B2B Câmbio ganharam conta sozinhas depois do vínculo.
+
+---
+
 ## Parte 13 — Decisões da Fase 8
 
 ### D68 — Escritor de XLSX próprio, com entradas sem compressão

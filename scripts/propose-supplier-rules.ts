@@ -63,7 +63,29 @@ const RESET = "[0m";
  * semelhança de nome. É dizer em que conta do plano um pagamento cai, que é escrituração, e
  * a evidência é a própria planilha do Andre.
  */
-const CONFIRMADOS: { taxId: string; code: string; why: string }[] = [
+const CONFIRMADOS: { taxId: string; code: string; why: string; amount?: string }[] = [
+  // ---- confirmados pelo Andre em 24/08/2026, lendo o extrato e a planilha ----
+  {
+    // O pagamento é ao CPF do Aparecido, mas quem trabalha é o João Beato — ele recebe pela
+    // conta do Aparecido. A folha de terceiros é 6.10, e o dia 04 do mês confirma o ritmo.
+    taxId: "48393304687",
+    code: "6.10",
+    why: "João Beato recebe pela conta do Aparecido — folha de terceiros",
+  },
+  {
+    // ETG é o CNPJ do Esdras. A aba `Colaboradores` traz `Esdras`, FREELANCER, Especialista
+    // Braze no Gringo, a **R$ 20.000 por mês** — e o razão tem exatamente 2× R$ 20.000, em
+    // 04/02 e 04/03. O valor mensal do contrato de trabalho bate com o pagamento ao centavo,
+    // sem ninguém ter procurado por isso.
+    taxId: "63555211000100",
+    code: "6.10",
+    why: "ETG é o CNPJ do Esdras — 2× R$ 20.000 batem com os R$ 20.000/mês da Colaboradores",
+  },
+  {
+    taxId: "37380874000121",
+    code: "8.01",
+    why: "Conex & Result é contabilidade",
+  },
   {
     // `- Penalties & Settlements` vale 45.000,00 em fevereiro e 45.000,00 no ano inteiro.
     // No razão há um único pagamento à Maruri: 45.000,00 em 09/02/2026. Valor exato, mês
@@ -134,6 +156,60 @@ const CONFIRMADOS: { taxId: string; code: string; why: string }[] = [
     why:
       "devolução de pagamento em duplicidade — as 4 saídas correspondentes já estão em 6.10; " +
       "confirmado pelo Andre em 24/08/2026",
+  },
+
+  /**
+   * Quando o cliente cobra das duas formas, a conta é do **pagamento**, não do cliente.
+   *
+   * Hold Beauty, Hogrefe e PDG IT tinham retainer e projeto vigentes ao mesmo tempo, e o
+   * `decisoes` os listava como indecidíveis — corretamente, porque a pergunta estava mal
+   * feita. Não era "qual conta é esse cliente"; era "qual conta é esse recebimento". Os dois
+   * primeiros caem **nas duas**.
+   *
+   * A seção `Pagamento de NF` da planilha nova responde, porque ela é sobre dinheiro
+   * *recebido* — que é exatamente o que o razão tem —, e responde por valor e mês:
+   *
+   *   Hold Beauty  linha 117 (Projeto)  abr/mai = 4.500      → o recebimento de 07/05
+   *   Hold Beauty  linha 161 (Ongoing)  jun/jul = 17.200     → os de 26/06 e 27/07
+   *   Hogrefe      linha 122 (Projeto)  jul     = 10.000     → o de 15/07
+   *   Hogrefe      linha 162 (Ongoing)  jul     =  9.000     → o outro de 15/07
+   *   PDG IT       linha 104 (Projeto)  jun     = 15.000     → o de 11/06
+   *
+   * O `amount` prende a regra ao valor exato: o motor confere a faixa **antes** da identidade
+   * (`applies`, em engine.ts), então documento + valor + sentido decidem juntos. É proposital
+   * que isso envelheça mal — a planilha mostra o retainer da Hold Beauty caindo para 7.200 em
+   * agosto, e quando esse pagamento chegar nenhuma regra vai casar e ele aparece no
+   * `decisoes` pedindo decisão, em vez de entrar calado na conta errada.
+   */
+  {
+    taxId: "48200079000120",
+    code: "3.02",
+    amount: "4500.00",
+    why: "Hold Beauty: os 4.500 são a linha 117 da planilha, Projeto",
+  },
+  {
+    taxId: "48200079000120",
+    code: "3.01",
+    amount: "17200.00",
+    why: "Hold Beauty: os 17.200 de jun e jul são a linha 161, Ongoing",
+  },
+  {
+    taxId: "65663775000192",
+    code: "3.02",
+    amount: "10000.00",
+    why: "Hogrefe: os 10.000 de 15/07 são a linha 122, Projeto",
+  },
+  {
+    taxId: "65663775000192",
+    code: "3.01",
+    amount: "9000.00",
+    why: "Hogrefe: os 9.000 de 15/07 são a linha 162, Ongoing",
+  },
+  {
+    taxId: "41125809000127",
+    code: "3.02",
+    amount: "15000.00",
+    why: "PDG IT: os 15.000 de 11/06 são a linha 104, Projeto",
   },
 ];
 
@@ -290,7 +366,7 @@ try {
    * não encontra linha sem conta é entrada obsoleta — já foi resolvida por outro caminho —
    * e some do relatório sozinha, em vez de virar uma regra sobre nada.
    */
-  const confirmed: (Candidate & { why: string })[] = [];
+  const confirmed: (Candidate & { why: string; amount: string | null })[] = [];
   for (const item of CONFIRMADOS) {
     const category = byCode.get(item.code);
     if (!category) {
@@ -299,6 +375,8 @@ try {
     }
 
     // O sentido tem de vir antes da trava, porque a trava é por documento **e sentido**.
+    // Quando a entrada prende um valor, só as linhas daquele valor contam — é o mesmo
+    // documento cobrando de duas formas.
     const [agg] = await sql<
       { name: string; direction: "in" | "out"; pending: number; pendingTotal: string }[]
     >`
@@ -310,14 +388,23 @@ try {
       where entity_id = ${entityId}
         and category_id is null
         and regexp_replace(counterparty_tax_id, '\\D', '', 'g') = ${item.taxId}
+        and (${item.amount ?? null}::numeric is null or amount = ${item.amount ?? null}::numeric)
       group by direction`;
     if (!agg) continue;
 
+    // Uma regra sem valor cobre o documento inteiro e por isso bloqueia; uma regra presa a
+    // outro valor não alcança este, e não bloqueia.
     const [existing] = await sql<{ n: number }[]>`
       select count(*)::int as n from categorization_rules
       where entity_id = ${entityId}
         and regexp_replace(counterparty_tax_id, '\\D', '', 'g') = ${item.taxId}
-        and (direction is null or direction = ${agg.direction})`;
+        and (direction is null or direction = ${agg.direction})
+        and (
+          (amount_min is null and amount_max is null)
+          or (${item.amount ?? null}::numeric is not null
+              and amount_min = ${item.amount ?? null}::numeric
+              and amount_max = ${item.amount ?? null}::numeric)
+        )`;
     if ((existing?.n ?? 0) > 0) continue;
 
     confirmed.push({
@@ -334,6 +421,7 @@ try {
       explainedBy: null,
       hasDocRule: false,
       why: item.why,
+      amount: item.amount ?? null,
     });
   }
 
@@ -430,12 +518,17 @@ try {
     for (const c of [...confirmed, ...ready]) {
       // Priority 10, like every document rule: ahead of every text rule, which is D40.
       // The pattern `*` means "this counterparty, whatever the description says".
+      //
+      // Quando a entrada prende um valor, ele entra como faixa fechada — mínimo igual ao
+      // máximo. É o que faz duas regras do mesmo documento e sentido conviverem sem
+      // ambiguidade: cada uma alcança um valor só.
+      const amount = "amount" in c ? ((c as { amount: string | null }).amount ?? null) : null;
       await sql`
         insert into categorization_rules
           (entity_id, priority, match_type, pattern, counterparty_tax_id, direction,
-           category_id, active)
+           category_id, amount_min, amount_max, active)
         values (${entityId}, 10, 'contains', '*', ${c.taxId}, ${c.direction},
-                ${c.categoryId}, true)`;
+                ${c.categoryId}, ${amount}, ${amount}, true)`;
       created += 1;
     }
     console.log(

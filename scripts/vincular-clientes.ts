@@ -108,6 +108,23 @@ const CONFIRMADOS: readonly { cliente: string; contraparte: string; porque: stri
       "ISM Serviços de Imagem é a MS Tecnologia; o contrato dela é mensal de R$ 5.000, " +
       "que é exatamente o valor dos três recebimentos",
   },
+  // Confirmados pelo Andre em 24/08/2026. Os dois são a mesma figura: **quem paga não é
+  // quem contrata**. Nenhum casamento por nome chegaria aqui, e nenhum deveria tentar.
+  {
+    cliente: "Iled",
+    contraparte: "22072161 MARA THAYSA%",
+    porque: "a Mara Thaysa pagou pela Iled",
+  },
+  {
+    // Um CPF pagando por um cliente. A D94 diz que **CPF nunca é cliente**, e continua
+    // valendo: o que o CPF ganha aqui não é a condição de cliente, é o vínculo com um que já
+    // existe — dito pelo Andre, não deduzido. A planilha nova reforça sem provar: o contato
+    // da B2B Câmbio é `roberto.pascoal@b2bcambio.com.br`, com NF emitida em 15/06, e o
+    // dinheiro entrou em 19/07.
+    cliente: "B2B Cambio",
+    contraparte: "ROBERTO PASCOAL%",
+    porque: "o Roberto Pascoal pagou pela B2B Câmbio; é o contato dela na planilha",
+  },
 ];
 
 /**
