@@ -93,6 +93,56 @@ const CONFIRMADOS: readonly { cliente: string; contraparte: string; porque: stri
     contraparte: "UMI SAN SERVICOS%",
     porque: "mesmo nome, só a razão social é mais longa",
   },
+  // Confirmado pelo Andre em 24/08/2026.
+  //
+  // Vale registrar a ironia: o comentário no topo deste arquivo usa `MS Tecnologia` como
+  // exemplo do que **não** casar por semelhança de nome. A resposta verdadeira não se
+  // parece nem um pouco — e o contrato confirma sozinho, sem ninguém ter procurado por
+  // isso: a MS Tecnologia tem um `project` de R$ 20.000 com **monthly_value de R$ 5.000**,
+  // vigente de 01/04 a 31/07/2026, e a ISM pagou exatamente 3× R$ 5.000 dentro da janela.
+  // Conta única, então a categoria sai junto do vínculo.
+  {
+    cliente: "MS Tecnologia",
+    contraparte: "ISM SERVICOS DE IMAGEM%",
+    porque:
+      "ISM Serviços de Imagem é a MS Tecnologia; o contrato dela é mensal de R$ 5.000, " +
+      "que é exatamente o valor dos três recebimentos",
+  },
+];
+
+/**
+ * Cliente que **não existe ainda** e o Andre disse que é cliente.
+ *
+ * Isto é o outro lado da mesma moeda da tabela acima. A D87 proíbe o script de *adivinhar*
+ * que uma contraparte é cliente novo — foi assim que a Ciclo quase virou duplicata. Não
+ * proíbe **executar** a resposta de quem sabe. A diferença entre as duas coisas é quem
+ * decidiu, e aqui quem decidiu foi o dono da empresa.
+ *
+ * Duas travas, porque criar cliente é a operação que estraga a margem em silêncio:
+ *
+ *   - **um cliente com esse nome já existente cancela a criação.** Se existe, o certo é
+ *     `CONFIRMADOS`, que liga o documento no que está lá.
+ *   - **o documento vem do extrato**, como na tabela de cima e pelo mesmo motivo: CNPJ
+ *     digitado à mão é número que ninguém confere.
+ *
+ * O `code` é necessário porque cliente recém-criado não tem contrato, e é do contrato que
+ * o `propose:receipts` tira a conta. Sem ele o cliente nasceria ligado e mudo.
+ */
+const NOVOS: readonly {
+  nome: string;
+  contraparte: string;
+  code: string;
+  porque: string;
+}[] = [
+  {
+    nome: "Conexão Marketing",
+    contraparte: "CONEXAO MARKETING E SERVICOS%",
+    code: "3.02",
+    porque:
+      "confirmado pelo Andre em 24/08/2026: é cliente, só não teve NF emitida. " +
+      "Projeto e não Ongoing porque é um recebimento único de R$ 5.000 em 05/03, e o " +
+      "razão tem cinco meses completos depois disso sem nenhuma repetição",
+  },
 ];
 
 /**
@@ -254,17 +304,107 @@ try {
     console.log(`     ${GREEN}vai receber o documento${RESET}\n`);
   }
 
-  if (pendentes.length === 0 && regrasNovas.length === 0) {
+  // ---------------------------------------------------------------------------
+  // Clientes novos
+  // ---------------------------------------------------------------------------
+
+  const novos: {
+    entityId: string;
+    nome: string;
+    documento: string;
+    categoryId: string;
+    conta: string;
+  }[] = [];
+
+  if (NOVOS.length > 0) {
+    console.log(`${BOLD}${NOVOS.length} cliente(s) novo(s) confirmado(s)${RESET}\n`);
+  }
+
+  for (const novo of NOVOS) {
+    console.log(`  ${BOLD}${novo.nome}${RESET} ${DIM}← ${novo.contraparte}${RESET}`);
+    console.log(`     ${DIM}${novo.porque}${RESET}`);
+
+    const [existente] = await sql<{ id: string }[]>`
+      select id from clients where name = ${novo.nome}`;
+    if (existente) {
+      console.log(
+        `     ${YELLOW}já existe cliente com esse nome — use CONFIRMADOS, não crie outro${RESET}\n`,
+      );
+      continue;
+    }
+
+    const documentos = await sql<{ doc: string }[]>`
+      select distinct regexp_replace(counterparty_tax_id, '\D', '', 'g') as doc
+      from cash_entries
+      where upper(coalesce(counterparty_name, '')) like ${novo.contraparte}
+        and counterparty_tax_id is not null`;
+    if (documentos.length !== 1) {
+      console.log(
+        `     ${YELLOW}${documentos.length} documento(s) no extrato para esse nome — não dá para criar${RESET}\n`,
+      );
+      continue;
+    }
+    const doc = documentos[0]!.doc;
+
+    const [jaTem] = await sql<{ id: string }[]>`
+      select id from clients
+      where regexp_replace(coalesce(tax_id, ''), '\D', '', 'g') = ${doc}`;
+    if (jaTem) {
+      console.log(`     ${YELLOW}esse CNPJ já está em outro cliente${RESET}\n`);
+      continue;
+    }
+
+    const [conta] = await sql<{ id: string; code: string; name: string; entity_id: string }[]>`
+      select id, code, name, entity_id from categories
+      where code = ${novo.code}
+        and entity_id = (select id from entities where slug = 'dd-group')`;
+    if (!conta) {
+      console.log(`     ${YELLOW}conta ${novo.code} não existe no plano${RESET}\n`);
+      continue;
+    }
+
+    novos.push({
+      entityId: conta.entity_id,
+      nome: novo.nome,
+      documento: doc,
+      categoryId: conta.id,
+      conta: `${conta.code} ${conta.name}`,
+    });
+    console.log(
+      `     ${GREEN}vai ser criado${RESET} com o documento do extrato → ${conta.code} ${conta.name}\n`,
+    );
+  }
+
+  if (pendentes.length === 0 && regrasNovas.length === 0 && novos.length === 0) {
     console.log(`${DIM}nada a fazer.${RESET}\n`);
   } else if (!APPLY) {
     console.log(
-      `${DIM}nada foi gravado — ${pendentes.length} documentos e ${regrasNovas.length} regras.` +
-        ` Rode com --aplicar.${RESET}\n`,
+      `${DIM}nada foi gravado — ${pendentes.length} documentos, ${regrasNovas.length} regras` +
+        ` e ${novos.length} cliente(s) novo(s). Rode com --aplicar.${RESET}\n`,
     );
   } else {
     await sql.begin(async (db) => {
       for (const item of pendentes) {
         await db`update clients set tax_id = ${item.documento} where id = ${item.id}`;
+      }
+      for (const novo of novos) {
+        const [criado] = await db<{ id: string }[]>`
+          insert into clients ${db({
+            entity_id: novo.entityId,
+            name: novo.nome,
+            tax_id: novo.documento,
+          })} returning id`;
+        // Sem contrato não há de onde tirar a conta, então ela vem junto na regra.
+        await db`insert into categorization_rules ${db({
+          entity_id: novo.entityId,
+          priority: 50,
+          match_type: "contains",
+          pattern: "*",
+          counterparty_tax_id: novo.documento,
+          direction: "in",
+          category_id: novo.categoryId,
+          client_id: criado!.id,
+        })}`;
       }
       for (const regra of regrasNovas) {
         // `pattern: '*'` é a convenção do projeto para regra que casa por documento e
@@ -282,7 +422,8 @@ try {
     });
     console.log(
       `${GREEN}${BOLD}${pendentes.length} clientes ganharam documento` +
-        `${regrasNovas.length > 0 ? `, ${regrasNovas.length} regra(s) por documento criada(s)` : ""}.${RESET}`,
+        `${regrasNovas.length > 0 ? `, ${regrasNovas.length} regra(s) por documento criada(s)` : ""}` +
+        `${novos.length > 0 ? `, ${novos.length} cliente(s) criado(s)` : ""}.${RESET}`,
     );
     console.log(
       `${DIM}Rode ${RESET}npm run propose:receipts${DIM} — a contraparte agora é reconhecida, e a\n` +

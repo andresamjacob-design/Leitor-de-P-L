@@ -1063,6 +1063,52 @@ mesmos R$ 72.493,45 —, 13 meses com resíduo zero, `verify:rls` 7/7. Cobertura
 
 ---
 
+### D102 — ISM é a MS Tecnologia, e a Conexão é cliente sem NF
+Duas respostas do Andre em 24/08/2026, e as duas caem em caminhos diferentes de propósito.
+
+**`ISM SERVICOS DE IMAGEM` é a `MS Tecnologia`** — cliente que já existia **sem documento**,
+então o certo era pôr o CNPJ nele, nunca criar outro (D87). Entrou em `CONFIRMADOS` do
+`vincular`.
+
+Vale a ironia registrada no arquivo: o comentário no topo do `vincular-clientes.ts` usa
+justamente `MS Tecnologia` como exemplo do que **não** casar por semelhança de nome. A
+resposta verdadeira não se parece nem um pouco — nenhum casamento automático chegaria nela.
+
+E o contrato confirmou sozinho, sem ninguém ter procurado por isso: a MS Tecnologia tem um
+único contrato `project`, R$ 20.000 no total e **`monthly_value` de R$ 5.000**, vigente de
+01/04 a 31/07/2026. A ISM pagou **3× R$ 5.000** dentro dessa janela. Conta única, então o
+`propose:receipts` tirou a conta do contrato sem ninguém escolher: **3.02 Receita — Projeto**.
+
+**`CONEXAO MARKETING E SERVICOS` é cliente que nunca teve NF emitida** — e não existia no
+sistema. Aqui o `vincular` não servia: ele só liga documento em cliente existente, e se
+recusa a criar, porque criar por semelhança é como a Ciclo quase virou duplicata.
+
+→ O script ganhou uma tabela **`NOVOS`**, que é o outro lado da mesma moeda. A D87 proíbe o
+script de **adivinhar** que uma contraparte é cliente novo; não proíbe **executar** a
+resposta de quem sabe. A diferença é quem decidiu, e aqui decidiu o dono da empresa. Duas
+travas: nome já existente **cancela** a criação (aí o certo é `CONFIRMADOS`), e o documento
+vem do extrato, nunca digitado.
+
+A conta veio junto na regra porque cliente recém-criado **não tem contrato**, e é do
+contrato que o `propose:receipts` tira a conta — sem isso ele nasceria ligado e mudo.
+**3.02 e não 3.01** porque é um recebimento único de R$ 5.000 em 05/03 e o razão tem cinco
+meses completos depois sem repetição; retainer não se comporta assim.
+
+**Resultado:** cobertura 81,9% → **82,2% (875 de 1.064)**, contrapartes desconhecidas
+**14 → 12**. Os 13 meses seguem com resíduo zero e o `verify:rls` deu 7/7.
+
+> **A receita não moveu o resultado, e está certo.** O ensaio marcou "0 espelhos de
+> competência criados" e queda de R$ 0,00: receita nasce de contrato e NF (SPEC §5), não do
+> caixa. A linha ganhou conta e cliente; a DRE não se mexeu.
+
+> **Uma pendência que a planilha não resolve:** o Andre citou a Conexão na **linha 86** do
+> bloco de clientes. Na cópia em `docs/reference/`, de 12/08, esse bloco termina na **83** e
+> a 86 é `Impostos` — e `Conex` não aparece em nenhuma das seis abas. A planilha dele está
+> mais nova. Uma cópia atualizada provavelmente resolve também ISM, Mara Thaysa e Roberto de
+> uma vez, além de refrescar contratos e receita.
+
+---
+
 ## Parte 13 — Decisões da Fase 8
 
 ### D68 — Escritor de XLSX próprio, com entradas sem compressão

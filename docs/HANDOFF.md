@@ -4,7 +4,7 @@ Onde tudo está, o que foi feito, e o que falta. Escrito para quem chega sem con
 nenhum, inclusive eu mesmo numa conversa nova.
 
 Leia junto quando precisar do detalhe: `docs/PLAN.md` (o roteiro original),
-`docs/DECISIONS.md` (decisões numeradas D1–D101 e pendências Q2–Q18) e `README.md`.
+`docs/DECISIONS.md` (decisões numeradas D1–D102 e pendências Q2–Q18) e `README.md`.
 
 ---
 
@@ -104,12 +104,12 @@ npm run import:invoices     # faturas de cartão em massa
 | | |
 |---|---|
 | Razão de caixa | **1.064 lançamentos**, 06/08/2025 a 31/07/2026 |
-| Categorizados | **871 (81,9%)** — 193 sem conta |
+| Categorizados | **875 (82,2%)** — 189 sem conta |
 | Competência | 284 linhas de receita + 640 de custo |
 | Receita reconhecida | **R$ 3.556.736,91** (jan–ago/2026) |
 | Contratos | 80 (65 ativos, 15 concluídos), 95 parcelas mensais |
-| Clientes / pessoas | 72 / 40 |
-| Regras | 129 |
+| Clientes / pessoas | 73 / 40 |
+| Regras | 130 |
 | Importações | 23 |
 | Notas fiscais | **0** |
 
@@ -340,7 +340,7 @@ o histórico daquela contraparte, e o `recategorize` a aplica ao razão inteiro.
 
 | | O que é | Como destrava |
 |---|---|---|
-| **14 contrapartes sem dono** ← *o próximo passo* | R$ 269 mil do lado dos **pagamentos** (Santa Monica Criação R$ 84.620, Aparecido Ribeiro R$ 62.472, ETG R$ 60.000, Taliêco R$ 36.000, Conex & Result R$ 7.200…) e R$ 30 mil do lado dos recebimentos (ISM, Mara Thaysa, Conexão). Eram **31**: a D98 resolveu 7 lendo o razão, a D100 mais 4 — inclusive a **Senseilabs, que era o CNPJ do Escola.i** — e a D101 mais 6, pela aritmética da planilha. | **O que sobrou é o que a planilha não explica.** Dizer quem é cada uma. Se for um dos **32 clientes que já existem sem documento**, o certo é pôr o CNPJ nele — casar nome duplica cliente (D87). Depois: `npm run vincular` e `npm run recategorize`. |
+| **12 contrapartes sem dono** ← *o próximo passo* | R$ 269 mil do lado dos **pagamentos** (Santa Monica Criação R$ 84.620, Aparecido Ribeiro R$ 62.472, ETG R$ 60.000, Taliêco R$ 36.000, Conex & Result R$ 7.200…) e R$ 15 mil do lado dos recebimentos (Mara Thaysa, Roberto Pascoal). Eram **31**: a D98 resolveu 7 lendo o razão, a D100 mais 4 — inclusive a **Senseilabs, que era o CNPJ do Escola.i** —, a D101 mais 6 pela aritmética da planilha, e a D102 mais 2 respondidas pelo Andre. | **O que sobrou é o que a planilha não explica.** Dizer quem é cada uma. Se for um dos clientes que já existem sem documento, o certo é pôr o CNPJ nele — casar nome duplica cliente (D87). Depois: `npm run vincular` e `npm run recategorize`. |
 | **`OP REC EXT`** | 4 entradas, ~R$ 408 mil, sem documento nenhum | Parecem câmbio. Em qual receita caem é decisão. |
 | **19 linhas que o histórico resolveria** | R$ 205.311,97. O motor sabe a resposta, mas por inferência, não por regra | Estão paradas de propósito (D97). Eram 42; a D100 tirou 17 de lá promovendo-as a **decisão**. **Ainda não recomendo aplicar o resto em bloco:** as 6 linhas de receita (Hogrefe, Hold Beauty, PDG IT) responderiam sozinhas a pergunta que o `decisoes` §2 diz estar em aberto. |
 | **`PAGAMENTOS A FORNECEDORES SISPAG`** | 8 saídas, **R$ 95.950** | **Nenhum arquivo do Itaú resolve**: o próprio PDF itemizado não nomeia essas oito. Só o detalhe do lote no internet banking. |
@@ -380,6 +380,16 @@ Ficaram três de fora **de propósito**, e o motivo importa:
   de texto não as alcança por definição. `npm run propose:suppliers` promoveu a conta a
   **regra por documento** e fechou Attentive, Tarefy, Ciclo e Escola.i — 17 linhas.
 
+### A planilha em `docs/reference/` está velha — vale pedir a atual
+
+O Andre citou um cliente na **linha 86** do bloco de clientes. Na cópia de **12/08** esse
+bloco termina na **83** e a 86 é `Impostos`; `Conex` não aparece em nenhuma das seis abas.
+A dele tem pelo menos três linhas de cliente a mais.
+
+Uma cópia atualizada é barata e resolve várias coisas de uma vez: provavelmente nomeia
+**Mara Thaysa** e **Roberto Pascoal**, e ainda refresca contratos, receita e o bloco de
+custo — que é de onde a D101 tirou a conta de seis contrapartes.
+
 ### Depende de arquivo ou chave que não chegou
 
 | # | O que falta |
@@ -403,7 +413,7 @@ mil; nenhuma fase cobre), `Q9` (documento escolar alheio na pasta — apagar?), 
 
 ### Se for fazer só três coisas
 
-1. **Responder as 14 contrapartes** (`npm run decisoes`). É o maior bloco que não depende de
+1. **Responder as 12 contrapartes** (`npm run decisoes`). É o maior bloco que não depende de
    arquivo nenhum, e a maioria provavelmente já está cadastrada sem documento — como
    aconteceu com as oito de 19/08, em que **nenhuma era cliente novo**. Eram 31: as
    D98/D100/D101 tiraram 17 sem ninguém adivinhar nada. **O que sobrou é justamente o que a
