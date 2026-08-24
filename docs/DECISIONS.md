@@ -1013,6 +1013,56 @@ Cobertura 79,0% → **80,6% (858 de 1.064)**.
 
 ---
 
+### D101 — A planilha lança um mês à frente do caixa, e é isso que fecha as contas
+A D100 promove ao documento o que o razão **já decidiu**. Sobrava o fornecedor que nunca foi
+categorizado — não há o que promover. Para esses restava a planilha, e ela provou mais do
+que parecia.
+
+**O padrão, achado duas vezes em blocos que não se conhecem:** a `DRE Geral` lança por
+**competência, um mês à frente do caixa**. O boleto pago em fevereiro aparece em janeiro.
+
+- `- Juridico` vale **14.589,00** em janeiro. O caixa de **fevereiro** soma
+  6.347,00 + 5.000,00 + 3.242,00 = **14.589,00**. E o pagamento de março, 5.000,00, é o
+  `- Juridico` de **fevereiro**. Ao centavo nos dois meses.
+- `- Seguro Saúde (estag)`, mês a mês, contra os boletos da Prudential: 25/05 R$ 51,02 →
+  abril; 24/06 R$ 50,00 → maio; 26/07 R$ 50,00 → junho.
+
+Achado o padrão, o resto caiu:
+
+- `- Plano de Saude` é zero até junho e vale **2.702,37** em julho — e de novo em agosto,
+  que o razão não alcança, o que explica o total do ano ser exatamente o dobro. Julho no
+  razão: Bradesco 1.924,85 + Intermédica 388,76 + 388,76 = **2.702,37**.
+- `- Penalties & Settlements` vale **45.000,00** em fevereiro e 45.000,00 no ano inteiro.
+  Há um único pagamento à **Maruri**: 45.000,00 em 09/02. Único dos dois lados.
+
+→ O `propose:suppliers` ganhou uma **segunda via de evidência**, separada da primeira: uma
+tabela em que cada entrada carrega **por que** aquela conta, conferida por valor e por mês.
+Vale a distinção: isto não é adivinhar identidade (D87) — ninguém vira cliente por
+semelhança de nome. É dizer em que conta do plano um pagamento cai, que é escrituração, e a
+evidência é a planilha do próprio Andre.
+
+**Aplicado em 24/08/2026:** 6 regras → 13 lançamentos, **R$ 72.493,45**, em 11.03 Multas e
+acordos (1), 8.02 Jurídico (5), 6.06 Plano de saúde (3) e 6.07 Seguro saúde (4). O ensaio
+confirmou sozinho: o 6.06 recebeu **exatamente R$ 2.702,37** e o 8.02 **exatamente
+R$ 24.589,00**, os números que a planilha tinha previsto.
+
+Ponte: "saídas de caixa sem competência" caiu de R$ 357.878,12 para **R$ 285.384,67** — os
+mesmos R$ 72.493,45 —, 13 meses com resíduo zero, `verify:rls` 7/7. Cobertura 80,6% →
+**81,9% (871 de 1.064)**. Contrapartes desconhecidas: 20 → **14**.
+
+**Três que eu não apliquei, e o motivo importa:**
+
+- **INPI, R$ 440.** É o Instituto Nacional da Propriedade Industrial, e só se paga taxa de
+  marca a ele — mas o `- Juridico` da planilha é **zero de março em diante**, e o pagamento
+  é de maio. Sei o que a empresa é; não tenho evidência de onde o Andre lança. Decidir aqui
+  seria conhecimento de mundo vestido de aritmética.
+- **FDN Telecom, R$ 10.000 em 2 linhas.** O nome diz telecom, mas `- Claro e TIM` vale
+  **R$ 394,92 no ano inteiro**. R$ 5.000 por mês não é conta de telefone. O nome está
+  mentindo sobre a natureza, ou é outra coisa.
+- **Keepclear, +R$ 0,01.** O centavo de teste. Continua sem conta de propósito.
+
+---
+
 ## Parte 13 — Decisões da Fase 8
 
 ### D68 — Escritor de XLSX próprio, com entradas sem compressão

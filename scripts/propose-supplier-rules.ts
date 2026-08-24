@@ -46,6 +46,71 @@ const BOLD = "[1m";
 const DIM = "[2m";
 const RESET = "[0m";
 
+/**
+ * A segunda via de evidência: a planilha prova a conta por **aritmética**.
+ *
+ * A primeira via — a de baixo — só promove o que o razão já decidiu. Ela não alcança o
+ * fornecedor que **nunca** foi categorizado, porque não há nada a promover. Para esses
+ * sobra a planilha, e sobra num sentido forte: quando uma linha do bloco de custo tem um
+ * valor que só um pagamento do razão poderia ter produzido, a conta deixa de ser opinião.
+ *
+ * Cada entrada aqui foi conferida contra `DRE Geral` **por valor e por mês**, e o que a
+ * conferência revelou é que a planilha lança por **competência, um mês à frente do caixa**
+ * — o pagamento de fevereiro aparece em janeiro. O padrão apareceu duas vezes, sozinho, em
+ * dois blocos que não se conhecem, e é ele que faz as contas fecharem ao centavo.
+ *
+ * Isto **não** é adivinhar identidade (D87): ninguém está sendo cadastrado como cliente por
+ * semelhança de nome. É dizer em que conta do plano um pagamento cai, que é escrituração, e
+ * a evidência é a própria planilha do Andre.
+ */
+const CONFIRMADOS: { taxId: string; code: string; why: string }[] = [
+  {
+    // `- Penalties & Settlements` vale 45.000,00 em fevereiro e 45.000,00 no ano inteiro.
+    // No razão há um único pagamento à Maruri: 45.000,00 em 09/02/2026. Valor exato, mês
+    // exato, e único dos dois lados. A Maruri ainda aparece na aba `Vendas e Perdas`, que
+    // é onde um acordo com negócio perdido apareceria.
+    taxId: "01220005000192",
+    code: "11.03",
+    why: "Penalties & Settlements: 45.000,00 em fev, único do ano dos dois lados",
+  },
+  {
+    // `- Plano de Saude` é zero até junho e vale 2.702,37 em julho (e de novo em agosto,
+    // que o razão ainda não alcança). Julho no razão: Bradesco 1.924,85 + Intermédica
+    // 388,76 + 388,76 = 2.702,37. Ao centavo.
+    taxId: "92693118000160",
+    code: "6.06",
+    why: "Plano de Saude: jul 2.702,37 = Bradesco 1.924,85 + Intermédica 2× 388,76",
+  },
+  {
+    taxId: "44649812000138",
+    code: "6.06",
+    why: "Plano de Saude: compõe os 2.702,37 de julho com a Bradesco",
+  },
+  {
+    // `- Seguro Saúde (estag)`, mês a mês, contra os boletos da Prudential, com a
+    // defasagem de um mês: 25/05 R$ 51,02 → abril; 24/06 R$ 50,00 → maio; 26/07 R$ 50,00
+    // → junho. Três de quatro ao centavo; o de 27/04 sai 51,06 contra 51,00, arredondamento
+    // da própria planilha.
+    taxId: "21986074000119",
+    code: "6.07",
+    why: "Seguro Saúde (estag): série mensal casa com defasagem de um mês, 3 de 4 ao centavo",
+  },
+  {
+    // `- Juridico` vale 14.589,00 em janeiro e 5.000,00 em fevereiro. O caixa de fevereiro
+    // soma 6.347,00 + 5.000,00 + 3.242,00 = 14.589,00, e o pagamento de março é 5.000,00 —
+    // a mesma defasagem de um mês, ao centavo nos dois meses. O pagamento de janeiro
+    // (5.000,00) é competência de dez/2025, fora desta planilha.
+    taxId: "54606092000187",
+    code: "8.02",
+    why: "Juridico: caixa de fev soma 14.589,00 = janeiro da planilha, ao centavo",
+  },
+  {
+    taxId: "00058442154",
+    code: "8.02",
+    why: "Juridico: os 6.347,00 compõem os 14.589,00 de fevereiro",
+  },
+];
+
 type Candidate = {
   taxId: string;
   name: string;
@@ -182,9 +247,78 @@ try {
     else unexplained.push(candidate);
   }
 
+  /**
+   * A segunda via, conferida contra o razão antes de aparecer. Uma entrada da tabela que
+   * não encontra linha sem conta é entrada obsoleta — já foi resolvida por outro caminho —
+   * e some do relatório sozinha, em vez de virar uma regra sobre nada.
+   */
+  const confirmed: (Candidate & { why: string })[] = [];
+  for (const item of CONFIRMADOS) {
+    const category = byCode.get(item.code);
+    if (!category) {
+      console.log(`${DIM}sem conta ${item.code} no plano — ${item.taxId} ignorado${RESET}`);
+      continue;
+    }
+
+    const [existing] = await sql<{ n: number }[]>`
+      select count(*)::int as n from categorization_rules
+      where entity_id = ${entityId}
+        and regexp_replace(counterparty_tax_id, '\\D', '', 'g') = ${item.taxId}`;
+    if ((existing?.n ?? 0) > 0) continue;
+
+    const [agg] = await sql<
+      { name: string; direction: "in" | "out"; pending: number; pendingTotal: string }[]
+    >`
+      select (array_agg(counterparty_name order by length(counterparty_name) desc))[1] as name,
+             direction,
+             count(*)::int as pending,
+             sum(amount)::text as "pendingTotal"
+      from cash_entries
+      where entity_id = ${entityId}
+        and category_id is null
+        and regexp_replace(counterparty_tax_id, '\\D', '', 'g') = ${item.taxId}
+      group by direction`;
+    if (!agg) continue;
+
+    confirmed.push({
+      taxId: item.taxId,
+      name: agg.name,
+      direction: agg.direction,
+      pending: agg.pending,
+      pendingTotal: agg.pendingTotal,
+      decided: 0,
+      codes: [item.code],
+      code: item.code,
+      categoryId: category.id,
+      categoryName: category.name,
+      explainedBy: null,
+      hasDocRule: false,
+      why: item.why,
+    });
+  }
+
   console.log(
     `\n${BOLD}${rows.length} pares documento+sentido ainda sem conta no razão${RESET}\n`,
   );
+
+  if (confirmed.length > 0) {
+    console.log(
+      `${BOLD}a planilha prova a conta por aritmética — ${confirmed.length} documentos${RESET}`,
+    );
+    for (const c of confirmed) {
+      console.log(
+        `  ${GREEN}${String(c.pending).padStart(2)}${RESET} ${c.direction === "out" ? "saída  " : "entrada"} ` +
+          `${brl(c.pendingTotal).padStart(11)}  ${c.name.slice(0, 38).padEnd(38)} ` +
+          `${DIM}${mask(c.taxId)}${RESET}  → ${c.code} ${c.categoryName}`,
+      );
+      console.log(`      ${DIM}${c.why}${RESET}`);
+    }
+    const lines = confirmed.reduce((s, c) => s + c.pending, 0);
+    const total = confirmed.reduce((s, c) => s + Math.abs(Number(c.pendingTotal)), 0);
+    console.log(
+      `\n  ${BOLD}${lines} linhas, R$ ${total.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}.${RESET}\n`,
+    );
+  }
 
   if (ready.length > 0) {
     console.log(
@@ -253,7 +387,7 @@ try {
     );
   } else {
     let created = 0;
-    for (const c of ready) {
+    for (const c of [...confirmed, ...ready]) {
       // Priority 10, like every document rule: ahead of every text rule, which is D40.
       // The pattern `*` means "this counterparty, whatever the description says".
       await sql`

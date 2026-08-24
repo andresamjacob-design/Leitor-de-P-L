@@ -4,7 +4,7 @@ Onde tudo está, o que foi feito, e o que falta. Escrito para quem chega sem con
 nenhum, inclusive eu mesmo numa conversa nova.
 
 Leia junto quando precisar do detalhe: `docs/PLAN.md` (o roteiro original),
-`docs/DECISIONS.md` (decisões numeradas D1–D100 e pendências Q2–Q18) e `README.md`.
+`docs/DECISIONS.md` (decisões numeradas D1–D101 e pendências Q2–Q18) e `README.md`.
 
 ---
 
@@ -104,12 +104,12 @@ npm run import:invoices     # faturas de cartão em massa
 | | |
 |---|---|
 | Razão de caixa | **1.064 lançamentos**, 06/08/2025 a 31/07/2026 |
-| Categorizados | **858 (80,6%)** — 206 sem conta |
+| Categorizados | **871 (81,9%)** — 193 sem conta |
 | Competência | 284 linhas de receita + 640 de custo |
 | Receita reconhecida | **R$ 3.556.736,91** (jan–ago/2026) |
 | Contratos | 80 (65 ativos, 15 concluídos), 95 parcelas mensais |
 | Clientes / pessoas | 72 / 40 |
-| Regras | 123 |
+| Regras | 129 |
 | Importações | 23 |
 | Notas fiscais | **0** |
 
@@ -308,10 +308,10 @@ diferenças dos 13 meses:
 |---|---|
 | Receita reconhecida no mês | + R$ 3.556.736,91 |
 | Entradas de caixa sem competência | − R$ 2.995.308,69 |
-| **Saídas de caixa sem competência** | **+ R$ 357.878,12** |
+| **Saídas de caixa sem competência** | **+ R$ 285.384,67** |
 | Custo de compra no cartão | − R$ 147.685,31 |
 
-A linha do meio é a lista de tarefas em forma de número: **R$ 358 mil que saiu do caixa e
+A linha do meio é a lista de tarefas em forma de número: **R$ 285 mil que saiu do caixa e
 ainda não pesa na DRE**, porque essas linhas não têm categoria. Conforme forem
 categorizadas, o custo cresce e o resultado cai, **sem o caixa mudar um centavo**.
 
@@ -340,18 +340,29 @@ o histórico daquela contraparte, e o `recategorize` a aplica ao razão inteiro.
 
 | | O que é | Como destrava |
 |---|---|---|
-| **20 contrapartes sem dono** ← *o próximo passo* | R$ 314 mil do lado dos **pagamentos** (Santa Monica Criação R$ 84.620, Aparecido Ribeiro R$ 62.472, ETG R$ 60.000, Maruri R$ 45.000, Taliêco R$ 36.000…) e R$ 30 mil do lado dos recebimentos (ISM, Mara Thaysa, Conexão). Eram **31**: a D98 resolveu 7 lendo o razão, e a D100 mais 4 — inclusive a **Senseilabs, que era o CNPJ do Escola.i**. | Dizer quem é cada uma. Se for um dos **32 clientes que já existem sem documento**, o certo é pôr o CNPJ nele — casar nome duplica cliente (D87). Depois: `npm run vincular` e `npm run recategorize`. **Duas já têm evidência forte** — ver abaixo. |
+| **14 contrapartes sem dono** ← *o próximo passo* | R$ 269 mil do lado dos **pagamentos** (Santa Monica Criação R$ 84.620, Aparecido Ribeiro R$ 62.472, ETG R$ 60.000, Taliêco R$ 36.000, Conex & Result R$ 7.200…) e R$ 30 mil do lado dos recebimentos (ISM, Mara Thaysa, Conexão). Eram **31**: a D98 resolveu 7 lendo o razão, a D100 mais 4 — inclusive a **Senseilabs, que era o CNPJ do Escola.i** — e a D101 mais 6, pela aritmética da planilha. | **O que sobrou é o que a planilha não explica.** Dizer quem é cada uma. Se for um dos **32 clientes que já existem sem documento**, o certo é pôr o CNPJ nele — casar nome duplica cliente (D87). Depois: `npm run vincular` e `npm run recategorize`. |
 | **`OP REC EXT`** | 4 entradas, ~R$ 408 mil, sem documento nenhum | Parecem câmbio. Em qual receita caem é decisão. |
-| **25 linhas que o histórico resolveria** | R$ 274.900,97. O motor sabe a resposta, mas por inferência, não por regra | Estão paradas de propósito (D97). Eram 42; a D100 tirou 17 de lá promovendo-as a **decisão**. **Ainda não recomendo aplicar o resto em bloco:** as 6 linhas de receita (Hogrefe, Hold Beauty, PDG IT) responderiam sozinhas a pergunta que o `decisoes` §2 diz estar em aberto. |
+| **19 linhas que o histórico resolveria** | R$ 205.311,97. O motor sabe a resposta, mas por inferência, não por regra | Estão paradas de propósito (D97). Eram 42; a D100 tirou 17 de lá promovendo-as a **decisão**. **Ainda não recomendo aplicar o resto em bloco:** as 6 linhas de receita (Hogrefe, Hold Beauty, PDG IT) responderiam sozinhas a pergunta que o `decisoes` §2 diz estar em aberto. |
 | **`PAGAMENTOS A FORNECEDORES SISPAG`** | 8 saídas, **R$ 95.950** | **Nenhum arquivo do Itaú resolve**: o próprio PDF itemizado não nomeia essas oito. Só o detalhe do lote no internet banking. |
 | **PDG IT, Hold Beauty, Hogrefe** | 6 recebimentos, R$ 73.400 — projeto *e* retainer vigentes ao mesmo tempo | Dizer qual contrato é qual. A vigência já resolveu 7 dos 13 sozinha (D89). |
 | **`BOLETOS RECEBIDOS`** | 8 entradas, R$ 43.100, sem documento | O extrato não nomeia o sacado. |
 | **Conta de receita financeira** | Não existe no plano. Os rendimentos de aplicação (38 linhas, R$ 202,31) estão em `99.03`, que é **transferência**, e ficam fora da DRE — com R$ 485.000 no CDB isso cresce (D95) | Criar `3.05 Receita financeira`? E em qual grupo da DRE — `receita_bruta` infla o OPBB, então provavelmente um grupo não operacional. É pergunta de contador. |
 
-### Duas que a planilha praticamente já respondeu
+### As que a planilha respondeu por aritmética — feitas (D101)
 
-Não apliquei nenhuma: as duas são identidade, e identidade é sua (D87). Mas a
-evidência está fechada, e conferir cada uma é olhar uma célula.
+Maruri, Danillo (os dois), Bradesco Saúde, Intermédica e Prudential **já entraram**: a
+planilha prova a conta de cada uma por valor e por mês, e a chave foi descobrir que a
+`DRE Geral` lança **um mês à frente do caixa**. Detalhe e conferência na D101.
+
+Ficaram três de fora **de propósito**, e o motivo importa:
+
+- **INPI, R$ 440** — só se paga taxa de marca ao Instituto Nacional da Propriedade
+  Industrial, mas o `- Juridico` da planilha é zero de março em diante e o pagamento é de
+  maio. Sei o que a empresa é; não sei onde você lança. Isso é conhecimento de mundo, não
+  aritmética.
+- **FDN Telecom, R$ 10.000 em 2 linhas** — o nome diz telecom, mas `- Claro e TIM` vale
+  R$ 394,92 no ano inteiro. R$ 5.000 por mês não é conta de telefone.
+- **Keepclear, +R$ 0,01** — o centavo de teste, sem conta de propósito.
 
 - **Maruri → `11.03 Multas e acordos`.** A linha `- Penalties & Settlements` da `DRE Geral`
   vale **R$ 45.000,00, só em fevereiro, e R$ 45.000 no ano inteiro**. No razão há um único
@@ -392,10 +403,12 @@ mil; nenhuma fase cobre), `Q9` (documento escolar alheio na pasta — apagar?), 
 
 ### Se for fazer só três coisas
 
-1. **Responder as 24 contrapartes** (`npm run decisoes`). É o maior bloco que não depende de
+1. **Responder as 14 contrapartes** (`npm run decisoes`). É o maior bloco que não depende de
    arquivo nenhum, e a maioria provavelmente já está cadastrada sem documento — como
-   aconteceu com as oito de 19/08, em que **nenhuma era cliente novo**. Comece pelas três
-   que a planilha já respondeu (Maruri, Danillo, Attentive), acima.
+   aconteceu com as oito de 19/08, em que **nenhuma era cliente novo**. Eram 31: as
+   D98/D100/D101 tiraram 17 sem ninguém adivinhar nada. **O que sobrou é justamente o que a
+   planilha não explica** — começa por Santa Monica Criação (R$ 84.620), Aparecido
+   (R$ 62.472), ETG (R$ 60.000) e Taliêco (R$ 36.000), que são R$ 243 mil dos R$ 269 mil.
 2. **Rodar `npm run vincular` e `npm run recategorize`** depois de responder. É o que
    converte resposta em custo na DRE.
 3. **Decidir a conta de receita financeira** com o contador, junto de `OP REC EXT`. São as
