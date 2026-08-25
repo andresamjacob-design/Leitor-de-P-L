@@ -145,6 +145,27 @@ const TO_CODE: Record<string, string> = {
  * as expense would double-count every purchase already on the invoice (D-C).
  */
 const STATEMENT_RULES: { pattern: string; code: string; direction: Direction; note: string }[] = [
+  /**
+   * O câmbio. Confirmado pelo Andre em 24–25/08/2026.
+   *
+   * `OP REC EXT` é a conversão de NF emitida em **dólar**, e a conta sai da própria planilha:
+   * a aba `Income` tem exatamente três linhas de receita — `Receita Ongoing`,
+   * `Receita Projetos` e `Receita Salesforce` —, e as duas primeiras já são 3.01 e 3.02.
+   *
+   * A terceira **não é só Salesforce**: ela vale R$ 1.800,00 em maio, julho e agosto, que é
+   * o valor exato dos recebimentos da Ciclo — e a Ciclo já está em **3.03** no razão. A
+   * linha é o fluxo de parceria inteiro, e é isso que fecha o mapa das três.
+   *
+   * **Sem documento**, então tem de ser regra de texto: o extrato não nomeia quem mandou o
+   * dinheiro de fora. É a exceção que a D40 admite, não uma preferência.
+   *
+   * O valor que cai no banco **não é o da NF**, e não deveria mesmo: a NF sai em dólar e a
+   * conversão acontece depois, a outra cotação. Em janeiro o banco creditou R$ 900 a menos
+   * que a planilha; em junho, R$ 30.506,22 a mais. Isso **não** vira conta nova — os dois
+   * razões são separados (D2), a receita nasce de contrato e NF (SPEC §5), e a diferença
+   * aparece nomeada na ponte da D85. É exatamente o caso para o qual a ponte existe.
+   */
+  { pattern: "OP REC EXT", code: "3.03", direction: "in", note: "conversão de NF em dólar — a linha `Receita Salesforce` da planilha, que é 3.03" },
   { pattern: "BUSINESS 7502-5632", code: "99.02", direction: "out", note: "débito da fatura do cartão 5780" },
   { pattern: "BUSINESS 4005-1044", code: "99.02", direction: "out", note: "débito da fatura do cartão 8299" },
   // Same account, opposite sides: the sweep out and the sweep back. Without a direction

@@ -4,7 +4,7 @@ Onde tudo está, o que foi feito, e o que falta. Escrito para quem chega sem con
 nenhum, inclusive eu mesmo numa conversa nova.
 
 Leia junto quando precisar do detalhe: `docs/PLAN.md` (o roteiro original),
-`docs/DECISIONS.md` (decisões numeradas D1–D104 e pendências Q2–Q18) e `README.md`.
+`docs/DECISIONS.md` (decisões numeradas D1–D105 e pendências Q2–Q18) e `README.md`.
 
 ---
 
@@ -104,12 +104,12 @@ npm run import:invoices     # faturas de cartão em massa
 | | |
 |---|---|
 | Razão de caixa | **1.064 lançamentos**, 06/08/2025 a 31/07/2026 |
-| Categorizados | **890 (83,6%)** — 174 sem conta |
+| Categorizados | **895 (84,1%)** — 169 sem conta |
 | Competência | 284 linhas de receita + 640 de custo |
 | Receita reconhecida | **R$ 3.556.736,91** (jan–ago/2026) |
 | Contratos | 80 (65 ativos, 15 concluídos), 95 parcelas mensais |
 | Clientes / pessoas | 73 / 40 |
-| Regras | 139 |
+| Regras | 140 |
 | Importações | 23 |
 | Notas fiscais | **0** |
 
@@ -349,7 +349,7 @@ o histórico daquela contraparte, e o `recategorize` a aplica ao razão inteiro.
 | | O que é | Como destrava |
 |---|---|---|
 | **7 contrapartes sem dono** ← *o próximo passo* | R$ 117.865,68. Sobraram Santa Monica Criação (R$ 84.620), Taliêco (R$ 24.000), FDN Telecom (R$ 10.000), WCommerce (R$ 4.805), Ricardo de Freitas (R$ 3.000), INPI (R$ 440) e o centavo da Keepclear. Eram **31**. | O Andre disse que vai achar essas. Depois: `npm run vincular` e `npm run recategorize`. |
-| **`OP REC EXT`** ← *a maior que sobrou* | 5 entradas, **R$ 415.273,24**, sem documento nenhum. O Andre disse que são a **conversão de NFs pagas em dólar** — Salesforce, por exemplo. | Falta a conta. A aritmética não fecha sozinha: o de 09/02 bate **exato** com a linha `Receita Salesforce` de fevereiro (R$ 20.411,15), mas os de junho somam R$ 373.754,89 contra R$ 345.048,67 da planilha. Existe `3.04 Receita — Parceria` vazia no plano. |
+| ~~**`OP REC EXT`**~~ | **Resolvido em 25/08 (D105).** São conversão de NF em dólar, e a conta saiu da planilha: a linha `Receita Salesforce` vale R$ 1.800 em mai/jul/ago, que é a **Ciclo** — já em 3.03. A diferença entre extrato e NF é cotação, e não vira conta nova: a ponte a nomeia. | — |
 | **19 linhas que o histórico resolveria** | R$ 205.311,97. O motor sabe a resposta, mas por inferência, não por regra | Estão paradas de propósito (D97). Eram 42; a D100 tirou 17 de lá promovendo-as a **decisão**. **Ainda não recomendo aplicar o resto em bloco:** as 6 linhas de receita (Hogrefe, Hold Beauty, PDG IT) responderiam sozinhas a pergunta que o `decisoes` §2 diz estar em aberto. |
 | **`PAGAMENTOS A FORNECEDORES SISPAG`** | 8 saídas, **R$ 95.950** | **Nenhum arquivo do Itaú resolve**: o próprio PDF itemizado não nomeia essas oito. Só o detalhe do lote no internet banking. |
 | ~~**PDG IT, Hold Beauty, Hogrefe**~~ | **Resolvido em 24/08 (D104).** A pergunta estava mal feita: não era qual conta é o *cliente*, era qual conta é o *recebimento* — e Hold Beauty e Hogrefe caem **nas duas**. A seção `Pagamento de NF` da planilha nova responde por valor e mês. | — |

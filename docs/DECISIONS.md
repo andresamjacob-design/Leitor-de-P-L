@@ -1209,6 +1209,47 @@ indecidível foram de 3 para **zero**. Os 13 meses seguem com resíduo zero, `ve
 
 ---
 
+### D105 — O câmbio é 3.03, e a diferença de cotação não precisa de conta
+`OP REC EXT` — 5 entradas, **R$ 415.273,24**, sem documento nenhum — era a maior linha
+indecidida do projeto. O Andre respondeu duas coisas em 24–25/08/2026, e cada uma resolveu
+metade.
+
+**Primeira: são conversão de NF emitida em dólar** ("da Salesforce, por exemplo").
+
+**A conta sai da própria planilha, e a chave estava escondida num R$ 1.800.** A aba `Income`
+tem exatamente **três** linhas de receita — `Receita Ongoing`, `Receita Projetos` e
+`Receita Salesforce` —, e as duas primeiras já são 3.01 e 3.02. A terceira **não é só
+Salesforce**: ela vale R$ 1.800,00 em maio, julho e agosto, que é o valor exato dos
+recebimentos da **Ciclo** — e a Ciclo já estava em **3.03 Receita — Referral** no razão. A
+linha é o fluxo de parceria inteiro. O mapa das três fecha, e o terceiro elo estava provado
+antes de alguém perguntar.
+
+**Segunda, e é a que evita uma conta nova: a diferença entre o extrato e a NF é cotação.**
+A NF sai em dólar e a conversão acontece depois, a outro câmbio. Medido:
+
+| | planilha | razão | diferença |
+|---|---|---|---|
+| janeiro | 7.352,95 | 6.452,95 | banco creditou **R$ 900 a menos** |
+| junho (fora a Ciclo) | 343.248,67 | 373.754,89 | banco creditou **R$ 30.506,22 a mais** |
+
+Variação nos dois sentidos, que é o que câmbio faz.
+
+**E isso não vira conta nova.** Os dois razões são separados (D2), a receita nasce de
+contrato e NF (SPEC §5), e a diferença aparece **nomeada** na ponte da D85 — é exatamente o
+caso para o qual a ponte foi construída. O ensaio confirmou sozinho: **0 espelhos de
+competência criados, resultado acumulado inalterado**. As linhas ganharam conta e cliente; a
+DRE não se mexeu um centavo.
+
+Sem documento, teve de ser **regra de texto** — o extrato não nomeia quem mandou dinheiro de
+fora. É a exceção que a D40 admite, não uma preferência, e por isso mora em
+`STATEMENT_RULES`, junto das outras que vêm do vocabulário do banco e não da planilha.
+
+**Aplicado:** 1 regra → 5 lançamentos, R$ 415.273,24. Cobertura 83,6% → **84,1% (895 de
+1.064)**, e o que falta decidir caiu de R$ 780.111,72 para **R$ 364.838,48** — menos da
+metade. Os 13 meses seguem com resíduo zero e o `verify:rls` deu 7/7.
+
+---
+
 ## Parte 13 — Decisões da Fase 8
 
 ### D68 — Escritor de XLSX próprio, com entradas sem compressão
