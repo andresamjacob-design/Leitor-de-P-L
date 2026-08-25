@@ -1301,6 +1301,62 @@ para elas seria o oposto do que este arquivo inteiro defende.
 
 ---
 
+### D107 — O fluxo mostra o que saiu da conta e não voltou
+O Andre perguntou por que os totais da tela de fluxo não batiam com a planilha dele, e a
+resposta veio em camadas. Duas das regras que ele deu **o sistema já cumpria**, e valia
+descobrir isso antes de mexer em qualquer coisa:
+
+- **aplicação não é gasto** — `99.03` é `kind = 'transfer'`, e a tela já põe transferência
+  numa seção própria, fora de entradas e saídas (D14b);
+- **rendimento não é entrada** — os rendimentos moram em `99.03` desde a decisão de 16/08,
+  então também já estavam fora. A **planilha** é que os conta como receita.
+
+A regra nova é a terceira: **pagamento estornado não é gasto, e a devolução dele não é
+entrada.** Juntos, os dois são dinheiro que deu meia-volta, e mostrá-los infla as duas
+colunas sem mover saldo nenhum.
+
+→ `refundedEntryIds` casa pagamento com devolução e tira **as duas pernas** do relatório.
+Três condições, e a terceira é a que importa:
+
+- **mesmo documento** — sem identidade não há par; nome não basta para anular dinheiro;
+- **mesmo valor**, e a devolução dentro de 90 dias;
+- **mesma categoria** — que é a regra que a D83 já tinha escrito. Sem ela, uma contraparte
+  que está dos dois lados do balcão anularia um recebimento contra um pagamento legítimo, e
+  a D82 e a D99 voltariam por uma terceira porta. A Ciclo é o teste.
+
+O casamento é **um para um**, porque foi assim que o caso real se apresentou: o Ricardo
+recebeu **dois** pagamentos de R$ 115.000 e devolveu **um**. Anular os dois esconderia um
+gasto verdadeiro. Cinco testes novos, 391 → **396**.
+
+Achou 3 pares no razão: R$ 115.000 (jan), R$ 50.000 (fev) e R$ 1.000 (mai), todos em 6.10.
+
+**E aí ficou visível o que sobrava.** Com as devoluções anuladas, a diferença entre a tela e
+a planilha virou **uma coisa só, igual todo mês**:
+
+| mês | dif nas saídas | fatura do cartão naquele mês |
+|---|---|---|
+| janeiro | −14.922,64 | **14.922,64** |
+| fevereiro | −13.575,02 | **13.575,02** |
+| abril | −18.076,95 | **18.076,95** |
+| maio | −43.244,06 | **43.244,06** |
+| junho | −28.179,41 | **28.179,41** |
+
+**Cinco de sete meses batem ao centavo.** A planilha conta o **pagamento da fatura** como
+despesa; a tela o classifica como transferência (`99.02`) e o deixa fora das saídas.
+
+Os dois têm lógica. A D-C classificou a fatura como transferência para **não contar duas
+vezes** o que já está lançado como compra no cartão. Só que o fluxo de caixa **exclui as
+contas de cartão** — então as compras não aparecem nele, e a fatura é a única representação
+do gasto de cartão nessa tela. Do ponto de vista do caixa, quando a fatura é paga o dinheiro
+**sai do banco e não volta**, que é exatamente o critério desta decisão.
+
+**Deixei como está e perguntei**, porque isso é escolha de apresentação e não defeito — e
+mudar o que a tela chama de "saída" sem o dono pedir seria decidir no lugar dele. Os outros
+dois meses (março e julho) saem de estornos pequenos, R$ 169,00 e R$ 218,88, sem documento
+para parear.
+
+---
+
 ## Parte 13 — Decisões da Fase 8
 
 ### D68 — Escritor de XLSX próprio, com entradas sem compressão

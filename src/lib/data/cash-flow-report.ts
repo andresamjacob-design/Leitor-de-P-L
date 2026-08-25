@@ -89,6 +89,8 @@ export async function loadCashFlow({
       amount: entry.amount,
       direction: entry.direction,
       categoryId: entry.categoryId ? (categoryKey.get(entry.categoryId) ?? null) : null,
+      // Só serve para casar pagamento com devolução — ver `refundedEntryIds`.
+      counterpartyTaxId: entry.counterpartyTaxId ?? null,
     })),
     categories: flowCategories,
   });

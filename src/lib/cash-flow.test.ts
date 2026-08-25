@@ -225,3 +225,68 @@ describe("buildCashFlow", () => {
     expect(result.warnings).toHaveLength(1);
   });
 });
+
+describe("pagamento devolvido não é gasto nem entrada (D107)", () => {
+  /** Como `entry`, mas com documento — o par só existe quando há identidade. */
+  function withDoc(base: FlowEntry, doc: string | null): FlowEntry {
+    return { ...base, counterpartyTaxId: doc };
+  }
+  const saidas = (r: ReturnType<typeof report>) =>
+    r.sections.find((s) => s.key === "out")!.total;
+  const entradas = (r: ReturnType<typeof report>) =>
+    r.sections.find((s) => s.key === "in")!.total;
+
+  it("o pagamento e a devolução somem das duas colunas, e o saldo não muda", () => {
+    const comPar = report([
+      withDoc(entry("2026-01-10", "1.000,00", "out", "sal"), "39880538803"),
+      withDoc(entry("2026-01-10", "1.000,00", "in", "sal"), "39880538803"),
+    ]);
+
+    expect(saidas(comPar)).toBe(0n);
+    expect(entradas(comPar)).toBe(0n);
+    // O saldo final é o mesmo que se nada tivesse acontecido — porque nada aconteceu.
+    expect(comPar.closing.at(-1)).toBe(BANK.openingBalance);
+  });
+
+  it("dois pagamentos e uma devolução deixam um pagamento de pé — o caso do Ricardo", () => {
+    const r = report([
+      withDoc(entry("2026-01-08", "115.000,00", "out", "sal"), "39880538803"),
+      withDoc(entry("2026-01-08", "115.000,00", "out", "sal"), "39880538803"),
+      withDoc(entry("2026-01-08", "115.000,00", "in", "sal"), "39880538803"),
+    ]);
+
+    expect(saidas(r)).toBe(parseMoney("115.000,00"));
+    expect(entradas(r)).toBe(0n);
+  });
+
+  it("categoria diferente não é devolução — é a D83, e é o que protege a Ciclo", () => {
+    // Um CNPJ que é cliente e fornecedor ao mesmo tempo: recebemos receita dele e pagamos
+    // custo a ele, pelo mesmo valor. Anular os dois inventaria um desconto que não existe.
+    const r = report([
+      withDoc(entry("2026-01-10", "4.000,00", "out", "sal"), "23757895000109"),
+      withDoc(entry("2026-01-20", "4.000,00", "in", "rev"), "23757895000109"),
+    ]);
+
+    expect(saidas(r)).toBe(parseMoney("4.000,00"));
+    expect(entradas(r)).toBe(parseMoney("4.000,00"));
+  });
+
+  it("sem documento não há par — nome não basta para anular dinheiro", () => {
+    const r = report([
+      entry("2026-01-10", "500,00", "out", "sal"),
+      entry("2026-01-11", "500,00", "in", "sal"),
+    ]);
+
+    expect(saidas(r)).toBe(parseMoney("500,00"));
+    expect(entradas(r)).toBe(parseMoney("500,00"));
+  });
+
+  it("devolução muito depois do pagamento não é daquele pagamento", () => {
+    const r = report([
+      withDoc(entry("2026-01-10", "800,00", "out", "sal"), "12345678901"),
+      withDoc(entry("2026-05-31", "800,00", "in", "sal"), "12345678901"),
+    ], "2026-01-01", "2026-05-31");
+
+    expect(saidas(r)).toBe(parseMoney("800,00"));
+  });
+});
