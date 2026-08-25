@@ -108,22 +108,44 @@ const CONFIRMADOS: readonly { cliente: string; contraparte: string; porque: stri
       "ISM Serviços de Imagem é a MS Tecnologia; o contrato dela é mensal de R$ 5.000, " +
       "que é exatamente o valor dos três recebimentos",
   },
-  // Confirmados pelo Andre em 24/08/2026. Os dois são a mesma figura: **quem paga não é
-  // quem contrata**. Nenhum casamento por nome chegaria aqui, e nenhum deveria tentar.
+];
+
+/**
+ * Documento que **paga por** um cliente sem ser o documento **dele**.
+ *
+ * Isto não é o mesmo que a tabela de cima, e confundir os dois foi um erro de verdade —
+ * cometido aqui em 24/08/2026 e corrigido no dia seguinte. Pedido para ligar a B2B Câmbio ao
+ * Roberto Pascoal, o `CONFIRMADOS` fez o que sabe fazer: gravou **o CPF dele em
+ * `clients.tax_id`**. Empresa não tem CPF. O CNPJ da B2B Câmbio é 32.648.450/0001-81, e
+ * estava na planilha o tempo todo.
+ *
+ * O sintoma apareceu sozinho e foi o que denunciou: a linha continuou **sem conta**, porque
+ * o `propose:receipts` recusa CPF como receita de cliente (D94) — a trava certa, funcionando.
+ *
+ * A D94 já tinha escrito o caminho para o segundo documento: **vira regra**, com
+ * `client_id` e conta juntos, e a identidade do cliente fica intacta. É o que esta tabela
+ * faz. A diferença entre as duas não é técnica, é sobre o que a linha afirma: `CONFIRMADOS`
+ * diz *"este documento é o cliente"*; `PAGADORES` diz *"este documento paga por ele"*.
+ */
+const PAGADORES: readonly {
+  cliente: string;
+  contraparte: string;
+  code: string;
+  porque: string;
+}[] = [
   {
     cliente: "Iled",
     contraparte: "22072161 MARA THAYSA%",
-    porque: "a Mara Thaysa pagou pela Iled",
+    code: "3.02",
+    porque: "a Mara Thaysa pagou pela Iled; o contrato da Iled é projeto",
   },
   {
-    // Um CPF pagando por um cliente. A D94 diz que **CPF nunca é cliente**, e continua
-    // valendo: o que o CPF ganha aqui não é a condição de cliente, é o vínculo com um que já
-    // existe — dito pelo Andre, não deduzido. A planilha nova reforça sem provar: o contato
-    // da B2B Câmbio é `roberto.pascoal@b2bcambio.com.br`, com NF emitida em 15/06, e o
-    // dinheiro entrou em 19/07.
+    // A planilha nova reforça sem provar: o contato da B2B Câmbio é
+    // `roberto.pascoal@b2bcambio.com.br`, NF emitida em 15/06, dinheiro em 19/07.
     cliente: "B2B Cambio",
     contraparte: "ROBERTO PASCOAL%",
-    porque: "o Roberto Pascoal pagou pela B2B Câmbio; é o contato dela na planilha",
+    code: "3.02",
+    porque: "o Roberto Pascoal pagou pela B2B Câmbio; o contrato dela é projeto",
   },
 ];
 
@@ -185,6 +207,17 @@ try {
   console.log(`\n${BOLD}${CONFIRMADOS.length} vínculos confirmados${RESET}\n`);
 
   const pendentes: { id: string; cliente: string; documento: string }[] = [];
+  const pagadores: {
+    entityId: string;
+    clientId: string;
+    cliente: string;
+    documento: string;
+    categoryId: string;
+    conta: string;
+    /** Id do cliente que ficou com este documento por engano, se houver. */
+    limparDe: string | null;
+    jaTemRegra: boolean;
+  }[] = [];
   const regrasNovas: {
     entityId: string;
     clientId: string;
@@ -322,6 +355,88 @@ try {
   }
 
   // ---------------------------------------------------------------------------
+  // Pagadores — documento que paga por um cliente sem ser o documento dele
+  // ---------------------------------------------------------------------------
+
+  if (PAGADORES.length > 0) {
+    console.log(`${BOLD}${PAGADORES.length} pagador(es) confirmado(s)${RESET}\n`);
+  }
+
+  for (const pag of PAGADORES) {
+    console.log(`  ${BOLD}${pag.cliente}${RESET} ${DIM}← pago por ${pag.contraparte}${RESET}`);
+    console.log(`     ${DIM}${pag.porque}${RESET}`);
+
+    const [cliente] = await sql<{ id: string; name: string; entity_id: string }[]>`
+      select id, name, entity_id from clients where name = ${pag.cliente}`;
+    if (!cliente) {
+      console.log(`     ${YELLOW}cliente “${pag.cliente}” não existe${RESET}\n`);
+      continue;
+    }
+
+    const documentos = await sql<{ doc: string }[]>`
+      select distinct regexp_replace(counterparty_tax_id, '\D', '', 'g') as doc
+      from cash_entries
+      where upper(coalesce(counterparty_name, '')) like ${pag.contraparte}
+        and counterparty_tax_id is not null`;
+    if (documentos.length !== 1) {
+      console.log(
+        `     ${YELLOW}${documentos.length} documento(s) no extrato para esse nome${RESET}\n`,
+      );
+      continue;
+    }
+    const doc = documentos[0]!.doc;
+
+    const [conta] = await sql<{ id: string; code: string; name: string }[]>`
+      select id, code, name from categories
+      where code = ${pag.code} and entity_id = ${cliente.entity_id}`;
+    if (!conta) {
+      console.log(`     ${YELLOW}conta ${pag.code} não existe${RESET}\n`);
+      continue;
+    }
+
+    /**
+     * A correção do erro de 24/08: se este documento foi parar em `clients.tax_id`, ele sai
+     * de lá. Um CPF nunca é a identidade de uma empresa, e um CNPJ de terceiro também não —
+     * quem paga não é quem contrata.
+     */
+    const [usurpado] = await sql<{ id: string; name: string }[]>`
+      select id, name from clients
+      where entity_id = ${cliente.entity_id}
+        and regexp_replace(coalesce(tax_id, ''), '\D', '', 'g') = ${doc}`;
+
+    const [jaTemRegra] = await sql<{ id: string }[]>`
+      select id from categorization_rules
+      where entity_id = ${cliente.entity_id}
+        and regexp_replace(coalesce(counterparty_tax_id, ''), '\D', '', 'g') = ${doc}`;
+
+    if (jaTemRegra && !usurpado) {
+      console.log(`     ${GREEN}já existe regra por documento${RESET}\n`);
+      continue;
+    }
+
+    if (usurpado) {
+      console.log(
+        `     ${YELLOW}esse documento está em clients.tax_id de “${usurpado.name}” — vai sair de lá${RESET}`,
+      );
+    }
+    console.log(
+      `     ${GREEN}vira regra por documento${RESET} → ${conta.code} ${conta.name}` +
+        `  ${DIM}(pagador, não identidade)${RESET}\n`,
+    );
+
+    pagadores.push({
+      entityId: cliente.entity_id,
+      clientId: cliente.id,
+      cliente: cliente.name,
+      documento: doc,
+      categoryId: conta.id,
+      conta: `${conta.code} ${conta.name}`,
+      limparDe: usurpado?.id ?? null,
+      jaTemRegra: !!jaTemRegra,
+    });
+  }
+
+  // ---------------------------------------------------------------------------
   // Clientes novos
   // ---------------------------------------------------------------------------
 
@@ -392,17 +507,40 @@ try {
     );
   }
 
-  if (pendentes.length === 0 && regrasNovas.length === 0 && novos.length === 0) {
+  if (
+    pendentes.length === 0 &&
+    regrasNovas.length === 0 &&
+    novos.length === 0 &&
+    pagadores.length === 0
+  ) {
     console.log(`${DIM}nada a fazer.${RESET}\n`);
   } else if (!APPLY) {
     console.log(
-      `${DIM}nada foi gravado — ${pendentes.length} documentos, ${regrasNovas.length} regras` +
-        ` e ${novos.length} cliente(s) novo(s). Rode com --aplicar.${RESET}\n`,
+      `${DIM}nada foi gravado — ${pendentes.length} documentos, ${regrasNovas.length} regras,` +
+        ` ${novos.length} cliente(s) novo(s) e ${pagadores.length} pagador(es).` +
+        ` Rode com --aplicar.${RESET}\n`,
     );
   } else {
     await sql.begin(async (db) => {
       for (const item of pendentes) {
         await db`update clients set tax_id = ${item.documento} where id = ${item.id}`;
+      }
+      for (const pag of pagadores) {
+        // Primeiro devolve a identidade: o documento de quem paga sai do cliente.
+        if (pag.limparDe) {
+          await db`update clients set tax_id = null where id = ${pag.limparDe}`;
+        }
+        if (pag.jaTemRegra) continue;
+        await db`insert into categorization_rules ${db({
+          entity_id: pag.entityId,
+          priority: 50,
+          match_type: "contains",
+          pattern: "*",
+          counterparty_tax_id: pag.documento,
+          direction: "in",
+          category_id: pag.categoryId,
+          client_id: pag.clientId,
+        })}`;
       }
       for (const novo of novos) {
         const [criado] = await db<{ id: string }[]>`
@@ -440,7 +578,8 @@ try {
     console.log(
       `${GREEN}${BOLD}${pendentes.length} clientes ganharam documento` +
         `${regrasNovas.length > 0 ? `, ${regrasNovas.length} regra(s) por documento criada(s)` : ""}` +
-        `${novos.length > 0 ? `, ${novos.length} cliente(s) criado(s)` : ""}.${RESET}`,
+        `${novos.length > 0 ? `, ${novos.length} cliente(s) criado(s)` : ""}` +
+        `${pagadores.length > 0 ? `, ${pagadores.length} pagador(es) virou regra` : ""}.${RESET}`,
     );
     console.log(
       `${DIM}Rode ${RESET}npm run propose:receipts${DIM} — a contraparte agora é reconhecida, e a\n` +
