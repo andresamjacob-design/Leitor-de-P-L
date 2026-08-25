@@ -4,7 +4,7 @@ Onde tudo está, o que foi feito, e o que falta. Escrito para quem chega sem con
 nenhum, inclusive eu mesmo numa conversa nova.
 
 Leia junto quando precisar do detalhe: `docs/PLAN.md` (o roteiro original),
-`docs/DECISIONS.md` (decisões numeradas D1–D105 e pendências Q2–Q18) e `README.md`.
+`docs/DECISIONS.md` (decisões numeradas D1–D106 e pendências Q2–Q18) e `README.md`.
 
 ---
 
@@ -104,12 +104,12 @@ npm run import:invoices     # faturas de cartão em massa
 | | |
 |---|---|
 | Razão de caixa | **1.064 lançamentos**, 06/08/2025 a 31/07/2026 |
-| Categorizados | **895 (84,1%)** — 169 sem conta |
+| Categorizados | **973 (91,4%)** — 91 sem conta |
 | Competência | 284 linhas de receita + 640 de custo |
 | Receita reconhecida | **R$ 3.556.736,91** (jan–ago/2026) |
 | Contratos | 80 (65 ativos, 15 concluídos), 95 parcelas mensais |
 | Clientes / pessoas | 73 / 40 |
-| Regras | 140 |
+| Regras | 194 |
 | Importações | 23 |
 | Notas fiscais | **0** |
 
@@ -317,7 +317,7 @@ diferenças dos 13 meses:
 | Receita reconhecida no mês | + R$ 3.556.736,91 |
 | Entradas de caixa sem competência | − R$ 2.830.308,69 |
 | **Saídas de caixa sem competência** | **+ R$ 222.984,67** |
-| Custo de compra no cartão | − R$ 147.685,31 |
+| Custo de compra no cartão | − R$ 219.356,95 |
 
 A linha do meio é a lista de tarefas em forma de número: **R$ 285 mil que saiu do caixa e
 ainda não pesa na DRE**, porque essas linhas não têm categoria. Conforme forem

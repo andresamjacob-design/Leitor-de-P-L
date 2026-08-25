@@ -52,11 +52,79 @@ const ALIASES: Record<string, string[]> = {
   Gsuite: ["GOOGLE"],
   ChatGPT: ["OPENAI", "CHATGPT"],
   Claude: ["CLAUDE.AI", "ANTHROPIC"],
-  "Uber e Transporte": ["UBER"],
+  // Táxi, estacionamento e locadora entram junto do Uber: a linha da planilha se chama
+  // "Uber e Transporte", e o transporte é o que ela quer dizer.
+  "Uber e Transporte": [
+    "UBER",
+    "TAXISAMP",
+    "GUARUCOOP",
+    "ACE PARKING",
+    "ALLPARK",
+    "GARAGEM TEC",
+    "HORA PARK",
+    "INDIGO ",
+    "UNIDAS LOCADORA",
+  ],
   "Claro e TIM": ["CLARO", "TIM*"],
-  Passagem: ["AZUL LINHAS", "FLY*", "MAXMILHAS", "GOL "],
-  Hotels: ["HOTEL"],
-  Alimentação: [],
+  // A lista original tinha só as companhias que apareciam nos arquivos do dia em que ela
+  // foi escrita. Estas são as que faltavam, lidas do que ficou sem conta — e a American
+  // entra como `AMERICAN0` porque o cartão gruda o número do bilhete no nome.
+  Passagem: [
+    "AZUL LINHAS",
+    "FLY*",
+    "MAXMILHAS",
+    "GOL ",
+    "LATAM",
+    "AVIANCA",
+    "AMERICAN0",
+    "CVC BRASIL",
+    "ZUPPER",
+    "123 MILHAS",
+    "123VIAGENS",
+    "ALASKA A",
+  ],
+  // O apelido era a palavra `HOTEL`, que nenhuma bandeira de hotel escreve no extrato.
+  Hotels: ["HOTEL", "MARRIOTT", "HYATT", "BOOKING.COM", "IBIS", "MERCURE"],
+  /**
+   * A lista estava **vazia**, e por isso a regra caía na palavra "Alimentação" — que não
+   * aparece em extrato de cartão nenhum. Eram 68 linhas de restaurante sem conta.
+   *
+   * O sufixo `-CT` do cartão **não** serve de atalho: ele é separador de campo, e aparece
+   * igual em hotel (`HS ANALIA FR-CT`), táxi (`GUARUCOOP TA-CT`) e posto
+   * (`POSTO DE SER-CT`). Não há como pegar comida por formato; tem de ser por nome.
+   *
+   * O Andre confirmou em 25/08/2026 que restaurante em viagem também entra aqui, e não em
+   * `Travel Meals`.
+   */
+  Alimentação: [
+    "ASSADOR REST",
+    "BOTECO SAO P",
+    "FOGO MORUMBI",
+    "RAUL S RETAU",
+    "CALUMA BUFFE",
+    "MALAGUETA ",
+    "SUCESSO REDE",
+    "ELEPHANT & C",
+    "THE NOR",
+    "BECO ALFAS",
+    "MERCATTO II",
+    "VARANDA GO",
+    "BADARO ",
+    "BACIO DI LAT",
+    "CEREJA GRILL",
+    "RESTAURANTE ",
+    "FRANS CAFE",
+    "STARBUCKS",
+    "DI ZUCCA",
+    "MENDONCA FOO",
+    "HAMSGRILL",
+    "BARDOPONTO",
+    "CAKE SWEET",
+    "SFB COMERCIO",
+    "FIDELE CHURRASCARJA",
+    "IFD*",
+    "PALACIO DAS PIZZAS",
+  ],
   // The statement truncates the counterparty, so `ATTENTIVE CONTABILIDADE` never matches:
   // it arrives as `BOLETO PAGO ATTENTIVE CO`. The prefix alone is enough, and it also
   // catches `ATTENTIVE SERVICOS ADMINISTRAT`, which is the same office billing separately.
@@ -70,7 +138,18 @@ const ALIASES: Record<string, string[]> = {
   IOF: ["IOF"],
   Freelancers: [],
   Juridico: [],
-  Brindes: [],
+  // `PG *INNOVATION BRINDES` vale R$ 1.345,40, e a linha `- Brindes` da DRE vale
+  // R$ 1.345,40 no ano inteiro. Igual ao centavo, e é o ano todo dos dois lados.
+  Brindes: ["INNOVATION BRINDES"],
+  // Três nomes que a planilha escreve por extenso e o extrato abrevia. Sem o apelido, a
+  // regra procura a frase inteira e nunca acha nada — foi por isso que as três marcaram
+  // zero linhas desde sempre.
+  "Railway Corporation": ["RAILWAY"],
+  Tactic: ["TACTIQ"],
+  // `MERCADO*2ELETROINF`, três parcelas de R$ 1.030,12 = R$ 3.090,36, que é a linha
+  // `Maquinas` da DRE ao centavo. O apelido é `2ELETROINF` e não `MERCADO` de propósito:
+  // `MERCADO` sozinho pegaria `RECEBIMENTOS SUPERMERCADO HIROTA`, que é receita de cliente.
+  Maquinas: ["2ELETROINF"],
   "Job Materials": [],
   "Travel Meals": [],
   Entertainment: [],

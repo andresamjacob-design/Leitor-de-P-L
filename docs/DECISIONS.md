@@ -1250,6 +1250,57 @@ metade. Os 13 meses seguem com resíduo zero e o `verify:rls` deu 7/7.
 
 ---
 
+### D106 — A regra existia, o apelido é que faltava
+O Andre perguntou por que 149 linhas de cartão não tinham regra. A resposta que eu tinha dado
+no documento — *"não têm documento, então regra por CNPJ não alcança"* — **estava errada**.
+Regra de texto não precisa de documento, e ela existia.
+
+**O mecanismo tem duas camadas, e a de baixo estava incompleta.** A planilha nomeia
+**categorias** (`Hotels`, `Passagem`, `Alimentação`); o extrato do cartão só traz **loja**
+(`HYATT REGENCY MCCORMIC`). A ponte entre as duas é a tabela `ALIASES`, escrita à mão — e ela
+só tinha as lojas que apareciam nos arquivos **no dia em que foi escrita**. Nada nela estava
+errado; ela estava incompleta, e o que sobrou era exatamente o que não estava lá naquele dia.
+
+| categoria | apelidos que existiam | o que faltava |
+|---|---|---|
+| Passagens | `AZUL LINHAS`, `FLY*`, `GOL`, `MAXMILHAS` | LATAM, Avianca, American, CVC, Zupper, 123 Milhas, Alaska |
+| Hotéis | `HOTEL` | Marriott, Hyatt, Booking, Ibis, Mercure — nenhum escreve "hotel" |
+| Uber e transporte | `UBER` | táxi, estacionamento, locadora |
+| **Alimentação** | **nenhum** | 68 linhas de restaurante |
+
+**A `Alimentação` era o caso mais duro:** lista vazia significa que a regra procurava a
+palavra "Alimentação", que não aparece em extrato de cartão nenhum. E não há atalho de
+formato — o sufixo `-CT` do cartão é separador de campo, não categoria: ele aparece igual em
+hotel (`HS ANALIA FR-CT`), táxi (`GUARUCOOP TA-CT`) e posto (`POSTO DE SER-CT`). Teve de ser
+loja por loja. **Confirmado pelo Andre em 25/08/2026: restaurante em viagem entra em
+`Alimentação`, não em `Travel Meals`.**
+
+**Três regras marcavam zero desde sempre, pelo mesmo motivo, e ninguém tinha notado:** o
+apelido era o nome que a planilha escreve por extenso e o extrato abrevia —
+`Railway Corporation` × `RAILWAY`, `Tactic` × `TACTIQ`, `Maquinas` × `MERCADO*2ELETROINF`.
+
+**E duas provas aritméticas de brinde**, do mesmo tipo da D101:
+
+- `MERCADO*2ELETROINF`, três parcelas de R$ 1.030,12 = **R$ 3.090,36**, que é a linha
+  `Maquinas` da DRE ao centavo. O apelido ficou `2ELETROINF` e não `MERCADO` de propósito:
+  `MERCADO` sozinho pegaria `RECEBIMENTOS SUPERMERCADO HIROTA`, que é receita de cliente.
+- `PG *INNOVATION BRINDES` vale **R$ 1.345,40**, e a linha `- Brindes` vale R$ 1.345,40 **no
+  ano inteiro**.
+
+**Aplicado:** 52 regras → **77 lançamentos, R$ 71.671,64**, em 9.01 Passagens (23), 9.02
+Hotéis (6), 9.03 Alimentação (27), 9.04 Uber e transporte (15), 5.01 Máquinas (3), 7.18
+Tactic, 10.02 Brindes e 7.19 Railway. Cobertura 84,2% → **91,4% (973 de 1.064)**, e o que
+falta decidir caiu para **R$ 288.166,84**. Os 13 meses seguem com resíduo zero e o
+`verify:rls` deu 7/7.
+
+**O que deixei de fora, de propósito:** os `BOLETOS RECEBIDOS` — 8 linhas, **R$ 43.100 de
+dinheiro entrando**, sem sacado nomeado. Isso é receita, não despesa de cartão, e é pergunta
+para o Andre, não regra. Sobraram também 24 descrições que eu não sei o que são
+(`SQ *DREAMFORCE SF`, `ASA*MARIA CLARA`, `PIU R E P L EP`), R$ 8.391,05 — inventar categoria
+para elas seria o oposto do que este arquivo inteiro defende.
+
+---
+
 ## Parte 13 — Decisões da Fase 8
 
 ### D68 — Escritor de XLSX próprio, com entradas sem compressão
