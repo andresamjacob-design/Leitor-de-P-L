@@ -1,4 +1,4 @@
-# Handover — 21/08/2026
+# Handover — 25/08/2026
 
 Onde tudo está, o que foi feito, e o que falta. Escrito para quem chega sem contexto
 nenhum, inclusive eu mesmo numa conversa nova.
@@ -51,6 +51,12 @@ CNPJ de cliente e saldo.
 - `Claude de DRE - Dynamics Data 2026.xlsx` — a planilha mestre. Abas: `DRE Geral`
   (receita nas linhas 2–90, custo nas 95–140), `Colaboradores`, `New Squads`, `Cargos`,
   `Organograma Projetos`, `Vendas e Perdas`.
+- `Fluxo de Caixa - 2026.xlsx` — **a segunda planilha, chegou em 24/08.** É de fluxo, não
+  de DRE. Abas: `Setup`, `Income`, `Clientes`, `Expenses`, `Pessoas`, `Summary`. A aba
+  `Clientes` tem **CNPJ e e-mail** de 32 clientes e duas seções — `Emissão de NF` e
+  `Pagamento de NF` —, e é a segunda que responde pergunta de caixa, porque é sobre
+  dinheiro recebido. **A marcação azul nas colunas de mês é a Gabriel Sampaio Jacob**
+  (D104): 24 clientes, R$ 1.486.782,66, tudo de agosto em diante.
 - 6 extratos de conta corrente em xlsx, 19 faturas de cartão em PDF (34 arquivos, 9 são a
   mesma fatura sob outro nome), 1 extrato Contabilizei em PDF.
 
@@ -137,7 +143,7 @@ npm run import:invoices     # faturas de cartão em massa
 
 ## 4. O que foi feito
 
-**44 commits** na branch, de `aa9250d` (onde o `main` está). Por tema, não por
+**55 commits** na branch, de `aa9250d` (onde o `main` está). Por tema, não por
 ordem — e o fio que liga quase tudo é o mesmo: **o dado real chegou e mostrou onde o
 sistema mentia.**
 
@@ -189,6 +195,28 @@ arquivo.
   no `decisoes` §2 — e marcou o `PDG IT` como ambíguo.
 - As três linhas da **Ciclo** foram para **8.03 Agência**, a conta certa. O histórico as
   mandaria para 6.10, que é o erro que a D99 mediu.
+
+### As respostas do Andre, e o que elas ensinaram (D104–D107)
+
+O dado real acabou; o que destravou o resto foram respostas dele, e três mudaram o **desenho**:
+
+- **Quem paga não é quem contrata.** `APARECIDO` é o João Beato, `ETG` é o CNPJ do Esdras,
+  `MARA THAYSA` pagou pela Iled e `ROBERTO PASCOAL` pela B2B Câmbio. Nenhum casamento
+  automático chegaria a nenhum deles — e o `vincular` ganhou uma tabela **`PAGADORES`**
+  separada da `CONFIRMADOS`, porque *"este documento é o cliente"* e *"este documento paga
+  por ele"* são afirmações diferentes.
+- **A pergunta do contrato estava mal feita** (D104). Não era *qual conta é esse cliente*,
+  era **qual conta é esse recebimento** — Hold Beauty e Hogrefe caem **nas duas**. A regra
+  agora prende **valor** além de documento e sentido, e envelhece mal de propósito: quando o
+  retainer da Hold Beauty cair para R$ 7.200 em agosto, nenhuma regra casa e a linha aparece
+  pedindo decisão, em vez de entrar calada na conta errada.
+- **A regra existia; o apelido é que faltava** (D106). A planilha nomeia *categorias*
+  (`Hotels`, `Passagem`, `Alimentação`); o cartão só traz *loja*. A tabela `ALIASES` é a
+  ponte, e só tinha as lojas visíveis no dia em que foi escrita. 52 apelidos novos → **77
+  lançamentos, R$ 71.671,64**, e a cobertura saltou de 84,2% para 91,4%.
+- **O fluxo mostra o que saiu e não voltou** (D107). Pagamento estornado some das duas
+  colunas. O par exige documento, valor **e categoria** iguais — a terceira condição é a D83,
+  e é o que impede a Ciclo de ter um recebimento anulado contra um pagamento legítimo.
 
 ### A ponte entre os dois razões
 
@@ -331,110 +359,100 @@ categorizadas, o custo cresce e o resultado cai, **sem o caixa mudar um centavo*
 
 ## 6. O que falta
 
-### Depende de você
+**91 lançamentos, R$ 288.166,84.** Quase tudo depende de uma resposta, não de código —
+e a maior parte já tem dono conhecido.
 
-Rode **`npm run decisoes`** — lista cada pergunta em aberto com a evidência do lado, feito
-para você responder de uma sentada. `npm run pendencias` dá o quadro por dinheiro.
+Rode **`npm run decisoes`** (as perguntas com a evidência do lado) e **`npm run pendencias`**
+(o quadro por dinheiro).
 
-Uma resposta sua costuma resolver várias linhas de uma vez: a regra por documento pega todo
-o histórico daquela contraparte, e o `recategorize` a aplica ao razão inteiro.
+> ℹ️ Depois de responder qualquer coisa: **`npm run vincular`** grava a identidade e
+> **`npm run recategorize`** leva ao razão. É o `recategorize` que converte resposta em
+> número na DRE (D97), e ele separa **regra de palpite** — regra entra com `--aplicar`,
+> histórico exige `--incluir-historico`.
 
-> ℹ️ **O motor não roda sozinho sobre o razão** (D88): ele só olha `staged_transactions`, e
-> o staging está vazio porque tudo foi aprovado. Isso deixou de ser bloqueio — **`npm run
-> recategorize` aplica o motor ao razão** (D97), separando regra de palpite. Depois de
-> responder qualquer coisa abaixo, é ele que entrega o resultado.
+### O que sobrou, por bloco
 
-**Na ordem do dinheiro:**
+| bloco | linhas | valor | o que destrava |
+|---|---|---|---|
+| **7 contrapartes sem dono** | 11 | **R$ 126.865,68** | Santa Monica (R$ 84.620), Taliêco (R$ 24.000), FDN Telecom (R$ 10.000), WCommerce (R$ 4.805), Ricardo de Freitas (R$ 3.000), INPI (R$ 440), Keepclear (R$ 0,01). **O Andre disse que vai achar.** Eram 31. |
+| **Lotes SISPAG sem nome** | 8 | **R$ 95.950,00** | Só o detalhe do lote no internet banking. **Plano B combinado: se não achar, entra como `Outros (SISPAG)`.** |
+| **`BOLETOS RECEBIDOS`** | 8 | **R$ 43.100,00** | **Quase resolvido** — ver abaixo. Falta dizer de quem é a parcela de R$ 5.000. |
+| **Cartão e miúdos** | 64 | R$ 22.251,16 | 24 descrições que ninguém sabe o que são (`SQ *DREAMFORCE SF`, `ASA*MARIA CLARA`, `PIU R E P L EP`). Pior retorno por minuto da lista. |
 
-| | O que é | Como destrava |
-|---|---|---|
-| **7 contrapartes sem dono** ← *o próximo passo* | R$ 117.865,68. Sobraram Santa Monica Criação (R$ 84.620), Taliêco (R$ 24.000), FDN Telecom (R$ 10.000), WCommerce (R$ 4.805), Ricardo de Freitas (R$ 3.000), INPI (R$ 440) e o centavo da Keepclear. Eram **31**. | O Andre disse que vai achar essas. Depois: `npm run vincular` e `npm run recategorize`. |
-| ~~**`OP REC EXT`**~~ | **Resolvido em 25/08 (D105).** São conversão de NF em dólar, e a conta saiu da planilha: a linha `Receita Salesforce` vale R$ 1.800 em mai/jul/ago, que é a **Ciclo** — já em 3.03. A diferença entre extrato e NF é cotação, e não vira conta nova: a ponte a nomeia. | — |
-| **19 linhas que o histórico resolveria** | R$ 205.311,97. O motor sabe a resposta, mas por inferência, não por regra | Estão paradas de propósito (D97). Eram 42; a D100 tirou 17 de lá promovendo-as a **decisão**. **Ainda não recomendo aplicar o resto em bloco:** as 6 linhas de receita (Hogrefe, Hold Beauty, PDG IT) responderiam sozinhas a pergunta que o `decisoes` §2 diz estar em aberto. |
-| **`PAGAMENTOS A FORNECEDORES SISPAG`** | 8 saídas, **R$ 95.950** | **Nenhum arquivo do Itaú resolve**: o próprio PDF itemizado não nomeia essas oito. Só o detalhe do lote no internet banking. |
-| ~~**PDG IT, Hold Beauty, Hogrefe**~~ | **Resolvido em 24/08 (D104).** A pergunta estava mal feita: não era qual conta é o *cliente*, era qual conta é o *recebimento* — e Hold Beauty e Hogrefe caem **nas duas**. A seção `Pagamento de NF` da planilha nova responde por valor e mês. | — |
-| **`BOLETOS RECEBIDOS`** | 8 entradas, R$ 43.100, sem documento | O extrato não nomeia o sacado. |
-| **Conta de receita financeira** | Não existe no plano. Os rendimentos de aplicação (38 linhas, R$ 202,31) estão em `99.03`, que é **transferência**, e ficam fora da DRE — com R$ 485.000 no CDB isso cresce (D95) | Criar `3.05 Receita financeira`? E em qual grupo da DRE — `receita_bruta` infla o OPBB, então provavelmente um grupo não operacional. É pergunta de contador. |
+### Os boletos quase se explicaram sozinhos
 
-### As que a planilha respondeu por aritmética — feitas (D101)
+A planilha nova nomeia: a **Mash paga R$ 3.300 todo mês**, de janeiro a julho — e os boletos
+de R$ 3.300 são exatamente 20/01, 23/02, 23/03 e 16/07. Os de **R$ 8.300 são 3.300 + 5.000**,
+dois boletos liquidados juntos (por isso o banco escreve "boletos", no plural).
 
-Maruri, Danillo (os dois), Bradesco Saúde, Intermédica e Prudential **já entraram**: a
-planilha prova a conta de cada uma por valor e por mês, e a chave foi descobrir que a
-`DRE Geral` lança **um mês à frente do caixa**. Detalhe e conferência na D101.
+A conta fecha ao centavo: **7 × 3.300 + 4 × 5.000 = R$ 43.100**.
 
-Ficaram três de fora **de propósito**, e o motivo importa:
+Falta só de quem é a parcela de R$ 5.000. Candidatos com R$ 5.000 nos meses certos: **Afubra,
+Mash (Service), Star Palestras, Asaptech**.
 
-- **INPI, R$ 440** — só se paga taxa de marca ao Instituto Nacional da Propriedade
-  Industrial, mas o `- Juridico` da planilha é zero de março em diante e o pagamento é de
-  maio. Sei o que a empresa é; não sei onde você lança. Isso é conhecimento de mundo, não
-  aritmética.
-- **FDN Telecom, R$ 10.000 em 2 linhas** — o nome diz telecom, mas `- Claro e TIM` vale
-  R$ 394,92 no ano inteiro. R$ 5.000 por mês não é conta de telefone.
-- **Keepclear, +R$ 0,01** — o centavo de teste, sem conta de propósito.
+### Uma pergunta de apresentação, esperando resposta (D107)
 
-- **Maruri → `11.03 Multas e acordos`.** A linha `- Penalties & Settlements` da `DRE Geral`
-  vale **R$ 45.000,00, só em fevereiro, e R$ 45.000 no ano inteiro**. No razão há um único
-  pagamento à Maruri, de **R$ 45.000,00, em 09/02/2026**. Valor exato, mês exato, único dos
-  dois lados — e a Maruri aparece na aba `Vendas e Perdas`, que é onde um acordo com um
-  negócio perdido apareceria. A conta já existe no plano.
-- **Danillo → `8.02 Jurídico`.** São duas contrapartes com o mesmo sobrenome, a
-  advocacia (CNPJ) e a pessoa (CPF). O caixa de fevereiro soma
-  **5.000 + 3.242 + 6.347 = R$ 14.589,00**, que é exatamente o `- Juridico` de **janeiro**
-  na planilha; e o pagamento de março, R$ 5.000, é o `- Juridico` de **fevereiro**. A
-  competência anda um mês à frente do caixa, e com esse deslocamento os dois lados fecham.
-- ~~**`ATTENTIVE` por texto**~~ — **resolvido pela D100.** As 49 regras de texto da planilha
-  já estavam todas gravadas e já funcionavam; o que faltava era **alcance**, não regra. As
-  linhas do SISPAG têm por descrição o rótulo do lote, `PAGAMENTOS A FORNECEDORES`, e regra
-  de texto não as alcança por definição. `npm run propose:suppliers` promoveu a conta a
-  **regra por documento** e fechou Attentive, Tarefy, Ciclo e Escola.i — 17 linhas.
+**A fatura do cartão conta como saída no fluxo?** Hoje o app a classifica como transferência
+(`99.02`) e a deixa fora das saídas; a planilha do Andre a conta como despesa. Depois de
+anular as devoluções, **essa é a única diferença que sobra entre os dois, e cinco de sete
+meses batem ao centavo com ela**.
 
-### A planilha em `docs/reference/` está velha — vale pedir a atual
+Os dois têm lógica — a D-C classificou assim para não contar duas vezes o que já é compra no
+cartão. Mas o fluxo **exclui as contas de cartão**, então ali a fatura é a única
+representação daquele gasto. Se o Andre disser que conta, os sete meses passam a fechar.
 
-O Andre citou um cliente na **linha 86** do bloco de clientes. Na cópia de **12/08** esse
-bloco termina na **83** e a 86 é `Impostos`; `Conex` não aparece em nenhuma das seis abas.
-A dele tem pelo menos três linhas de cliente a mais.
+### As sete linhas que o histórico resolveria
 
-Uma cópia atualizada é barata e resolve várias coisas de uma vez: provavelmente nomeia
-**Mara Thaysa** e **Roberto Pascoal**, e ainda refresca contratos, receita e o bloco de
-custo — que é de onde a D101 tirou a conta de seis contrapartes.
+R$ 70.011,97. O motor sabe a resposta, mas por **inferência**, não por regra — estão paradas
+de propósito (D97). `npm run recategorize -- --aplicar --incluir-historico` se quiser que
+entrem.
+
+### Julho não fecha com a planilha, e vale olhar
+
+Conferido na D107: a planilha diz ter recebido em julho **R$ 18.800 que o banco não mostra**
+— CSO R$ 3.000, Medcom R$ 5.000 e **GM Promo R$ 10.800 (o Andre já confirmou o pagamento)**.
+Em compensação, a **RiHappy pagou R$ 12.000 duas vezes** em 29/07 e a planilha conta uma só
+(o Andre já corrigiu do lado dele).
+
+`18.800 − 12.000 = 6.800`, mais o rendimento de R$ 36,54, fecha a diferença exata.
+
+> **A convenção para pagamento dobrado**, dada pelo Andre: na **DRE**, R$ 12.000 em cada mês;
+> no **fluxo**, R$ 24.000 no mês em que foi pago. É exatamente como os dois razões já se
+> separam (D2).
 
 ### Depende de arquivo ou chave que não chegou
 
 | # | O que falta |
 |---|---|
-| **Q18** | `ANTHROPIC_API_KEY` existe no `.env.local` mas está **vazia**. Todo o caminho de IA está testado com modelo mockado; nenhuma chamada real aconteceu. |
-| **Q15** | Fatura de junho/2026 da conta 8384 não está na pasta. |
+| **Q2** | **Extrato do Itaú da Gabriel Sampaio Jacob.** O Andre confirmou: **só o que é de agosto em diante** migra, e ela recebe no Itaú. A conta é nova e pode não ter movimento ainda. Sem o extrato eu não movo os R$ 259.845,85 de agosto — a segunda empresa ficaria com receita e nenhum caixa para conferir. |
+| **Q18** | `ANTHROPIC_API_KEY` está **vazia**. Todo o caminho de IA foi testado com modelo simulado; nenhuma chamada real aconteceu. O Andre resolve com o chefe, por causa do pagamento. Não bloqueia nada. |
 | **NFs** | Zero cadastradas. A Fase 5 concilia NF contra caixa e não tem dado nenhum. |
-| **Q2** | Nada chegou da entidade Gabriel Sampaio Jacob. |
-| — | **Extrato do CDB** — confirmaria se houve rendimento retido dentro dele. R$ 485.000 é o principal (D84). |
-| — | **Detalhe do lote SISPAG** no internet banking, só para as 8 saídas de R$ 95.950 que nem o PDF nomeia. |
+| ~~Faturas 8299~~ | **set/out/nov de 2025 — sem acesso, buraco permanente.** O custo de cartão desses três meses nunca vai entrar. Não procure de novo. |
 
-> ~~**Q13**~~ **fechada em 19/08/2026** (D96): o `/ToUnicode` do PDF é que estava errado, não
-> a fonte. `readItauStatementPdf` lê esses arquivos, e o de jan–mar decompôs o SISPAG
-> inteiro. Não precisa reexportar nada.
+> **Sobre o rendimento do CDB:** o Andre disse que aparece no extrato, e para a **varredura
+> automática** é verdade. Mas R$ 485.000 aplicados desde junho renderam R$ 28,43 (jun) e
+> R$ 38,59 (jul) de rendimento **visível** — isso é a varredura, não o CDB. O rendimento dele
+> provavelmente só credita no resgate, então o saldo de R$ 485.000 é **só principal**. Não é
+> urgente; é uma coisa a saber.
 
 ### Decisões antigas ainda abertas
 
-`Q4` (metas na tela), `Q8` (a aba `Vendas e Perdas` é um CRM — 6 negócios ganhos, R$ 221
-mil; nenhuma fase cobre), `Q9` (documento escolar alheio na pasta — apagar?), `Q16`
-(contratos), `Q17` (arquivo do contrato no Storage).
+`Q4` (metas na tela), `Q8` (a aba `Vendas e Perdas` é um CRM — nenhuma fase cobre),
+`Q9` (documento escolar alheio na pasta — apagar?), `Q16` (contratos), `Q17` (arquivo do
+contrato no Storage).
+
+> ~~**3.05 Receita financeira**~~ — **o Andre decidiu em 25/08 não criar.** Os rendimentos
+> ficam em `99.03`, que é transferência, e seguem **fora da DRE**. É decisão, não
+> esquecimento.
 
 ### Se for fazer só três coisas
 
-1. **Responder as 7 contrapartes** (`npm run decisoes`). É o maior bloco que não depende de
-   arquivo nenhum, e a maioria provavelmente já está cadastrada sem documento — como
-   aconteceu com as oito de 19/08, em que **nenhuma era cliente novo**. Eram 31: as
-   D98/D100/D101 tiraram 17 sem ninguém adivinhar nada. **O que sobrou é justamente o que a
-   planilha não explica** — começa por Santa Monica Criação (R$ 84.620), Aparecido
-   (R$ 62.472), ETG (R$ 60.000) e Taliêco (R$ 36.000), que são R$ 243 mil dos R$ 269 mil.
-2. **Rodar `npm run vincular` e `npm run recategorize`** depois de responder. É o que
-   converte resposta em custo na DRE.
-3. **Decidir a conta de receita financeira** com o contador, junto de `OP REC EXT`. São as
-   duas únicas pendências que mexem em como o resultado é *estruturado*, não só em quanto
-   ele é.
-
-O que **não** vale a pena esperar: o retorno CNAB do SISPAG. Ele resolveria R$ 95.950 de 8
-linhas, e o resto já entrou pelo PDF.
+1. **Perguntar ao Andre se a fatura do cartão conta como saída** — é uma frase, e faz a tela
+   de fluxo bater com a planilha dele em sete meses.
+2. **Fechar os boletos** dizendo de quem é a parcela de R$ 5.000 — R$ 43.100 de receita, e a
+   parte da Mash já está provada.
+3. **Esperar as 7 contrapartes e o extrato da Gabriel.** Os dois estão com ele; nada a fazer
+   até chegarem.
 
 ---
 
@@ -527,6 +545,20 @@ Aprendidos neste trabalho:
   Faltando o documento verdadeiro, o casamento estrito falha, a regra aproximada assume, e
   um sobrenome comum vira identificação. Foi assim que três pessoas diferentes
   reivindicaram o mesmo CPF. É a mesma lição do `/ToUnicode` mentiroso da D96.
+- **A planilha nomeia categoria; o extrato nomeia loja.** A ponte entre as duas é uma tabela
+  de apelidos escrita à mão, e ela só tem o que era visível quando alguém a escreveu. Regra
+  que marca **zero linhas** quase sempre é apelido errado, não regra errada — `Railway
+  Corporation` × `RAILWAY`, `Tactic` × `TACTIQ`, `Maquinas` × `MERCADO*2ELETROINF`.
+- **Sufixo de extrato não é categoria.** O `-CT` do cartão parece marcar restaurante e não
+  marca nada: aparece igual em hotel, táxi e posto. É separador de campo.
+- **`clients.tax_id` é a identidade do cliente, não de quem paga por ele.** Gravar ali o CPF
+  de um terceiro faz o `propose:receipts` recusar a linha em silêncio, e a recusa está certa
+  (D94). Quem paga por um cliente vira **regra**, com `client_id` e conta juntos.
+- **Antes de dizer "o app está errado", confira o que a tela soma.** A comparação com a
+  planilha do Andre parecia mostrar erro grosso; era SQL cru contra uma tela que já separa
+  transferência em seção própria. Meia hora de diferença entre acusar e medir.
+- **Diferença idêntica nos dois lados é transferência.** Quando entrada e saída sobem pelo
+  mesmo valor, ninguém ganhou nem gastou: o dinheiro trocou de bolso.
 - **Backtick dentro de comentário SQL fecha o template literal.** Comentar `--` dentro de
   uma query em template string é seguro; citar um nome de coluna com crase, não.
 
