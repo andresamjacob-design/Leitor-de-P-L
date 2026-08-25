@@ -4,7 +4,7 @@ Onde tudo está, o que foi feito, e o que falta. Escrito para quem chega sem con
 nenhum, inclusive eu mesmo numa conversa nova.
 
 Leia junto quando precisar do detalhe: `docs/PLAN.md` (o roteiro original),
-`docs/DECISIONS.md` (decisões numeradas D1–D107 e pendências Q2–Q18) e `README.md`.
+`docs/DECISIONS.md` (decisões numeradas D1–D108 e pendências Q2–Q18) e `README.md`.
 
 ---
 
@@ -75,7 +75,7 @@ Todos os scripts que gravam têm dry run por padrão e pedem `--aplicar`. Vário
 
 ```
 npm run dev
-npm run check               # typecheck + lint + 396 testes
+npm run check               # typecheck + lint + 402 testes
 npm run test:e2e            # Playwright, 25 testes
 npm run db:migrate          # aplica migrations
 npm run db:seed             # 62 categorias × 2 entidades
@@ -390,16 +390,19 @@ A conta fecha ao centavo: **7 × 3.300 + 4 × 5.000 = R$ 43.100**.
 Falta só de quem é a parcela de R$ 5.000. Candidatos com R$ 5.000 nos meses certos: **Afubra,
 Mash (Service), Star Palestras, Asaptech**.
 
-### Uma pergunta de apresentação, esperando resposta (D107)
+### ~~Uma pergunta de apresentação, esperando resposta (D107)~~
 
-**A fatura do cartão conta como saída no fluxo?** Hoje o app a classifica como transferência
-(`99.02`) e a deixa fora das saídas; a planilha do Andre a conta como despesa. Depois de
-anular as devoluções, **essa é a única diferença que sobra entre os dois, e cinco de sete
-meses batem ao centavo com ela**.
+**Respondida em 25/08/2026: a fatura conta como saída.** Ver D108. A regra que entrou no
+código não cita `99.02` — é *uma transferência só é transferência quando as duas pernas estão
+no relatório*. O CDB tem as duas e continua se cancelando; o cartão fica fora (D-C), então a
+fatura tem uma perna só.
 
-Os dois têm lógica — a D-C classificou assim para não contar duas vezes o que já é compra no
-cartão. Mas o fluxo **exclui as contas de cartão**, então ali a fatura é a única
-representação daquele gasto. Se o Andre disser que conta, os sete meses passam a fechar.
+Medido contra a aba `Summary` da planilha: **cinco dos sete meses foram a R$ 0,00 exatos**, e
+a distância somada caiu de R$ 224.672,43 para **R$ 387,88** — o que sobra são os dois estornos
+pequenos de março (R$ 169,00) e julho (R$ 218,88), sem documento para parear. O saldo final
+não se moveu: R$ 711.916,33 antes e depois.
+
+Na DRE nada mudou, e é de propósito: lá o custo continua sendo a compra, não a fatura.
 
 ### As sete linhas que o histórico resolveria
 
@@ -447,10 +450,11 @@ contrato no Storage).
 
 ### Se for fazer só três coisas
 
-1. **Perguntar ao Andre se a fatura do cartão conta como saída** — é uma frase, e faz a tela
-   de fluxo bater com a planilha dele em sete meses.
-2. **Fechar os boletos** dizendo de quem é a parcela de R$ 5.000 — R$ 43.100 de receita, e a
-   parte da Mash já está provada.
+1. ~~**Perguntar se a fatura do cartão conta como saída.**~~ **Feito em 25/08 (D108)** — cinco
+   dos sete meses foram a zero ao centavo.
+2. **Fechar os boletos.** A parcela de R$ 5.000 é da **Mash (Service)**, medido e não
+   adivinhado (D109) — falta só o Andre confirmar e dizer como partir os três boletos de
+   R$ 8.300, que carregam duas contas dentro.
 3. **Esperar as 7 contrapartes e o extrato da Gabriel.** Os dois estão com ele; nada a fazer
    até chegarem.
 

@@ -102,13 +102,23 @@ export function periodRange(from: IsoDate, to: IsoDate): Period[] {
  * A transfer is a transfer whichever way it points. Everything else follows its
  * direction, including an uncategorised entry — money that moved is money that moved,
  * and hiding it until someone categorises it would make the balance wrong.
+ *
+ * `oneLegged` is the exception, and it exists because **uma transferência só é
+ * transferência quando as duas pernas estão no relatório** (D108). A aplicação no CDB
+ * tem as duas — conta de aplicação é conta de caixa —, então ela se cancela e mostrar as
+ * duas pernas seria inflar as colunas. O pagamento da fatura tem uma só, porque o cartão
+ * fica fora deste relatório de propósito (D-C): daquele lado o dinheiro sai do banco e
+ * não volta, que é o critério da D107.
  */
 function sectionOf(
   entry: FlowEntry,
   categories: Map<string, FlowCategory>,
+  oneLegged: ReadonlySet<string>,
 ): CashFlowSectionKey {
   const kind = entry.categoryId ? categories.get(entry.categoryId)?.kind : undefined;
-  if (kind === "transfer") return "transfer";
+  if (kind === "transfer" && !(entry.categoryId && oneLegged.has(entry.categoryId))) {
+    return "transfer";
+  }
   return entry.direction;
 }
 
@@ -207,6 +217,13 @@ export type BuildCashFlowInput = {
   /** Every entry of those accounts, including ones before the range — they set the opening. */
   entries: readonly FlowEntry[];
   categories: readonly FlowCategory[];
+  /**
+   * Contas de transferência cuja contrapartida **não** está neste relatório, e que por
+   * isso contam como entrada ou saída de verdade (D108). Quem decide é o carregador, que
+   * é quem sabe quais contas ficaram de fora; vazio por omissão, para que o
+   * comportamento antigo continue sendo o padrão.
+   */
+  oneLeggedTransferCategoryIds?: ReadonlySet<string>;
 };
 
 export function buildCashFlow({
@@ -214,6 +231,7 @@ export function buildCashFlow({
   accounts,
   entries,
   categories,
+  oneLeggedTransferCategoryIds = new Set<string>(),
 }: BuildCashFlowInput): CashFlowReport {
   if (periods.length === 0) {
     return {
@@ -277,13 +295,18 @@ export function buildCashFlow({
     );
   }
 
+  const oneLeggedSeen = new Set<string>();
+
   for (const entry of cashEntries) {
     if (refunded.has(entry.id)) continue;
 
     const index = indexOfPeriod.get(periodOf(entry.occurredOn));
     if (index === undefined) continue; // before the range (already in opening) or after it
 
-    const section = sectionOf(entry, categoryById);
+    const section = sectionOf(entry, categoryById, oneLeggedTransferCategoryIds);
+    if (entry.categoryId && oneLeggedTransferCategoryIds.has(entry.categoryId)) {
+      oneLeggedSeen.add(entry.categoryId);
+    }
     const key = entry.categoryId ?? "";
     const rows = buckets.get(section) as Map<string, Cents[]>;
     const values = rows.get(key) ?? zeros(periods.length);
@@ -292,6 +315,18 @@ export function buildCashFlow({
     values[index] =
       (values[index] as Cents) + (section === "transfer" ? signed(entry) : entry.amount);
     rows.set(key, values);
+  }
+
+  if (oneLeggedSeen.size > 0) {
+    const nomes = [...oneLeggedSeen]
+      .map((id) => categoryById.get(id)?.name ?? id)
+      .sort()
+      .join(", ");
+    warnings.push(
+      `${nomes} aparece como saída, e não como transferência: a conta de destino está ` +
+        `fora deste relatório, então daqui o dinheiro sai e não volta. Na DRE o custo ` +
+        `continua sendo a compra, não a fatura — o gasto não é contado duas vezes.`,
+    );
   }
 
   const sections: CashFlowSection[] = (["in", "out", "transfer"] as const).map((key) => {

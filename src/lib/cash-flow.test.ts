@@ -290,3 +290,81 @@ describe("pagamento devolvido não é gasto nem entrada (D107)", () => {
     expect(saidas(r)).toBe(parseMoney("800,00"));
   });
 });
+
+describe("transferência com uma perna só é saída (D108)", () => {
+  /** Como `report`, mas com o cartão declarado fora do relatório — que é o caso real. */
+  function comCartaoFora(entries: FlowEntry[], from = "2026-01-01", to = "2026-03-31") {
+    return buildCashFlow({
+      periods: periodRange(from, to),
+      accounts: [BANK],
+      entries,
+      categories: CATEGORIES,
+      oneLeggedTransferCategoryIds: new Set(["card"]),
+    });
+  }
+  const secao = (r: ReturnType<typeof report>, key: "in" | "out" | "transfer") =>
+    r.sections.find((s) => s.key === key)!.total;
+
+  it("o pagamento da fatura entra em saídas, e não em transferências", () => {
+    const r = comCartaoFora([entry("2026-01-15", "14.922,64", "out", "card")]);
+
+    expect(secao(r, "out")).toBe(parseMoney("14.922,64"));
+    expect(secao(r, "transfer")).toBe(0n);
+  });
+
+  it("a aplicação no CDB continua transferência — as duas pernas estão no relatório", () => {
+    const r = comCartaoFora([
+      entry("2026-01-15", "14.922,64", "out", "card"),
+      entry("2026-01-20", "485.000,00", "out", "appl"),
+    ]);
+
+    // Só a fatura mudou de lado. A aplicação é a prova de que a regra não é "toda
+    // transferência vira saída" — é "transferência sem contrapartida aqui dentro".
+    expect(secao(r, "out")).toBe(parseMoney("14.922,64"));
+    expect(secao(r, "transfer")).toBe(parseMoney("-485.000,00"));
+  });
+
+  it("mudar de seção não move dinheiro: o saldo final é o mesmo de antes", () => {
+    const lancamentos = [
+      entry("2026-01-10", "100.000,00", "in", "rev"),
+      entry("2026-01-15", "14.922,64", "out", "card"),
+    ];
+
+    expect(comCartaoFora(lancamentos).closing.at(-1)).toBe(
+      report([...lancamentos]).closing.at(-1),
+    );
+  });
+
+  it("o resultado operacional passa a sentir a fatura — é o número que bate com a planilha", () => {
+    const lancamentos = [
+      entry("2026-01-10", "100.000,00", "in", "rev"),
+      entry("2026-01-15", "14.922,64", "out", "card"),
+    ];
+
+    const antes = report([...lancamentos]).operating[0] as bigint;
+    const depois = comCartaoFora(lancamentos).operating[0] as bigint;
+
+    expect(antes).toBe(parseMoney("100.000,00"));
+    expect(depois).toBe(parseMoney("85.077,36"));
+    expect(antes - depois).toBe(parseMoney("14.922,64"));
+  });
+
+  it("a tela avisa, porque quem lê precisa saber por que a fatura está ali", () => {
+    const r = comCartaoFora([entry("2026-01-15", "14.922,64", "out", "card")]);
+
+    expect(r.warnings.some((w) => w.includes("Pagamento de fatura"))).toBe(true);
+    // E não avisa quando não há fatura no período — aviso que aparece sempre é ruído.
+    expect(
+      comCartaoFora([entry("2026-01-10", "100,00", "out", "sal")]).warnings.some((w) =>
+        w.includes("Pagamento de fatura"),
+      ),
+    ).toBe(false);
+  });
+
+  it("sem o conjunto, nada muda — o comportamento antigo continua sendo o padrão", () => {
+    const r = report([entry("2026-01-15", "14.922,64", "out", "card")]);
+
+    expect(secao(r, "out")).toBe(0n);
+    expect(secao(r, "transfer")).toBe(parseMoney("-14.922,64"));
+  });
+});

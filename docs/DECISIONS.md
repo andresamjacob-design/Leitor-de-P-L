@@ -1357,6 +1357,67 @@ para parear.
 
 ---
 
+### D108 — Uma transferência só é transferência quando as duas pernas estão no relatório
+A D107 mediu a diferença entre a tela de fluxo e a planilha e a reduziu a **uma coisa só**:
+o pagamento da fatura do cartão. Deixou a pergunta em aberto de propósito, porque é escolha
+de apresentação. **O Andre respondeu em 25/08/2026: conta como saída.**
+
+O que quase entrou no código foi uma exceção — *"`99.02` é o caso especial que vira saída"*.
+A regra verdadeira já estava escrita no projeto, em `CASH_ACCOUNT_TYPES`, e ninguém a tinha
+lido assim:
+
+```ts
+export const CASH_ACCOUNT_TYPES = ["bank", "cash", "investment"] as const;
+```
+
+**O CDB está dentro do relatório; o cartão não está.** Daí sai o critério, e ele não precisa
+citar conta nenhuma:
+
+> Uma transferência só se cancela quando as **duas pernas** aparecem. A aplicação no CDB tem
+> as duas — mostrar as duas infla as colunas sem mover saldo, que é a razão da seção separada
+> (D14b). O pagamento da fatura tem **uma só**, porque o cartão fica fora por decisão anterior
+> (D-C): daqui o dinheiro sai do banco e não volta, que é exatamente o critério da D107.
+
+Isto **não** é a D-C sendo revertida. Ela classificou a fatura como transferência para o gasto
+de cartão não ser contado duas vezes, e continua valendo onde importa: **na DRE o custo é a
+compra, não a fatura.** O que muda é só o fluxo de caixa, e ali a compra nunca aparece — a
+fatura é a única representação daquele dinheiro.
+
+→ `buildCashFlow` ganhou `oneLeggedTransferCategoryIds`, e quem o preenche é o
+`cash-flow-report.ts`, que é quem sabe **quais contas ficaram de fora** — o construtor puro
+continua sem conhecer código de conta nenhum. Vazio por omissão, então o comportamento antigo
+é o padrão e há um teste que prova isso.
+
+**Medido contra o dado real, saídas do fluxo × aba `Summary` da planilha:**
+
+| mês | planilha | antes | dif antes | depois | dif depois |
+|---|---|---|---|---|---|
+| janeiro | 352.801,12 | 337.878,48 | −14.922,64 | 352.801,12 | **0,00** |
+| fevereiro | 590.429,17 | 576.854,15 | −13.575,02 | 590.429,17 | **0,00** |
+| março | 344.853,99 | 334.691,64 | −10.162,35 | 345.022,99 | +169,00 |
+| abril | 369.256,45 | 351.179,50 | −18.076,95 | 369.256,45 | **0,00** |
+| maio | 295.576,52 | 252.332,46 | −43.244,06 | 295.576,52 | **0,00** |
+| junho | 300.111,49 | 271.932,08 | −28.179,41 | 300.111,49 | **0,00** |
+| julho | 375.382,82 | 278.870,82 | −96.512,00 | 375.601,70 | +218,88 |
+
+**Cinco meses ao centavo.** A distância somada caiu de **R$ 224.672,43 para R$ 387,88**, e o
+que sobra são os dois estornos pequenos que a D107 já tinha nomeado — R$ 169,00 e R$ 218,88,
+sem documento para parear.
+
+**A prova de que nada foi inventado é o saldo:** R$ 711.916,33 antes e R$ 711.916,33 depois.
+Mudar de seção não move dinheiro; se movesse, seria defeito e não decisão.
+
+**A tela avisa**, e só quando há fatura no período — aviso que aparece sempre vira ruído e
+para de ser lido. Seis testes novos, 396 → **402**, e um deles é o do sentido oposto no mesmo
+dia, que é a lição da D99: a aplicação no CDB **continua** transferência, provando que a regra
+não é "toda transferência vira saída".
+
+> **Nenhuma escrita no banco.** É mudança de leitura: a `verify:reconcile` não usa este
+> construtor (a ponte lê os dois razões crus) e o export chama o mesmo carregador da tela
+> (D69), então ele acompanha sozinho.
+
+---
+
 ## Parte 13 — Decisões da Fase 8
 
 ### D68 — Escritor de XLSX próprio, com entradas sem compressão

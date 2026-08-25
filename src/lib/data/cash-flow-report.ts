@@ -10,6 +10,12 @@
  *   2. **Consolidated merges by code.** The same chart-of-accounts line exists once per
  *      entity, with a different id each time. Keying the consolidated report by `code`
  *      is what keeps "Salários" one row instead of two.
+ *
+ * A primeira decisão tem uma consequência que ficou implícita por muito tempo e agora é
+ * explícita (D108): tirar o cartão do relatório deixa o **pagamento da fatura** com uma
+ * perna só. Aplicar no CDB tem as duas — conta de aplicação é conta de caixa —, então
+ * continua sendo transferência e se cancela. A fatura, não: aqui o dinheiro sai do banco
+ * e não volta.
  */
 
 import { buildCashFlow, periodRange, type CashFlowReport, type FlowCategory } from "@/lib/cash-flow";
@@ -18,6 +24,9 @@ import { listCategories, type Category } from "@/lib/data/categories";
 import { listCashEntries } from "@/lib/data/cash-entries";
 import { isCashAccount } from "@/lib/ledger-types";
 import type { IsoDate } from "@/lib/dates";
+
+/** `99.02` — Pagamento de fatura de cartão. O cartão fica fora do relatório (D-C). */
+const CARD_BILL_CODE = "99.02";
 
 export type CashFlowView = {
   report: CashFlowReport;
@@ -74,6 +83,15 @@ export async function loadCashFlow({
     }
   }
 
+  // As contas de transferência cuja contrapartida ficou de fora do relatório (D108). O
+  // código é o critério porque é ele que diz **para onde** o dinheiro foi: `99.02` é o
+  // pagamento da fatura, e o cartão é justamente o que `cashAccounts` acabou de excluir.
+  const oneLeggedTransferCategoryIds = new Set(
+    categories
+      .filter((category) => category.code === CARD_BILL_CODE)
+      .map((category) => categoryKey.get(category.id) ?? category.id),
+  );
+
   const report = buildCashFlow({
     periods: periodRange(from, to),
     accounts: cashAccounts.map((account) => ({
@@ -93,6 +111,7 @@ export async function loadCashFlow({
       counterpartyTaxId: entry.counterpartyTaxId ?? null,
     })),
     categories: flowCategories,
+    oneLeggedTransferCategoryIds,
   });
 
   return { report, cashAccounts, cardAccounts, categories, rowCategoryIds };
