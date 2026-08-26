@@ -157,10 +157,11 @@ npm run import:invoices     # faturas de cartão em massa
   meses, **ao centavo** (D108). Nos outros dois sobram R$ 169,00 e R$ 218,88, que são dois
   estornos pequenos sem documento para parear. A distância somada é **R$ 387,88**.
 
-- **O pró-labore mais a distribuição batem com a linha `Distribuição de Lucro` da planilha
-  de caixa**, ao centavo, nos sete meses (D110). `6.11` marca **R$ 313.014,93** e `99.04`
-  marca **R$ 442.500,00**; somados, **R$ 755.514,93**. É a conferência que separou custo de
-  retirada, e ela fecha nas duas contas ao mesmo tempo.
+- **A linha de sócios do fluxo bate com a linha `Distribuição de Lucro` da planilha de
+  caixa, mês a mês, nos sete meses, com distância somada R$ 0,00** (D110 e D112). `6.11`
+  marca **R$ 313.014,93** e `99.04` marca **R$ 442.500,00**; somados, **R$ 755.514,93**. A
+  D110 provou a soma; a D112 provou **cada mês**, que é mais forte — uma soma pode fechar com
+  dois erros que se cancelam.
 
 > A quarta é de outra natureza que as três primeiras: elas são o sistema conferindo contra
 > si mesmo e contra o banco; esta é o sistema conferindo contra **outro** sistema, que tem
@@ -290,6 +291,10 @@ e que na DRE dele *só os salários* entram, enquanto no fluxo entra tudo.
   `6.11` com R$ 313.014,93, e `6.10` com R$ 901.092,02, que é o time sem sócios dentro. O
   resultado acumulado subiu de R$ 1.156.625,50 para **R$ 1.522.875,50**, e o saldo não se
   moveu em nenhuma das duas.
+- **No fluxo de caixa as duas viraram uma linha só** (D112), porque o caixa não distingue o
+  que a DRE precisa distinguir — é como a planilha dele já lança, dentro do bloco `Pessoas`.
+  Agrupar não move dinheiro, e há teste provando que o total da seção e o fechamento do mês
+  são idênticos com e sem.
 - **A FDN Telecom era o Nicholas Forte** (D111) — a D101 tinha recusado escrevendo *"o nome
   está mentindo sobre a natureza, ou é outra coisa"*, e era outra coisa. Mais 2 lançamentos,
   R$ 10.000, e o resultado fechou em **R$ 1.512.875,50**.

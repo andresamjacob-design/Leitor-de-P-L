@@ -1695,6 +1695,70 @@ As contrapartes sem dono caem de 7 para **6**, e de R$ 126.865,68 para **R$ 116.
 
 ---
 
+### D112 — O caixa não distingue o que a DRE precisa distinguir
+A D110 separou pró-labore de distribuição porque a **DRE** exige: um é despesa e entra no
+resultado, o outro não é e fica abaixo do EBITDA. Foi a separação certa, e ela cria um
+problema do outro lado.
+
+**Para quem olha o fluxo de caixa, as duas são a mesma coisa** — dinheiro que saiu do banco e
+foi para os sócios. Duas linhas ali não informam nada que o leitor de caixa precise; só
+obrigam a somar de cabeça. O Andre disse isso em 26/08/2026: *"e no fluxo de caixa o
+pró-labore pode ficar junto com distribuição de lucro"*.
+
+E é como a planilha dele **já lança**: dentro do bloco `Pessoas` há uma linha só,
+`Distribuição de Lucro`, e ela contém os dois. O app tinha ficado mais detalhado que a fonte
+sem que ninguém tivesse pedido.
+
+→ `buildCashFlow` ganhou `mergedRows`, e quem o preenche é o `cash-flow-report.ts` — o
+construtor puro continua sem conhecer código de conta nenhum, exatamente como na D108. A
+chave do grupo leva `:`, que um uuid nunca tem, então ela não colide com o id de uma conta
+nem com o `""` que marca "sem categoria".
+
+**Três decisões pequenas dentro dela, e cada uma tem motivo:**
+
+- **O grupo aparece onde o primeiro membro apareceria**, não no fim. `6.11` tem `sortOrder`
+  11 e `99.04` tem 95; a linha nasce no bloco de pessoal, que é onde a planilha do Andre
+  também a põe. Jogá-la para o fim, junto das transferências, esconderia R$ 755 mil embaixo
+  do relatório.
+- **A linha do grupo não tem `categoryId` nem `code`.** Clicar nela para ver "os lançamentos
+  desta conta" não faria sentido, porque são de duas — e devolver o id de uma delas seria
+  mentir sobre metade do valor.
+- **Grupo de um membro só não é grupo.** Se uma das duas contas não existir na entidade, o
+  agrupamento não se aplica: seria a conta com o nome trocado, e trocar nome de conta é
+  outra coisa.
+
+**Agrupar não pode mover dinheiro, e há teste provando.** Os dois membros já estavam na mesma
+seção — `6.11` é `expense` e `99.04` é `owner_draw`, e nenhum dos dois é `transfer`, então
+ambos já caíam em `entry.direction`. O total da seção, o operacional e o fechamento do mês
+são idênticos com e sem o agrupamento.
+
+**Medido contra o dado real, e é a conferência que vale:**
+
+| mês | linha agrupada | planilha | dif |
+|---|---|---|---|
+| janeiro | 266.250,00 | 266.250,00 | **0,00** |
+| fevereiro | 266.250,00 | 266.250,00 | **0,00** |
+| março | 45.000,00 | 45.000,00 | **0,00** |
+| abril | 44.472,00 | 44.472,00 | **0,00** |
+| maio | 44.472,00 | 44.472,00 | **0,00** |
+| junho | 44.598,93 | 44.598,93 | **0,00** |
+| julho | 44.472,00 | 44.472,00 | **0,00** |
+
+**Sete meses ao centavo, distância somada R$ 0,00.** A D110 tinha provado a soma dos sete
+(R$ 755.514,93); esta prova **mês a mês**, que é mais forte — uma soma pode fechar com dois
+erros que se cancelam, e sete zeros seguidos não podem.
+
+**Sete testes novos, 406 → 413**, e um deles é o do sentido oposto no mesmo dia (D99): **sem
+`mergedRows`, cada conta continua na sua linha**. O padrão é não agrupar nada, e há teste que
+falha se alguém inverter isso por engano.
+
+> **Nenhuma escrita no banco, e a DRE não sentiu nada.** É mudança de leitura, como a D108:
+> `verify:reconcile` não usa este construtor e o export chama o mesmo carregador da tela
+> (D69), então ele acompanha sozinho. Na DRE as duas contas continuam separadas, que é a
+> razão de a D110 tê-las separado.
+
+---
+
 ## Parte 13 — Decisões da Fase 8
 
 ### D68 — Escritor de XLSX próprio, com entradas sem compressão

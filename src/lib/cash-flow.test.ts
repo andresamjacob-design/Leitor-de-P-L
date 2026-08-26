@@ -6,6 +6,8 @@ const CATEGORIES: FlowCategory[] = [
   { id: "rev", code: "3.01", name: "Receita — Suporte contínuo", kind: "revenue", sortOrder: 0 },
   { id: "sal", code: "6.02", name: "Salários", kind: "expense", sortOrder: 10 },
   { id: "tool", code: "7.01", name: "Google Workspace", kind: "expense", sortOrder: 20 },
+  { id: "pro", code: "6.11", name: "Pró-labore", kind: "expense", sortOrder: 11 },
+  { id: "dist", code: "99.04", name: "Distribuição de lucros", kind: "owner_draw", sortOrder: 95 },
   { id: "card", code: "99.02", name: "Pagamento de fatura", kind: "transfer", sortOrder: 90 },
   { id: "appl", code: "99.03", name: "Aplicação automática", kind: "transfer", sortOrder: 91 },
 ];
@@ -366,5 +368,94 @@ describe("transferência com uma perna só é saída (D108)", () => {
 
     expect(secao(r, "out")).toBe(0n);
     expect(secao(r, "transfer")).toBe(parseMoney("-14.922,64"));
+  });
+});
+
+describe("linhas agrupadas (D112)", () => {
+  const socios = [{ label: "Sócios — pró-labore e distribuição", categoryIds: new Set(["pro", "dist"]) }];
+
+  function agrupado(entries: FlowEntry[]) {
+    return buildCashFlow({
+      periods: periodRange("2026-01-01", "2026-01-31"),
+      accounts: [BANK],
+      entries,
+      categories: CATEGORIES,
+      mergedRows: socios,
+    });
+  }
+
+  const lancamentos = () => [
+    entry("2026-01-05", "15.000,00", "out", "pro"),
+    entry("2026-01-09", "60.000,00", "out", "dist"),
+    entry("2026-01-25", "1.000,00", "out", "tool"),
+  ];
+
+  it("pró-labore e distribuição viram uma linha só, com a soma das duas", () => {
+    const saidas = agrupado(lancamentos()).sections.find((s) => s.key === "out");
+    const linha = saidas?.rows.find((r) => r.label.startsWith("Sócios"));
+
+    expect(linha?.total).toBe(parseMoney("75.000,00"));
+    expect(saidas?.rows.map((r) => r.label)).not.toContain("Pró-labore");
+    expect(saidas?.rows.map((r) => r.label)).not.toContain("Distribuição de lucros");
+  });
+
+  it("agrupar não move dinheiro: o total da seção é o mesmo com e sem", () => {
+    // É a trava da D108 escrita como teste: mudar de apresentação não pode mudar número.
+    const com = agrupado(lancamentos()).sections.find((s) => s.key === "out");
+    const sem = report(lancamentos(), "2026-01-01", "2026-01-31").sections.find(
+      (s) => s.key === "out",
+    );
+
+    expect(com?.total).toBe(sem?.total);
+    expect(com?.total).toBe(parseMoney("76.000,00"));
+  });
+
+  it("o fechamento do mês não muda", () => {
+    expect(agrupado(lancamentos()).closing).toEqual(
+      report(lancamentos(), "2026-01-01", "2026-01-31").closing,
+    );
+  });
+
+  it("a linha do grupo aparece onde o primeiro membro apareceria, não no fim", () => {
+    // 6.11 tem sortOrder 11 e 99.04 tem 95. O grupo é dos sócios e pertence ao bloco de
+    // pessoal, que é onde a planilha do Andre também o põe.
+    const saidas = agrupado(lancamentos()).sections.find((s) => s.key === "out");
+
+    expect(saidas?.rows.map((r) => r.label)).toEqual([
+      "Sócios — pró-labore e distribuição",
+      "Google Workspace",
+    ]);
+  });
+
+  it("a linha do grupo não tem conta, porque são duas", () => {
+    const saidas = agrupado(lancamentos()).sections.find((s) => s.key === "out");
+    const linha = saidas?.rows.find((r) => r.label.startsWith("Sócios"));
+
+    expect(linha?.categoryId).toBeNull();
+    expect(linha?.code).toBeNull();
+  });
+
+  it("sem `mergedRows`, cada conta continua na sua linha", () => {
+    // O sentido oposto, escrito no mesmo dia (D99): o padrão é não agrupar nada.
+    const saidas = report(lancamentos(), "2026-01-01", "2026-01-31").sections.find(
+      (s) => s.key === "out",
+    );
+
+    expect(saidas?.rows.map((r) => r.label)).toContain("Pró-labore");
+    expect(saidas?.rows.map((r) => r.label)).toContain("Distribuição de lucros");
+  });
+
+  it("uma conta fora do grupo não é arrastada para ele", () => {
+    const saidas = agrupado([
+      entry("2026-01-05", "15.000,00", "out", "pro"),
+      entry("2026-01-20", "60.000,00", "out", "sal"),
+    ]).sections.find((s) => s.key === "out");
+
+    expect(saidas?.rows.find((r) => r.label === "Salários")?.total).toBe(
+      parseMoney("60.000,00"),
+    );
+    expect(saidas?.rows.find((r) => r.label.startsWith("Sócios"))?.total).toBe(
+      parseMoney("15.000,00"),
+    );
   });
 });

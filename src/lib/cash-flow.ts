@@ -224,6 +224,19 @@ export type BuildCashFlowInput = {
    * comportamento antigo continue sendo o padrão.
    */
   oneLeggedTransferCategoryIds?: ReadonlySet<string>;
+  /**
+   * Contas que se apresentam como **uma linha só** neste relatório (D112).
+   *
+   * O caixa não distingue o que a DRE distingue. Pró-labore é despesa e distribuição de
+   * lucro não é, e a DRE tem de separá-las; para quem olha o caixa, as duas são a mesma
+   * coisa — dinheiro que saiu do banco e foi para os sócios. É como a planilha do Andre
+   * já faz: uma linha só dentro do bloco `Pessoas`.
+   *
+   * Agrupar **não** move dinheiro entre seções: os membros já estão na mesma seção, e o
+   * total dela não muda. Quem escolhe os membros é o carregador, que é quem conhece
+   * código de conta; vazio por omissão, então o comportamento antigo é o padrão.
+   */
+  mergedRows?: readonly { label: string; categoryIds: ReadonlySet<string> }[];
 };
 
 export function buildCashFlow({
@@ -232,6 +245,7 @@ export function buildCashFlow({
   entries,
   categories,
   oneLeggedTransferCategoryIds = new Set<string>(),
+  mergedRows = [],
 }: BuildCashFlowInput): CashFlowReport {
   if (periods.length === 0) {
     return {
@@ -297,6 +311,24 @@ export function buildCashFlow({
 
   const oneLeggedSeen = new Set<string>();
 
+  // `categoryId → chave do grupo`, e a ficha de cada grupo. A chave leva `:` de propósito:
+  // um uuid nunca tem, então ela não pode colidir com o id de uma conta de verdade nem com
+  // o `""` que marca "sem categoria".
+  const grupoDe = new Map<string, string>();
+  const grupos = new Map<string, { label: string; sortOrder: number }>();
+  mergedRows.forEach((grupo, i) => {
+    const chave = `grupo:${i}`;
+    let menorSortOrder = Number.MAX_SAFE_INTEGER;
+    for (const id of grupo.categoryIds) {
+      grupoDe.set(id, chave);
+      const sortOrder = categoryById.get(id)?.sortOrder;
+      if (sortOrder !== undefined) menorSortOrder = Math.min(menorSortOrder, sortOrder);
+    }
+    // O grupo aparece onde o **primeiro** dos seus membros apareceria, e não no fim: os
+    // sócios pertencem ao bloco de pessoal, que é onde a planilha do Andre também os põe.
+    grupos.set(chave, { label: grupo.label, sortOrder: menorSortOrder });
+  });
+
   for (const entry of cashEntries) {
     if (refunded.has(entry.id)) continue;
 
@@ -307,7 +339,7 @@ export function buildCashFlow({
     if (entry.categoryId && oneLeggedTransferCategoryIds.has(entry.categoryId)) {
       oneLeggedSeen.add(entry.categoryId);
     }
-    const key = entry.categoryId ?? "";
+    const key = (entry.categoryId && grupoDe.get(entry.categoryId)) || entry.categoryId || "";
     const rows = buckets.get(section) as Map<string, Cents[]>;
     const values = rows.get(key) ?? zeros(periods.length);
     // A transfer row keeps its own sign so an inflow and an outflow can cancel out;
@@ -332,6 +364,19 @@ export function buildCashFlow({
   const sections: CashFlowSection[] = (["in", "out", "transfer"] as const).map((key) => {
     const rows = [...(buckets.get(key) as Map<string, Cents[]>)]
       .map(([categoryId, values]) => {
+        const grupo = grupos.get(categoryId);
+        if (grupo) {
+          // Uma linha de grupo não tem conta: clicar nela para ver "os lançamentos desta
+          // conta" não faria sentido, porque são de duas.
+          return {
+            categoryId: null,
+            code: null,
+            label: grupo.label,
+            sortOrder: grupo.sortOrder,
+            values,
+            total: sum(values),
+          };
+        }
         const category = categoryId ? categoryById.get(categoryId) : undefined;
         return {
           categoryId: categoryId === "" ? null : categoryId,
