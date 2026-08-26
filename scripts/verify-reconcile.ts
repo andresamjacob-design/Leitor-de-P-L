@@ -68,6 +68,8 @@ try {
       operacional: string | null;
       entradas_sem_espelho: string | null;
       saidas_sem_espelho: string | null;
+      saidas_socios: string | null;
+      entradas_socios: string | null;
       saidas_espelho_outro_mes: string | null;
       entradas_espelho_outro_mes: string | null;
       ajuste_manual: string | null;
@@ -79,6 +81,7 @@ try {
              r.id      as espelho,
              r.period  as espelho_periodo,
              r.amount  as espelho_valor,
+             coalesce(c.kind::text, '') as conta_kind,
              case when e.direction = 'out' then e.amount else -e.amount end as esperado
       from cash_entries e
       join accounts a on a.id = e.account_id
@@ -90,8 +93,10 @@ try {
     )
     select mes as period,
       sum(case when direction = 'in' then amount else -amount end) as operacional,
-      sum(amount) filter (where direction = 'in'  and espelho is null) as entradas_sem_espelho,
-      sum(amount) filter (where direction = 'out' and espelho is null) as saidas_sem_espelho,
+      sum(amount) filter (where direction = 'in'  and espelho is null and conta_kind <> 'owner_draw') as entradas_sem_espelho,
+      sum(amount) filter (where direction = 'out' and espelho is null and conta_kind <> 'owner_draw') as saidas_sem_espelho,
+      sum(amount) filter (where direction = 'out' and espelho is null and conta_kind =  'owner_draw') as saidas_socios,
+      sum(amount) filter (where direction = 'in'  and espelho is null and conta_kind =  'owner_draw') as entradas_socios,
       sum(amount) filter (where direction = 'out' and espelho is not null and espelho_periodo <> mes) as saidas_espelho_outro_mes,
       sum(amount) filter (where direction = 'in'  and espelho is not null and espelho_periodo <> mes) as entradas_espelho_outro_mes,
       sum(espelho_valor - esperado) filter (where espelho is not null and espelho_periodo = mes) as ajuste_manual
@@ -125,6 +130,8 @@ try {
   const operacional = index(cash.map((r) => ({ period: r.period, v: r.operacional })));
   const entradasSem = index(cash.map((r) => ({ period: r.period, v: r.entradas_sem_espelho })));
   const saidasSem = index(cash.map((r) => ({ period: r.period, v: r.saidas_sem_espelho })));
+  const saidasSocios = index(cash.map((r) => ({ period: r.period, v: r.saidas_socios })));
+  const entradasSocios = index(cash.map((r) => ({ period: r.period, v: r.entradas_socios })));
   const saidasOutro = index(cash.map((r) => ({ period: r.period, v: r.saidas_espelho_outro_mes })));
   const entradasOutro = index(cash.map((r) => ({ period: r.period, v: r.entradas_espelho_outro_mes })));
   const ajuste = index(cash.map((r) => ({ period: r.period, v: r.ajuste_manual })));
@@ -159,6 +166,8 @@ try {
       custoReconhecido: at(custo, period),
       entradasSemEspelho: at(entradasSem, period),
       saidasSemEspelho: at(saidasSem, period),
+      saidasDeSocios: at(saidasSocios, period),
+      entradasDeSocios: at(entradasSocios, period),
       saidasComEspelhoEmOutroMes: at(saidasOutro, period),
       entradasComEspelhoEmOutroMes: at(entradasOutro, period),
       custoComCaixaEmOutroMes: at(custoOutroMes, period),

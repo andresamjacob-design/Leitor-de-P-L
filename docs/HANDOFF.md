@@ -95,6 +95,7 @@ npm run vincular            # põe o CNPJ do extrato no cliente que já existe (
 npm run import:sispag       # troca os lotes SISPAG pelos pagamentos de dentro (D96)
 npm run recategorize        # aplica o motor ao que já está no razão (D97)
 npm run boletos             # os BOLETOS RECEBIDOS da Mash (--ensaio / --aplicar, D109)
+npm run socios              # separa distribuição de lucro do salário dos sócios (D110)
 
 npm run propose:rules       # regras de texto vindas da planilha
 npm run propose:parties     # casa nome da planilha ↔ contraparte do extrato
@@ -130,7 +131,7 @@ npm run import:invoices     # faturas de cartão em massa
 | Itaucard 5780 | cartão | 0,00 | 468 | |
 | Itaucard 8299 | cartão | 0,00 | 48 | |
 
-**Quatro conferências que fecham hoje** — a quarta nasceu em 26/08:
+**Cinco conferências que fecham hoje** — a quarta e a quinta nasceram em 26/08:
 
 - A conta corrente marca **226.916,33**, que é o `SALDO TOTAL DISPONÍVEL` declarado pelo
   banco em 31/07/2026. Ao centavo.
@@ -142,6 +143,10 @@ npm run import:invoices     # faturas de cartão em massa
 - **As saídas do fluxo batem com a aba `Summary` da planilha de caixa** em cinco dos sete
   meses, **ao centavo** (D108). Nos outros dois sobram R$ 169,00 e R$ 218,88, que são dois
   estornos pequenos sem documento para parear. A distância somada é **R$ 387,88**.
+
+- **Os salários dos sócios mais a distribuição batem com a linha `Distribuição de Lucro`
+  da planilha de caixa**, ao centavo, nos sete meses (D110). R$ 313.014,93 + R$ 442.500,00 =
+  **R$ 755.514,93**. É a conferência que separou custo de retirada.
 
 > A quarta é de outra natureza que as três primeiras: elas são o sistema conferindo contra
 > si mesmo e contra o banco; esta é o sistema conferindo contra **outro** sistema, que tem
@@ -245,6 +250,28 @@ O dado real acabou; o que destravou o resto foram respostas dele, e três mudara
   mandou partir; `npm run boletos` faz isso com **trava de saldo como condição de saída**, e
   a filha que sobrevive **herda o `dedup_hash` da mãe** — sem isso, reimportar o extrato
   dobraria os R$ 8.300 em silêncio.
+
+### A resposta que mudou o tamanho da DRE (D110)
+
+A pergunta aberta desde 20/08 — *a folha de terceiros é salário ou freelancer?* — estava mal
+feita, como a da D104. O Andre respondeu que o balde `Pessoas` da planilha de caixa tem
+**três coisas dentro**: salário interno, freelancers e **distribuição de lucro dos sócios**;
+e que na DRE dele *só os salários* entram, enquanto no fluxo entra tudo.
+
+- **R$ 442.500 de distribuição de lucro estavam dentro de `6.10 Freelancers`**, que é conta
+  de custo. O SISPAG entrega CPF e valor, nunca a natureza do pagamento, e a D97 levou tudo
+  para a mesma conta porque ninguém tinha como separar olhando um CPF.
+- **A conta certa já existia e estava vazia desde a D24.** `99.04 Distribuição de lucros` é
+  `owner_draw`, e o `src/lib/pl.ts` já a punha abaixo do EBITDA. Não faltava desenho;
+  faltava a informação que só o dono tinha.
+- **O método é dele:** a aba `Colaboradores` traz o salário mensal de cada sócio
+  (`CUSTODIO`, `JACOB`, `LEONARDO`); o que passa disso é distribuição. De março em diante ela
+  é **zero** — os R$ 15.000 mensais são só salário.
+- **Aplicado:** 8 lançamentos, R$ 336.250,00, e o resultado acumulado subiu de
+  R$ 1.156.625,50 para **R$ 1.492.875,50**. O saldo não se moveu.
+- **Três dos oito lotes SISPAG anônimos ficaram identificados de brinde:** 46.250 + 15.000 +
+  15.000 = R$ 76.250, a distribuição de janeiro que faltava, e o R$ 46.250 reaparece nomeado
+  no Leonardo em 10/02.
 
 ### A ponte entre os dois razões
 
@@ -372,8 +399,17 @@ diferenças dos 13 meses:
 |---|---|
 | Receita reconhecida no mês | + R$ 3.556.736,91 |
 | Entradas de caixa sem competência | − R$ 2.830.308,69 |
+| Distribuição de lucro aos sócios | + R$ 501.250,00 |
 | **Saídas de caixa sem competência** | **+ R$ 222.984,67** |
 | Custo de compra no cartão | − R$ 219.356,95 |
+| Devolução de distribuição | − R$ 165.000,00 |
+
+> **As duas linhas de sócios nasceram na D110, e a razão é a lição da D109.** Depois de mover
+> a distribuição para `99.04`, a linha do meio saltou para R$ 724.234,67 — e ela é lida como
+> lista de tarefas, dinheiro que *ainda* vai pesar na DRE. R$ 501.250 dela nunca vão pesar:
+> estão fora por decisão. Os 13 meses fechavam e o resíduo era zero, e mesmo assim o número
+> tinha passado a mentir. Com as duas linhas próprias, as antigas voltaram aos valores
+> exatos de antes, que é a prova de que nada vazou.
 
 A linha do meio é a lista de tarefas em forma de número: **R$ 222.984,67 que saiu do caixa
 e ainda não pesa na DRE**, porque essas linhas não têm categoria. Conforme forem
@@ -407,7 +443,7 @@ Rode **`npm run decisoes`** (as perguntas com a evidência do lado) e **`npm run
 | bloco | linhas | valor | o que destrava |
 |---|---|---|---|
 | **7 contrapartes sem dono** | 11 | **R$ 126.865,68** | Santa Monica (R$ 84.620), Taliêco (R$ 24.000), FDN Telecom (R$ 10.000), WCommerce (R$ 4.805), Ricardo de Freitas (R$ 3.000), INPI (R$ 440), Keepclear (R$ 0,01). **O Andre disse que vai achar.** Eram 31. |
-| **Lotes SISPAG sem nome** | 8 | **R$ 95.950,00** | Só o detalhe do lote no internet banking. **Em 26/08 o Andre escolheu esperar**, sabendo o efeito: aplicar `Outros (SISPAG)` derruba o resultado em R$ 95.950 (jan 81.750, fev 1.200, mar 13.000) e **aproxima** da DRE dele, porque o app está abaixo dela em janeiro e março. O plano B segue disponível e é reversível por regra. |
+| **Lotes SISPAG sem nome** | 8 | **R$ 95.950,00** | ⚠️ **O plano B ficou perigoso (D110).** Três dos oito são distribuição e salário de sócio — 46.250 + 15.000 + 15.000 = R$ 76.250 —, e aplicar `Outros (SISPAG)` jogaria isso **dentro do custo**, o oposto do que a D110 acabou de consertar. O que sobra de verdade sem dono é **R$ 19.700** (jan 500 + 5.000, fev 1.200, mar 3.000 + 10.000). Para os R$ 76.250 basta o Andre confirmar a leitura; para os R$ 19.700, o detalhe do lote no internet banking. |
 | ~~**`BOLETOS RECEBIDOS`**~~ | ~~8~~ | ~~R$ 43.100,00~~ | ✅ **Fechado em 26/08 (D109): é a Mash.** |
 | **Cartão e miúdos** | 64 | R$ 22.251,16 | 24 descrições que ninguém sabe o que são (`SQ *DREAMFORCE SF`, `ASA*MARIA CLARA`, `PIU R E P L EP`). Pior retorno por minuto da lista. |
 
@@ -488,8 +524,14 @@ anterior da planilha, porque o imposto é pago no mês seguinte e ela o lança n
 > app sem tirar o `4.01` dos dois lados inverte o sinal da conclusão — eu cheguei a medir
 > assim e concluí o contrário do que era verdade.
 
-**A pergunta que abre esse projeto é do Andre:** a folha de terceiros aparece como salário
-ou como freelancer? Enquanto não houver resposta, não vale mexer.
+**Respondido em 26/08/2026 (D110), e a resposta é que o dilema não existia.** O `- Salários`
+da planilha e o `6.10 Freelancers` do app são a **mesma população** — o time inteiro, sócios
+incluídos. Nenhum dos dois estava errado sobre o nome. O que impedia comparar linha a linha
+era ter **distribuição de lucro misturada dentro do custo**, R$ 442.500, e isso saiu.
+
+O que ainda separa as duas continua sendo critério, não defeito: a planilha lança por
+competência um mês à frente (D101), e o app por caixa. A comparação linha a linha ficou
+possível; ainda não foi feita.
 
 ### Depende de arquivo ou chave que não chegou
 
@@ -518,17 +560,18 @@ contrato no Storage).
 
 ### Se for fazer só três coisas
 
-1. ~~**Perguntar se a fatura do cartão conta como saída.**~~ ✅ **D108** — cinco dos sete
-   meses foram a zero ao centavo.
-2. ~~**Fechar os boletos.**~~ ✅ **D109** — era a Mash, por eliminação, e os três de R$ 8.300
-   foram partidos a pedido dele.
-3. **Esperar as 7 contrapartes e o extrato da Gabriel.** Os dois estão com ele; nada a fazer
-   até chegarem. **É literalmente tudo o que resta que não seja miudeza de cartão** —
-   R$ 222.815,68 dos R$ 245.066,84.
+1. ~~**Perguntar se a fatura do cartão conta como saída.**~~ ✅ **D108**.
+2. ~~**Fechar os boletos.**~~ ✅ **D109**. ~~**A folha de terceiros.**~~ ✅ **D110** — não era
+   salário × freelancer; era distribuição de lucro dentro do custo, R$ 442.500.
+3. **Confirmar a leitura dos três lotes de janeiro** (46.250 + 15.000 + 15.000 = R$ 76.250):
+   é a única coisa nesta lista que **não depende de arquivo nenhum chegar**, só de o Andre
+   dizer sim. Fecha a distribuição de janeiro e derruba o bloco SISPAG para R$ 19.700.
+4. **Esperar as 7 contrapartes e o extrato da Gabriel.** Os dois estão com ele; nada a fazer
+   até chegarem — R$ 126.865,68 e a segunda empresa.
 
-> Se sobrar tempo e não chegar nada: a pergunta da folha de terceiros (salário × freelancer)
-> é a que destrava a comparação linha a linha entre as duas DREs, e é do Andre. Não vale
-> começar sem ela.
+> **Não invente tarefa em cima do que está esperando arquivo.** Das pendências grandes, só a
+> do item 3 é executável hoje. As outras duas são "chegou?" e, se a resposta for não, a
+> resposta certa é não fazer nada.
 
 ---
 
@@ -653,6 +696,31 @@ Aprendidos neste trabalho:
   imposto **acima** do lucro bruto; o app põe em `4.01` **dentro** do custo. Medi sem tirar
   os dois lados e concluí que o SISPAG *afastava* o app da planilha; alinhado, ele
   **aproxima**. A conclusão inverteu de sinal por causa da fronteira de uma linha.
+- **Um padrão que fecha aritmeticamente ainda pode estar particionado no lugar errado.**
+  Cada sócio recebe R$ 2.000 no dia 5 e ~R$ 13.000 no dia 20 — a forma exata de pró-labore
+  mínimo mais distribuição, e a soma batia com a planilha nos seis meses. Eu ia separar por
+  aí e teria tirado **R$ 643.264,93** da DRE em vez de R$ 442.500, levando salário junto. O
+  que decidiu foi a aba `Colaboradores` dizer R$ 15.000 inteiros. Forma de pagamento não é
+  natureza de pagamento; quem responde isso é o documento contábil, não o extrato.
+- **O CPF diz quem recebeu, nunca por quê.** O SISPAG entrega documento e valor, e a mesma
+  pessoa recebe salário e distribuição pelo mesmo CPF, no mesmo mês, às vezes no mesmo dia.
+  Nenhuma regra por documento vai separar isso, e é por isso que a D110 precisou de uma
+  segunda fonte — a planilha do dono — em vez de mais uma camada de inferência.
+- **Recategorizar uma linha que já tem conta exige apagar o espelho de competência à mão.**
+  O `recategorize` nunca precisou disso porque só toca em linha **sem** conta, então o padrão
+  do projeto é enganoso aqui. `planCashMirror` devolver `null` significa *apague o que
+  existe* — mas alguém tem que executar o apagar. Sem isso o custo continua na DRE depois da
+  mudança, **em silêncio**, e as três conferências continuam passando.
+- **Uma linha da ponte pode passar a mentir sem que o resíduo mude.** Mover R$ 501.250 para
+  `owner_draw` fez `Saídas de caixa sem competência` saltar de R$ 222.984,67 para
+  R$ 724.234,67, com os 13 meses fechando e resíduo zero o tempo todo. O número estava certo
+  e o **rótulo** tinha ficado errado: aquela linha é lida como lista de tarefas, e metade
+  dela nunca ia virar custo. Resíduo zero prova que nada sumiu, não que os nomes ainda
+  descrevem o que carregam.
+- **Nome de sócio pega a pessoa e a empresa homônima.** `GABRIEL SAMPAIO JACOB%` casa com o
+  CPF da pessoa e com o CNPJ da empresa de mesmo nome. A trava que salva é exigir que o
+  padrão resolva para **um documento só, e que ele seja CPF** — 11 dígitos. É a D100 cobrando
+  de novo, e desta vez o dado para errar estava a um `ilike` de distância.
 - **Data lida como `Date` num script de diagnóstico anda um dia para trás.** A regra do
   projeto — data é string `YYYY-MM-DD` — vale também para consulta de investigação: os oito
   lotes SISPAG apareceram como 08/01 e 19/01 num rascunho e são 09/01 e 20/01. `::text` na

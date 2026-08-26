@@ -1496,6 +1496,121 @@ decidir caiu de R$ 288.166,84 para **R$ 245.066,84** — os R$ 43.100 exatos.
 
 ---
 
+### D110 — O CPF diz quem recebeu, nunca por quê; e metade daquilo não era custo
+A pergunta aberta desde 20/08 era *"a folha de terceiros aparece como salário ou como
+freelancer?"*, e ela estava mal feita — do mesmo jeito que a da D104. A resposta do Andre,
+em 26/08/2026, mudou o assunto:
+
+> *"na planilha considere os totais do summary que está escrito como pessoas; esses
+> pagamentos somam salários interno, freelancers e a distribuição de lucro dos sócios
+> (Gabriel Jacob, Leonardo e Ricardo Custodio)"*
+
+E, logo depois: *"no DRE não entra o total de distribuição de lucro, no DRE só os salários;
+já no fluxo de caixa entra tudo, pró-labore + distribuição."*
+
+Não eram dois nomes para a mesma coisa. Eram **três coisas dentro de um balde só**, e uma
+delas não é despesa.
+
+**O defeito.** O SISPAG entrega CPF e valor, nunca a natureza do pagamento. Quando a D96
+abriu os lotes e a D97 levou as 63 regras ao razão, tudo o que os três sócios receberam caiu
+em `6.10 Freelancers` — conta de custo, dentro da DRE. **R$ 442.500,00 de distribuição de
+lucro estavam pesando no resultado**, e o resultado acumulado estava baixo por esse valor.
+
+O desenho para isso existia desde a **D24** e nunca tinha sido usado: `99.04 Distribuição de
+lucros` é `owner_draw`, grupo `socios`, e o `src/lib/pl.ts` já a põe **abaixo do EBITDA** —
+*"a profit distribution is not an operating expense; pró-labore is payroll and lives in
+`pessoal`"*. A conta estava vazia porque, olhando um CPF, ninguém tinha como saber qual
+metade era qual. Não faltava conta; faltava a informação que só o dono tinha.
+
+**Como se soube qual é qual.** O método é dele: a aba `Colaboradores` traz três linhas sem
+colaborador nomeado — `CUSTODIO`, `JACOB` e `LEONARDO` —, que são o salário mensal de cada
+sócio. Subtraindo do que o razão mostra que cada um recebeu, sobra a distribuição.
+
+| | recebido no razão | salário | distribuição |
+|---|---|---|---|
+| Ricardo | jan 130.000 · fev 65.000 · mar–jul 15.000 → 14.472 | 15.000 → 14.472 | **165.000** |
+| Gabriel | jan 75.000 · fev 140.000 · mar–jul 15.000 | 15.000 | **185.000** |
+| Leonardo | jan 61.250 · fev 61.250 · mar–jul 15.000 | 15.000 | **92.500** |
+
+**A leitura se prova sozinha, e por três caminhos que não se conhecem:**
+
+- Salários **R$ 313.014,93** mais distribuição **R$ 442.500,00** dão **R$ 755.514,93**, que é
+  a linha `Distribuição de Lucro` da aba `Summary` do fluxo de caixa **ao centavo**. E essa
+  mesma aba é a que a D108 já tinha provado bater com o app na linha `Expenses` — o número
+  novo reproduz um número já reconhecido, que é a diferença entre conferência e decoração
+  (D109).
+- De **março em diante a distribuição é zero**: os R$ 15.000 mensais são só salário. Por isso
+  só janeiro e fevereiro têm o que mover, e isso não foi imposto — caiu da subtração.
+- **Janeiro fecha com os lotes anônimos.** Os cinco lotes SISPAG sem nome de janeiro valem
+  46.250 + 15.000 + 15.000 + 500 + 5.000, e os três primeiros somam **exatamente os
+  R$ 76.250** que faltavam para a distribuição de janeiro. O R$ 46.250 reaparece **nomeado**
+  no Leonardo em 10/02, pelo mesmo valor: o mês seguinte prova a leitura do anterior.
+
+**A hipótese que a planilha desmentiu, e vale registrar.** Cada sócio recebe R$ 2.000 no dia
+5 e ~R$ 13.000 no dia 20. Isso tem exatamente a forma de pró-labore mínimo mais distribuição,
+e a soma fechava com a planilha nos seis meses — eu ia separar por aí, e teria tirado
+**R$ 643.264,93** da DRE, R$ 200 mil a mais do que devia, levando salário junto. O que
+decidiu foi a aba `Colaboradores` dizer R$ 15.000 inteiros. **Um padrão que fecha
+aritmeticamente ainda pode estar particionado no lugar errado.**
+
+**Os R$ 1.300 mensais no CPF do Custodio não são dele.** São seis pagamentos, R$ 7.800, e sem
+excluí-los seis meses passariam a ter R$ 1.300 de "distribuição" que não existe — a
+aritmética só fecha ao centavo depois de tirá-los. É o salário da **Manuella Cipryano**, que
+a aba `Pessoas` mostra recebendo exatamente isso de fev a jul e que o razão nunca traz com
+documento próprio. Confirmado pelo Andre; é o padrão da D104, quem paga não é quem recebe.
+
+→ `npm run socios` faz a separação, com quatro travas:
+
+- **Um padrão de nome tem de resolver para um documento só, e ele tem de ser CPF.** A D100
+  pagou caro por casar contraparte com `ilike` e pegar o CPF de outra pessoa, e aqui o risco
+  é maior: *a pessoa Gabriel Sampaio Jacob tem CPF e a empresa homônima tem CNPJ*. O
+  documento vem do extrato; nenhum CPF é digitado no script, como em `vincular-clientes.ts`.
+- **A diferença tem de casar com um lançamento exato, ou o script recusa.** Nada de escolher
+  o subconjunto que dá quase certo.
+- **O espelho de competência é apagado à mão.** O `recategorize` nunca precisou disso porque
+  só toca em linha **sem** conta; aqui a linha **já tem** espelho. `planCashMirror` devolver
+  `null` significa *apague o que existe* — mas alguém tem que executar o apagar, e sem isso o
+  custo continuaria na DRE depois da mudança, **em silêncio**.
+- **A trava de saldo é condição de saída** (D109): mudar de conta não move dinheiro.
+
+**Aplicado em 26/08/2026:** 8 lançamentos, **R$ 336.250,00**, de 6.10 para 99.04, com 8
+espelhos de competência apagados. O saldo ficou em **R$ 711.916,33 antes e depois**, o custo
+caiu exatamente os R$ 336.250,00 e o resultado acumulado **subiu** de R$ 1.156.625,50 para
+**R$ 1.492.875,50**. A cobertura não se mexeu — 984 de 1.067, 92,2% —, e não podia: mover
+linha já categorizada não categoriza nada.
+
+**O que o script recusou, e é o mais útil do relatório:** janeiro do Jacob. A diferença dá
+R$ 45.000 e ele só tem um lançamento de R$ 60.000, porque os R$ 15.000 de salário dele foram
+pagos dentro de um lote SISPAG ainda anônimo. Faltam **R$ 106.250** para a distribuição
+completa (R$ 60.000 do Jacob e R$ 46.250 do Leonardo), e os dois estão nos lotes de janeiro.
+
+> **O plano B do SISPAG ficou perigoso, e isso é consequência prática.** Aplicar
+> `Outros (SISPAG)` nos oito lotes jogaria R$ 76.250 de distribuição de lucro **dentro do
+> custo** — o oposto do que esta decisão acabou de consertar. Em compensação, três dos oito
+> ficaram identificados pela medição, e o bloco em aberto cai de R$ 95.950 para **R$ 19.700**.
+
+**A ponte precisou de uma linha nova, e o motivo é a lição da D109.** Depois de aplicar,
+`Saídas de caixa sem competência` saltou de R$ 222.984,67 para R$ 724.234,67 — e o handover
+descreve essa linha como *"a lista de tarefas em forma de número"*, dinheiro que ainda vai
+pesar na DRE quando alguém categorizar. R$ 501.250 dela **nunca** vão pesar. Os 13 meses
+fechavam, o resíduo era zero, e mesmo assim o número tinha passado a mentir sobre si mesmo.
+
+→ `MonthBuckets` ganhou `saidasDeSocios` e `entradasDeSocios`, e a ponte duas linhas
+próprias: **`Distribuição de lucro aos sócios`** e **`Devolução de distribuição`** (o par da
+D103, que saiu duas vezes e voltou uma). Separar um balde em dois e somar os dois de volta
+não pode mexer na identidade, e a medição confirma: as duas linhas antigas voltaram aos
+valores exatos de antes — R$ 222.984,67 e R$ 2.830.308,69 —, e as novas carregam os
+R$ 501.250,00 e os R$ 165.000,00. Quatro testes novos, 402 → **406**, e um deles é o do
+sentido oposto no mesmo dia (D99): custo sem categoria **continua** aparecendo como pendência.
+
+> **A pergunta original está respondida, e a resposta é que ela não tinha o dilema que
+> parecia ter.** O `- Salários` da planilha e o `6.10 Freelancers` do app são a mesma
+> população — o time inteiro, sócios incluídos. Nenhum dos dois estava errado sobre o nome.
+> O que estava errado era ter distribuição de lucro misturada dentro, e é isso que impedia
+> comparar as duas DREs linha a linha.
+
+---
+
 ## Parte 13 — Decisões da Fase 8
 
 ### D68 — Escritor de XLSX próprio, com entradas sem compressão

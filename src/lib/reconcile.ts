@@ -38,10 +38,20 @@ export type MonthBuckets = {
   receitaReconhecida: Cents;
   /** Assinado: devolução numa conta de custo entra negativa. */
   custoReconhecido: Cents;
-  /** Entradas do mês sem espelho: receita recebida, sócios, ou sem categoria. */
+  /** Entradas do mês sem espelho: receita recebida ou ainda sem categoria. */
   entradasSemEspelho: Cents;
-  /** Saídas do mês sem espelho: custo pago sem categoria, sócios. */
+  /** Saídas do mês sem espelho: custo pago ainda sem categoria. */
   saidasSemEspelho: Cents;
+  /**
+   * Retirada de sócio no mês (`owner_draw`), separada das duas de cima porque diz outra
+   * coisa (D110). "Sem competência" costuma significar *ainda* sem — uma linha à espera de
+   * categoria, que vai pesar no resultado quando alguém responder. Distribuição de lucro
+   * **nunca** vai: ela está fora da DRE por decisão, desde a D24. Somar as duas debaixo do
+   * mesmo rótulo transforma uma escolha em pendência e infla a lista de tarefas.
+   */
+  saidasDeSocios: Cents;
+  /** O outro lado: devolução de retirada, pelo mesmo motivo. */
+  entradasDeSocios: Cents;
   /** Saídas do mês cuja competência caiu em outro mês. */
   saidasComEspelhoEmOutroMes: Cents;
   entradasComEspelhoEmOutroMes: Cents;
@@ -93,7 +103,17 @@ export function buildBridge(buckets: MonthBuckets): Bridge {
     {
       label: "Saídas de caixa sem competência",
       amount: buckets.saidasSemEspelho,
-      why: "dinheiro pago que não virou custo: ainda sem categoria, ou retirada de sócio",
+      why: "dinheiro pago que ainda não virou custo porque está sem categoria — vai pesar no resultado quando alguém responder",
+    },
+    {
+      label: "Distribuição de lucro aos sócios",
+      amount: buckets.saidasDeSocios,
+      why: "D24 e D110 — sai do caixa e fica fora da DRE por decisão, não por pendência",
+    },
+    {
+      label: "Devolução de distribuição",
+      amount: -buckets.entradasDeSocios,
+      why: "o outro lado da linha de cima: retirada que voltou (D103)",
     },
     {
       label: "Saídas cuja competência é de outro mês",
