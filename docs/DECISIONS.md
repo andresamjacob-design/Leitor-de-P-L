@@ -1418,6 +1418,84 @@ não é "toda transferência vira saída".
 
 ---
 
+### D109 — Os boletos se identificaram por eliminação, e um deles carregava duas contas
+`BOLETOS RECEBIDOS` — 8 linhas, **R$ 43.100,00**, a maior entrada sem dono que restava. O
+extrato não nomeia o sacado, e a D106 tinha deixado o caso de fora de propósito: *"isso é
+receita, não despesa de cartão, e é pergunta para o Andre, não regra"*.
+
+A pergunta acabou não precisando de palpite. **A resposta saiu de medição**, e por um
+caminho que só existe porque o razão e a planilha estão os dois em cima da mesa:
+
+1. A parcela de R$ 5.000 aparece em **março, abril, maio e junho**. Na seção
+   `Pagamento de NF`, só **duas** linhas têm 5.000 nesses quatro meses: **Afubra** e
+   **Mash (Service)**. Star Palestras é Mar/Abr/Jun; Asaptech, só maio.
+2. **A Afubra já está no razão com nome próprio** — quatro TEDs, CNPJ 74.072.513/0001-44,
+   nos mesmos quatro meses. Star Palestras e Asaptech também. Se qualquer uma fosse o
+   boleto, teria pago duas vezes no mesmo mês.
+3. **A Mash é a única que a planilha diz ter pago e o razão nunca mostra.**
+4. E a aritmética confirma por um caminho que ninguém procurou: o contrato `project` da
+   Mash, cadastrado desde a leitura da planilha, tem **total de R$ 20.000** — e
+   4 × 5.000 = R$ 20.000, ao centavo.
+
+`7 × 3.300 + 4 × 5.000 = R$ 43.100`. Confirmado pelo Andre em 25/08/2026.
+
+> **Vale a distinção da D102:** isto não é o script adivinhando identidade, que a D87
+> proíbe. É medir quem *não pode* ser, sobrar um, e o dono confirmar. Quem decidiu foi ele;
+> o que a medição fez foi tornar a pergunta respondível em vez de um chute entre quatro.
+
+**A parte que não era medição, e por isso foi pergunta:** os boletos de 16/04, 15/05 e
+15/06 valem R$ 8.300 — 3.300 do Ongoing **mais** 5.000 do Projeto, dois boletos liquidados
+juntos, que é por que o banco escreve "boletos", no plural. **Uma linha de extrato com duas
+contas dentro**, e `category_id` é um só. O Andre escolheu **partir**, para a receita por
+conta ficar certa ao centavo.
+
+**Partir não é o que a D83 proíbe**, e a diferença é medível: lá o erro seria apagar a linha
+e o saldo deixar de bater com o banco. Aqui a soma é idêntica, e o script **recusa gravar se
+o saldo se mover** — a trava não é comentário, é condição de saída.
+
+**A armadilha cara estava no `dedup_hash`,** e ela custaria uma reimportação silenciosamente
+dobrada. O hash existe para que importar o mesmo extrato duas vezes não crie o mesmo
+movimento duas vezes (SPEC §7). Se as duas filhas recebessem hash honesto do próprio
+conteúdo, o arquivo original — que traz a linha de 8.300 — voltaria a entrar como novidade.
+
+- **A filha de 3.300 herda o hash da mãe.** Ele deixa de descrever o conteúdo dela e passa a
+  dizer a coisa que o campo existe para dizer: *"o movimento de 8.300 daquele extrato já
+  está representado aqui"*.
+- **A filha de 5.000 ganha hash próprio.** Nenhum importador vai produzi-lo, porque essa
+  linha não existe em arquivo nenhum.
+
+→ Duas **regras de texto com faixa de valor fechada** (D104), e não regra por documento: o
+boleto não traz documento nenhum. É a exceção que a D40 admite e que a D105 já tinha usado
+no `OP REC EXT`. `BOLETO` + R$ 3.300 + entrada → 3.01; `BOLETO` + R$ 5.000 + entrada →
+3.02, as duas com o `client_id` da Mash. Envelhecem mal de propósito: valor diferente não
+casa com nada e a linha aparece pedindo decisão.
+
+**Aplicado em 26/08/2026:** 11 lançamentos com conta, 3 linhas novas, 2 regras. O razão foi
+de 1.064 para **1.067**, a cobertura de 91,4% para **92,2% (984 de 1.067)**, e o que falta
+decidir caiu de R$ 288.166,84 para **R$ 245.066,84** — os R$ 43.100 exatos.
+
+**As três conferências que provam que nada foi inventado:**
+
+- **O caixa não se moveu:** R$ 711.916,33 antes e depois. Partir uma linha em duas que somam
+  o mesmo não pode mover saldo, e o script sai com erro se mover.
+- **Zero espelhos de competência**, e a ponte da D85 não mudou um centavo — receita nasce de
+  contrato e NF (SPEC §5), não do caixa. A DRE não sentiu nada, como na D102 e na D105.
+- **3.02 marca exatamente R$ 20.000,00**, que é o total do contrato `project` da Mash. O
+  número que serviu de evidência para identificar o pagador apareceu de volta no outro lado,
+  sem ninguém o ter usado para escrever a regra.
+
+`verify:rls` 7/7, `verify:reconcile` com os 13 meses em resíduo zero.
+
+> **Uma conferência que se conferiu sozinha, e vale como método:** a trava de saldo do
+> script começou somando só os movimentos e imprimiu **R$ −25.460,21**; incluindo a abertura
+> mas com os cartões dentro, **R$ 484.744,56**; só com as contas de caixa (D-C), o número
+> certo. Nas três versões o *delta* era zero e a trava passava — o que estava errado era o
+> número impresso, que **parecia** saldo. Só se sabe que é o certo porque R$ 711.916,33 é o
+> caixa que o handover já declarava, e essa conta não entrou na consulta. Um número que
+> ninguém reconhece não é conferência, é decoração.
+
+---
+
 ## Parte 13 — Decisões da Fase 8
 
 ### D68 — Escritor de XLSX próprio, com entradas sem compressão

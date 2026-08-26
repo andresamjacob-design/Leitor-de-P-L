@@ -4,7 +4,7 @@ Onde tudo está, o que foi feito, e o que falta. Escrito para quem chega sem con
 nenhum, inclusive eu mesmo numa conversa nova.
 
 Leia junto quando precisar do detalhe: `docs/PLAN.md` (o roteiro original),
-`docs/DECISIONS.md` (decisões numeradas D1–D108 e pendências Q2–Q18) e `README.md`.
+`docs/DECISIONS.md` (decisões numeradas D1–D109 e pendências Q2–Q18) e `README.md`.
 
 ---
 
@@ -94,6 +94,7 @@ npm run decisoes            # ← o que falta decidir, com a evidência de cada 
 npm run vincular            # põe o CNPJ do extrato no cliente que já existe (--aplicar)
 npm run import:sispag       # troca os lotes SISPAG pelos pagamentos de dentro (D96)
 npm run recategorize        # aplica o motor ao que já está no razão (D97)
+npm run boletos             # os BOLETOS RECEBIDOS da Mash (--ensaio / --aplicar, D109)
 
 npm run propose:rules       # regras de texto vindas da planilha
 npm run propose:parties     # casa nome da planilha ↔ contraparte do extrato
@@ -109,13 +110,13 @@ npm run import:invoices     # faturas de cartão em massa
 
 | | |
 |---|---|
-| Razão de caixa | **1.064 lançamentos**, 06/08/2025 a 31/07/2026 |
-| Categorizados | **973 (91,4%)** — 91 sem conta |
+| Razão de caixa | **1.067 lançamentos**, 06/08/2025 a 31/07/2026 |
+| Categorizados | **984 (92,2%)** — 83 sem conta |
 | Competência | 284 linhas de receita + 640 de custo |
 | Receita reconhecida | **R$ 3.556.736,91** (jan–ago/2026) |
 | Contratos | 80 (65 ativos, 15 concluídos), 95 parcelas mensais |
 | Clientes / pessoas | 73 / 40 |
-| Regras | 194 |
+| Regras | 196 |
 | Importações | 23 |
 | Notas fiscais | **0** |
 
@@ -123,7 +124,7 @@ npm run import:invoices     # faturas de cartão em massa
 
 | Conta | Tipo | Abertura | Lançamentos | Situação |
 |---|---|---|---|---|
-| Itaú — conta corrente | banco | 142.469,28 em 01/01/2026 | 543 | ✅ bate com o extrato |
+| Itaú — conta corrente | banco | 142.469,28 em 01/01/2026 | 546 | ✅ bate com o extrato |
 | Itaú — CDB DI | aplicação | 367.735,49 em 01/01/2026 | 5 | ✅ as duas pernas existem (§5.1) |
 | Contabilizei | banco | 0,00 | 0 | inativa |
 | Itaucard 5780 | cartão | 0,00 | 468 | |
@@ -359,7 +360,7 @@ categorizadas, o custo cresce e o resultado cai, **sem o caixa mudar um centavo*
 
 ## 6. O que falta
 
-**91 lançamentos, R$ 288.166,84.** Quase tudo depende de uma resposta, não de código —
+**83 lançamentos, R$ 245.066,84.** Quase tudo depende de uma resposta, não de código —
 e a maior parte já tem dono conhecido.
 
 Rode **`npm run decisoes`** (as perguntas com a evidência do lado) e **`npm run pendencias`**
@@ -376,19 +377,23 @@ Rode **`npm run decisoes`** (as perguntas com a evidência do lado) e **`npm run
 |---|---|---|---|
 | **7 contrapartes sem dono** | 11 | **R$ 126.865,68** | Santa Monica (R$ 84.620), Taliêco (R$ 24.000), FDN Telecom (R$ 10.000), WCommerce (R$ 4.805), Ricardo de Freitas (R$ 3.000), INPI (R$ 440), Keepclear (R$ 0,01). **O Andre disse que vai achar.** Eram 31. |
 | **Lotes SISPAG sem nome** | 8 | **R$ 95.950,00** | Só o detalhe do lote no internet banking. **Plano B combinado: se não achar, entra como `Outros (SISPAG)`.** |
-| **`BOLETOS RECEBIDOS`** | 8 | **R$ 43.100,00** | **Quase resolvido** — ver abaixo. Falta dizer de quem é a parcela de R$ 5.000. |
+| ~~**`BOLETOS RECEBIDOS`**~~ | ~~8~~ | ~~R$ 43.100,00~~ | ✅ **Fechado em 26/08 (D109): é a Mash.** |
 | **Cartão e miúdos** | 64 | R$ 22.251,16 | 24 descrições que ninguém sabe o que são (`SQ *DREAMFORCE SF`, `ASA*MARIA CLARA`, `PIU R E P L EP`). Pior retorno por minuto da lista. |
 
-### Os boletos quase se explicaram sozinhos
+### ~~Os boletos quase se explicaram sozinhos~~ — fechados em 26/08 (D109)
 
-A planilha nova nomeia: a **Mash paga R$ 3.300 todo mês**, de janeiro a julho — e os boletos
-de R$ 3.300 são exatamente 20/01, 23/02, 23/03 e 16/07. Os de **R$ 8.300 são 3.300 + 5.000**,
-dois boletos liquidados juntos (por isso o banco escreve "boletos", no plural).
+**Os dois lados são a Mash**, e a parcela de R$ 5.000 se identificou por eliminação: das
+quatro candidatas, três já estão no razão **com nome próprio** nos mesmos meses (Afubra por
+TED, Star Palestras e Asaptech por recebimento nomeado) — se fossem o boleto, teriam pago
+duas vezes. A Mash é a única que a planilha diz ter pago e o razão nunca mostra. E o contrato
+`project` dela, já cadastrado, tem total de **R$ 20.000** = 4 × 5.000.
 
-A conta fecha ao centavo: **7 × 3.300 + 4 × 5.000 = R$ 43.100**.
+`7 × 3.300 + 4 × 5.000 = R$ 43.100`, ao centavo.
 
-Falta só de quem é a parcela de R$ 5.000. Candidatos com R$ 5.000 nos meses certos: **Afubra,
-Mash (Service), Star Palestras, Asaptech**.
+Os três boletos de R$ 8.300 eram **uma linha de extrato com duas contas dentro**; o Andre
+mandou partir. `npm run boletos` faz isso com trava de saldo — recusa gravar se o caixa se
+mover. Aplicado: 3.01 ficou com R$ 23.100 e 3.02 com **exatamente R$ 20.000**, o total do
+contrato, que era a evidência da identificação voltando pelo outro lado.
 
 ### ~~Uma pergunta de apresentação, esperando resposta (D107)~~
 

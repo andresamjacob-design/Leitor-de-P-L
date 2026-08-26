@@ -37,7 +37,8 @@
     "decisoes": "vite-node --config vitest.config.ts scripts/decisoes.ts",
     "vincular": "vite-node --config vitest.config.ts scripts/vincular-clientes.ts",
     "import:sispag": "vite-node --config vitest.config.ts scripts/import-sispag.ts",
-    "recategorize": "vite-node --config vitest.config.ts scripts/recategorize.ts"
+    "recategorize": "vite-node --config vitest.config.ts scripts/recategorize.ts",
+    "boletos": "vite-node --config vitest.config.ts scripts/partir-boletos.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.4",
