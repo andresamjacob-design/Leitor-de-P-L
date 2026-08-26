@@ -1965,6 +1965,56 @@ que faltam, não contas erradas.
 
 ---
 
+### D117 — As cinco últimas contrapartes, e a conta que faltava no plano
+O Andre respondeu as cinco que sobravam em 26/08/2026, e duas delas exigiram uma conta nova.
+
+**`Santa Monica` e `WCommerce` entram em `Freelancers (outras empresas)`**, disse ele. A soma
+prova a leitura mês a mês, sem ninguém ter procurado por isso:
+
+| mês | razão | linha `Freelancer (outras empresas)` |
+|---|---|---|
+| março | 28.206,85 (Santa Monica) + 4.805,12 (WCommerce) | **33.011,97** |
+| abril | 28.206,85 | **28.206,85** |
+| maio | 28.206,85 | **28.206,85** |
+
+**R$ 89.425,67 dos dois lados, ao centavo.** Essa linha da aba `Expenses` era a única que o
+`comparar:fluxo` marcava como *"sem conta correspondente no app"* — o plano de contas tinha
+`6.10 Freelancers` e mais nada, e o Andre separa **freelancer que é empresa** do time nos
+**dois** arquivos: `- Freelancers (Outras empresas)` na DRE, e `Freelancer (outras empresas)`
+na aba `Expenses`, esta última nem sequer dentro do bloco `Pessoas`.
+
+→ **`6.12 Freelancers (outras empresas)`**, no seed, ao lado de `6.10`. Jogar as duas em 6.10
+teria feito o total continuar certo e a linha dele nunca ter par — que é exatamente a
+diferença entre o total bater e a composição existir (D116).
+
+**As outras três:**
+
+- **`Taliêco` é a Talita.** A aba `Pessoas` traz `INTERNO · Talita Machado · Coordenadora CRM`
+  com R$ 12.000 em fev, mar e abr; o razão tem três pagamentos de R$ 12.000 a esse CNPJ, em
+  05/02, 05/03 e 02/04. **Vínculo INTERNO, então 6.10 e não 6.12** — a distinção que a conta
+  nova acabou de criar já valeu na mesma sessão.
+- **`INPI` é registro de marca** → 8.02. A D101 tinha recusado escrevendo *"sei o que a
+  empresa é; não tenho evidência de onde o Andre lança"*. A evidência que faltava era ele
+  dizer, e a recusa foi o que manteve a pergunta viva.
+- **`Keepclear`, R$ 0,01,** era teste mesmo. **Fica sem conta de propósito:** é uma entrada de
+  um centavo que não é receita nem custo, e qualquer conta que eu escolhesse seria uma
+  afirmação falsa sobre ela. É a única linha do razão cuja categorização não muda nada.
+
+**Aplicado:** 4 regras por documento → 7 lançamentos, **R$ 113.865,67**. O resultado caiu de
+R$ 1.509.875,50 para **R$ 1.396.009,83** — custo que estava só no caixa entrando na DRE, o
+comportamento que a D85 nomeia na ponte. `verify:rls` 7/7 e os 13 meses com resíduo zero.
+
+No `comparar:fluxo`, as linhas que fecham os sete meses foram de 21 para **22**, e a distância
+somada caiu de R$ 69.783,55 para **R$ 49.397,17**.
+
+> **Um defeito meu no comparador, achado por esta decisão.** `Freelancer (outras empresas)`
+> continuava aparecendo como "sem conta" mesmo depois do apelido existir: a normalização tira
+> o parêntese do rótulo **antes** da busca, e `Freelancer` não é conta nenhuma. O apelido
+> passou a ser procurado pelo rótulo cru também. Uma tabela de apelidos que nunca casa é o
+> mesmo defeito da D106, agora do lado de quem compara.
+
+---
+
 ## Parte 13 — Decisões da Fase 8
 
 ### D68 — Escritor de XLSX próprio, com entradas sem compressão

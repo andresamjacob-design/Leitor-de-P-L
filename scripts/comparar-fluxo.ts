@@ -52,7 +52,8 @@ const APELIDOS: Record<string, string[]> = {
   Other: ["10.05"],
   "Máquinas e Computadores": ["5.01"],
   Imposto: ["4.01"],
-  "Freelancer (outras empresas)": ["6.10"],
+  // A conta que a D117 criou: freelancer que é empresa, separado do time nos dois arquivos.
+  "Freelancer (outras empresas)": ["6.12"],
 };
 
 const normalizar = (b: string) =>
@@ -153,11 +154,16 @@ try {
     const g = (row[1] ?? "").trim();
     if (g) grupo = g;
     const bruto = (row[4] ?? "").trim();
-    if (bruto === "" || bruto === "Monthly totals:") continue;
+    // A linha 1 tem `Expenses` no lugar do rótulo e serial de data no lugar do valor.
+    if (bruto === "" || bruto === "Monthly totals:" || bruto === "Expenses") continue;
 
     const rotulo = normalizar(bruto);
+    // O apelido é procurado **antes** de normalizar também: `Freelancer (outras empresas)`
+    // perde o parêntese na normalização e vira `Freelancer`, que não é conta nenhuma.
     const codes =
-      APELIDOS[rotulo] ?? (TO_CODE[rotulo] ? [TO_CODE[rotulo] as string] : null);
+      APELIDOS[bruto] ??
+      APELIDOS[rotulo] ??
+      (TO_CODE[rotulo] ? [TO_CODE[rotulo] as string] : null);
     const plan = MESES.map((_, i) => centavos(row[PRIMEIRA_COLUNA + i] ?? null));
 
     if (!codes) {

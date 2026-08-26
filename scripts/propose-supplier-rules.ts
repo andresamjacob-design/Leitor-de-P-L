@@ -102,6 +102,45 @@ const CONFIRMADOS: { taxId: string; code: string; why: string; amount?: string }
     why: "FDN Telecom é por onde o Nicholas Forte recebe — 2× R$ 5.000 batem com a aba Pessoas",
   },
   {
+    // ---- as cinco últimas contrapartes, respondidas pelo Andre em 26/08/2026 ----
+    //
+    // **Santa Monica e WCommerce entram em `Freelancers (outras empresas)`**, disse ele — e
+    // a soma prova a leitura, mês a mês, sem ninguém ter procurado por isso:
+    //
+    //     março  28.206,85 (Santa Monica) + 4.805,12 (WCommerce) = 33.011,97
+    //     abril  28.206,85                                       = 28.206,85
+    //     maio   28.206,85                                       = 28.206,85
+    //
+    // que é exatamente a linha `Freelancer (outras empresas)` da aba `Expenses`. Elas vão
+    // para **6.12**, criada para isto: ele separa freelancer-empresa do time nos dois
+    // arquivos, e sem conta própria a linha dele nunca teria correspondente.
+    taxId: "05819843000138",
+    code: "6.12",
+    why: "Santa Monica é freelancer PJ — 3× R$ 28.206,85 compõem `Freelancer (outras empresas)`",
+  },
+  {
+    taxId: "43207759000152",
+    code: "6.12",
+    why: "WCommerce é freelancer PJ — os R$ 4.805,12 completam março da mesma linha",
+  },
+  {
+    // **Taliêco é a Talita**, disse ele. A aba `Pessoas` traz `INTERNO · Talita Machado ·
+    // Coordenadora CRM` com R$ 12.000 em fev, mar e abr; o razão tem exatamente três
+    // pagamentos de R$ 12.000 a este CNPJ, em 05/02, 05/03 e 02/04. Três meses, três
+    // valores, dos dois lados. Vínculo INTERNO, então é folha — 6.10, e não 6.12.
+    taxId: "61145848000101",
+    code: "6.10",
+    why: "Taliêco é a Talita — 3× R$ 12.000 batem com a aba Pessoas em fev, mar e abr",
+  },
+  {
+    // **INPI é registro de marca**, confirmado. A D101 tinha recusado por não saber onde ele
+    // lança — *"sei o que a empresa é; não tenho evidência de onde o Andre lança"* —, e a
+    // evidência que faltava era ele dizer. Registro de marca é jurídico.
+    taxId: "42521088000137",
+    code: "8.02",
+    why: "INPI é registro de marca — jurídico, confirmado pelo Andre",
+  },
+  {
     // O MEI do `Ricardo`, backend, linha 32 da aba `Pessoas` — apontada pelo Andre.
     //
     // **Não é o Ricardo Custodio**, e a diferença é o documento: o sócio é CPF, este é CNPJ
