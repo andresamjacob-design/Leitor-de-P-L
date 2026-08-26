@@ -1884,6 +1884,87 @@ contrapartes sem dono caem de 6 para **5**. `verify:rls` 7/7, 13 meses com resí
 
 ---
 
+### D116 — O total da fatura já batia; o que faltava era a composição
+O Andre pediu em 26/08/2026: *"preciso que você categorize os dados conforme a minha planilha
+de fluxo os categoriza, e sei que o fluxo e a DRE têm categorizações diferentes, então deixe
+certinho uma para cada de modo que bata com os valores de cada arquivo"*.
+
+**A primeira medição mostrou que as duas categorizações são quase a mesma.** As sub-linhas
+dos dois arquivos têm os mesmos nomes; o que muda é o agrupamento e, sobretudo, a **data**:
+
+```
+Gsuite    DRE:   jan 4.090,89   fev 4.570,24   mar 4.837,88
+          Fluxo: jan 3.595,66   fev 4.090,89   mar 4.570,24
+```
+
+O fluxo dele é a DRE dele **deslocada um mês**, porque a compra de cartão entra na DRE quando
+é comprada e no fluxo quando a **fatura é paga**. O app já fazia como a DRE dele (D114). No
+fluxo, não fazia nem uma coisa nem outra: o cartão fica fora do relatório (D-C), então
+`Gsuite` no fluxo do app valia **zero** e a fatura aparecia inteira numa linha só.
+
+**O total estava certo e a composição não existia.** A D108 já tinha medido: as saídas do
+fluxo batem com a aba `Expenses` em cinco dos sete meses, ao centavo. Mas quem abrisse a tela
+não conseguia responder *"quanto gastei com viagem em maio"* — e a resposta estava no banco.
+
+**A chave é que cada arquivo de fatura importado virou uma `statement_imports`.** Cada
+importação **é** uma fatura, e a soma das compras dela é o que o banco pagou. Medido:
+**13 dos 14 pagamentos de 2026 casam com uma fatura importada, um para um, ao centavo** — sem
+precisar somar duas. O décimo quarto é R$ 830,97 em 05/06, a fatura de maio do cartão 8299,
+que nunca foi importada; ele continua sendo uma linha só. Uma quebra parcial fingindo ser
+completa seria pior que nenhuma.
+
+→ `src/lib/card-bills.ts`, puro e testado, troca cada pagamento pelas categorias das compras
+que ele quitou, **na data do pagamento**. As travas:
+
+- **Casamento por valor exato e um para um.** Nada de "a fatura mais próxima". Isso também
+  protege da reimportação — o handover conta que 9 dos 34 arquivos são a mesma fatura sob
+  outro nome, e uma delas soma **negativo**. Fatura que ninguém pagou nunca entra, porque
+  nenhum pagamento tem aquele valor.
+- **A soma é condição de saída.** As compras somam o pagamento por construção, então trocar
+  um pelo outro não pode mover o total do mês.
+- **Nada é gravado.** As partes têm id sintético e existem só na leitura; o razão não muda.
+
+**Um defeito que a medição pegou, e a correção que ele forçou.** A primeira versão punha uma
+conta que fecha **negativa** dentro do ciclo — estorno maior que compra — na seção de
+**entradas**. O total do mês subiu R$ 1.037,50 em maio e R$ 257,25 em março, e a conferência
+da D108 quebrou. A planilha do Andre já dizia o certo: a linha `Bank Charges` dela vale
+**−37,50** em abril, *dentro da despesa*. O `abatesSection` da D113, que era exclusivo de
+retirada de sócio, virou **campo** de `FlowEntry` e passou a servir aos dois casos.
+
+**A prova de que a quebra é segura é o total não ter se mexido:**
+
+| mês | saídas do app | aba `Expenses` | dif |
+|---|---|---|---|
+| janeiro | 352.801,12 | 352.801,12 | **0,00** |
+| fevereiro | 590.429,17 | 590.429,17 | **0,00** |
+| março | 345.022,99 | 344.853,99 | +169,00 |
+| abril | 369.256,45 | 369.256,45 | **0,00** |
+| maio | 295.576,52 | 295.576,52 | **0,00** |
+| junho | 300.111,49 | 300.111,49 | **0,00** |
+| julho | 375.601,70 | 375.382,82 | +218,88 |
+
+Distância somada **R$ 387,88** e saldo final **R$ 711.916,33** — os mesmos números da D108,
+que é o que se espera de uma mudança que só decompõe uma linha.
+
+**E a composição passou a existir.** → `npm run comparar:fluxo`, irmão do `comparar` do outro
+lado: **21 linhas fecham os sete meses ao centavo**, e entre elas estão todas as de cartão —
+Gsuite, Salesforce, Slack, Claude, Trello, Canva, Vindi, Clicksign, Wix, Plaud, NeverBounce,
+Scribd, Locaweb, Tactic, Railway. **Antes desta decisão, todas essas valiam zero no fluxo.**
+
+**O que ainda não fecha — R$ 69.783,55 — tem dono conhecido**, e quase tudo é o mesmo dinheiro
+que o `pendencias` já lista: a B.HUB em `6.10` em vez de `9.05` (D114), os R$ 155.816,84 sem
+categoria, e a linha `Freelancer (outras empresas)` da aba `Miscellaneous Cost of Service`,
+que não tem conta correspondente no app. **Categorização não conserta isso**: são respostas
+que faltam, não contas erradas.
+
+> **Uma linha do fluxo dele que o app ainda não sabe separar:** `Time - Interno` × `Time -
+> Freelancers`. A aba `Pessoas` do fluxo tem a coluna `VÍNCULO` com os dois; a aba
+> `Colaboradores` da DRE marca **todo mundo** como FREELANCER, e foi dela que o app leu —
+> as 40 pessoas estão todas com `bond = freelancer`. Enquanto isso não for relido da aba
+> certa, o app soma as duas linhas numa só.
+
+---
+
 ## Parte 13 — Decisões da Fase 8
 
 ### D68 — Escritor de XLSX próprio, com entradas sem compressão

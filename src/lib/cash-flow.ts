@@ -34,6 +34,13 @@ export type FlowCategory = {
   sortOrder: number;
 };
 
+/**
+ * `abatesSection` diz que a linha **desconta da própria seção** em vez de somar à de
+ * frente. Nasceu na D113 para retirada de sócio devolvida e virou campo na D116, quando a
+ * quebra da fatura passou a produzir contas que fecham negativas dentro de um ciclo — um
+ * estorno maior que a compra. A planilha do Andre faz igual: a linha `Bank Charges` dela
+ * vale **−37,50** em abril, dentro da despesa, e não vira receita.
+ */
 export type FlowEntry = {
   id: string;
   accountId: string;
@@ -44,6 +51,7 @@ export type FlowEntry = {
   categoryId: string | null;
   /** Só para casar pagamento com devolução; a identidade é o que torna o par confiável. */
   counterpartyTaxId?: string | null;
+  abatesSection?: boolean;
 };
 
 export type CashFlowSectionKey = "in" | "out" | "transfer";
@@ -123,11 +131,13 @@ function sectionOf(
   // abatendo — porque o que aconteceu foi uma distribuição menor, não um recebimento. Pôr
   // no `in` faria a empresa parecer ter ganhado dinheiro ao ter uma retirada estornada.
   if (kind === "owner_draw") return "out";
+  if (entry.abatesSection === true) return "out";
   return entry.direction;
 }
 
-/** True quando a linha abate a própria seção em vez de somar a ela (D113). */
+/** True quando a linha abate a própria seção em vez de somar a ela (D113, D116). */
 function abate(entry: FlowEntry, categories: Map<string, FlowCategory>): boolean {
+  if (entry.abatesSection === true) return true;
   const kind = entry.categoryId ? categories.get(entry.categoryId)?.kind : undefined;
   return kind === "owner_draw" && entry.direction === "in";
 }

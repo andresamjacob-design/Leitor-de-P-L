@@ -110,6 +110,7 @@ npm run recategorize        # aplica o motor ao que já está no razão (D97)
 npm run boletos             # os BOLETOS RECEBIDOS da Mash (--ensaio / --aplicar, D109)
 npm run socios              # separa distribuição de lucro do salário dos sócios (D110)
 npm run comparar            # a DRE do app contra a da planilha, linha a linha (D114)
+npm run comparar:fluxo      # o fluxo do app contra a aba Expenses, linha a linha (D116)
 
 npm run propose:rules       # regras de texto vindas da planilha
 npm run propose:parties     # casa nome da planilha ↔ contraparte do extrato

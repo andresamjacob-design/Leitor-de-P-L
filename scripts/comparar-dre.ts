@@ -54,6 +54,7 @@ import { formatBRL, fromNumeric, type Cents } from "@/lib/money";
 loadEnvLocal();
 
 const DETALHE = process.argv.includes("--detalhe");
+const FLUXO = process.argv.includes("--fluxo");
 
 const GREEN = "[32m";
 const YELLOW = "[33m";

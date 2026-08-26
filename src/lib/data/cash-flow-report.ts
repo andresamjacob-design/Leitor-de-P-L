@@ -19,6 +19,7 @@
  */
 
 import { buildCashFlow, periodRange, type CashFlowReport, type FlowCategory } from "@/lib/cash-flow";
+import { quebrarFaturas, type Fatura, type Pagamento } from "@/lib/card-bills";
 import { listAccounts, type Account } from "@/lib/data/accounts";
 import { listCategories, type Category } from "@/lib/data/categories";
 import { listCashEntries } from "@/lib/data/cash-entries";
@@ -63,12 +64,22 @@ export async function loadCashFlow({
   const cardAccounts = accounts.filter((account) => !isCashAccount(account.type));
 
   // Everything up to the end of the range: what came before sets the opening balance.
-  const entries = await listCashEntries({
-    entityIds,
-    to,
-    accountIds: cashAccounts.map((account) => account.id),
-    limit: 20000,
-  });
+  const [entries, cardEntries] = await Promise.all([
+    listCashEntries({
+      entityIds,
+      to,
+      accountIds: cashAccounts.map((account) => account.id),
+      limit: 20000,
+    }),
+    // As compras do cartão não entram no relatório (D-C), mas são o conteúdo do pagamento
+    // da fatura — é delas que sai a quebra (D116).
+    listCashEntries({
+      entityIds,
+      to,
+      accountIds: cardAccounts.map((account) => account.id),
+      limit: 20000,
+    }),
+  ]);
 
   const consolidated = entityIds.length > 1;
   const rowCategoryIds = new Map<string, string[]>();
@@ -112,6 +123,59 @@ export async function loadCashFlow({
       ? [{ label: SOCIOS_LABEL, categoryIds: sociosIds }]
       : [];
 
+  // ---- A quebra da fatura (D116) --------------------------------------------
+  // Cada arquivo de fatura importado virou uma `statement_imports`, então **cada importação
+  // é uma fatura**. O pagamento que tem exatamente o valor de uma delas é trocado pelas
+  // compras dentro dela, na data do pagamento; o que não casa fica como estava.
+  const billCategoryIds = new Set(
+    categories.filter((category) => category.code === CARD_BILL_CODE).map((c) => c.id),
+  );
+  const porImport = new Map<string, Fatura["compras"][number][]>();
+  for (const entry of cardEntries) {
+    if (entry.importId === null) continue;
+    porImport.set(entry.importId, [
+      ...(porImport.get(entry.importId) ?? []),
+      { categoryId: entry.categoryId, amount: entry.amount, direction: entry.direction },
+    ]);
+  }
+  const faturas: Fatura[] = [...porImport].map(([importId, compras]) => ({ importId, compras }));
+  const pagamentos: Pagamento[] = entries
+    .filter((entry) => entry.categoryId !== null && billCategoryIds.has(entry.categoryId))
+    .filter((entry) => entry.direction === "out")
+    .map((entry) => ({
+      id: entry.id,
+      accountId: entry.accountId,
+      occurredOn: entry.occurredOn,
+      amount: entry.amount,
+    }));
+  const quebra = quebrarFaturas(pagamentos, faturas);
+
+  const paraOFluxo = [
+    ...entries
+      .filter((entry) => !quebra.substituidos.has(entry.id))
+      .map((entry) => ({
+        id: entry.id,
+        accountId: entry.accountId,
+        occurredOn: entry.occurredOn,
+        amount: entry.amount,
+        direction: entry.direction,
+        categoryId: entry.categoryId ? (categoryKey.get(entry.categoryId) ?? null) : null,
+        // Só serve para casar pagamento com devolução — ver `refundedEntryIds`.
+        counterpartyTaxId: entry.counterpartyTaxId ?? null,
+      })),
+    ...quebra.partes.map((parte) => ({
+      id: parte.id,
+      accountId: parte.accountId,
+      occurredOn: parte.occurredOn,
+      amount: parte.amount,
+      direction: parte.direction,
+      categoryId: parte.categoryId ? (categoryKey.get(parte.categoryId) ?? null) : null,
+      // Uma parte não tem contraparte: ela é a soma de dezenas de compras.
+      counterpartyTaxId: null,
+      ...(parte.abatesSection === true ? { abatesSection: true } : {}),
+    })),
+  ];
+
   const report = buildCashFlow({
     periods: periodRange(from, to),
     accounts: cashAccounts.map((account) => ({
@@ -120,16 +184,7 @@ export async function loadCashFlow({
       openingBalance: account.openingBalance,
       openingDate: account.openingDate,
     })),
-    entries: entries.map((entry) => ({
-      id: entry.id,
-      accountId: entry.accountId,
-      occurredOn: entry.occurredOn,
-      amount: entry.amount,
-      direction: entry.direction,
-      categoryId: entry.categoryId ? (categoryKey.get(entry.categoryId) ?? null) : null,
-      // Só serve para casar pagamento com devolução — ver `refundedEntryIds`.
-      counterpartyTaxId: entry.counterpartyTaxId ?? null,
-    })),
+    entries: paraOFluxo,
     categories: flowCategories,
     oneLeggedTransferCategoryIds,
     mergedRows,
