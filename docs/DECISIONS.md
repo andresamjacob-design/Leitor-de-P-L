@@ -1573,21 +1573,67 @@ documento próprio. Confirmado pelo Andre; é o padrão da D104, quem paga não 
   custo continuaria na DRE depois da mudança, **em silêncio**.
 - **A trava de saldo é condição de saída** (D109): mudar de conta não move dinheiro.
 
-**Aplicado em 26/08/2026:** 8 lançamentos, **R$ 336.250,00**, de 6.10 para 99.04, com 8
-espelhos de competência apagados. O saldo ficou em **R$ 711.916,33 antes e depois**, o custo
-caiu exatamente os R$ 336.250,00 e o resultado acumulado **subiu** de R$ 1.156.625,50 para
-**R$ 1.492.875,50**. A cobertura não se mexeu — 984 de 1.067, 92,2% —, e não podia: mover
-linha já categorizada não categoriza nada.
+**A primeira aplicação, em 26/08/2026:** 8 lançamentos, **R$ 336.250,00**, de 6.10 para
+99.04. O saldo ficou em R$ 711.916,33 antes e depois e o resultado subiu de R$ 1.156.625,50
+para R$ 1.492.875,50.
 
-**O que o script recusou, e é o mais útil do relatório:** janeiro do Jacob. A diferença dá
-R$ 45.000 e ele só tem um lançamento de R$ 60.000, porque os R$ 15.000 de salário dele foram
-pagos dentro de um lote SISPAG ainda anônimo. Faltam **R$ 106.250** para a distribuição
-completa (R$ 60.000 do Jacob e R$ 46.250 do Leonardo), e os dois estão nos lotes de janeiro.
+**E o script recusou janeiro do Jacob, que foi o mais útil do relatório.** A diferença dava
+R$ 45.000 e ele só tem um lançamento de R$ 60.000 — porque os R$ 15.000 de pró-labore dele
+saíram dentro de um lote SISPAG anônimo. A recusa não era um defeito a contornar: era a
+pergunta certa aparecendo sozinha, e ela foi para o Andre.
+
+### A resposta de janeiro, e o pró-labore achando o próprio lugar
+
+Ele respondeu com uma linha: **`15000 + 15000 + 15000 + (92500 + 82500 + 46250)`** — *"cada
+15000 é salário (pró-labore), já os entre parênteses são distribuição"*. Duas coisas saem daí:
+
+- **Os três lotes anônimos de janeiro estão confirmados.** Janeiro tem de ter três
+  pró-labores de R$ 15.000 e só um está nomeado (o do Custodio, partido em 1.351,02 +
+  13.648,98). Os outros dois são os lotes de 20/01. E o de 09/01, R$ 46.250, é distribuição —
+  o mesmo valor que **reaparece nomeado no Leonardo em 10/02**. O mês seguinte prova a
+  leitura do anterior.
+- **Ele chamou aquilo de pró-labore, e o app tinha `6.11 Pró-labore` vazia.** Os R$ 15.000
+  mensais estavam em `6.10 Freelancers`, que é o nome errado para o que são. A D24 já dizia
+  onde eles moram — *"pró-labore is payroll and lives in `pessoal`"* —, e a conta existia
+  desde o seed, sem uma linha dentro.
+
+> **A repartição entre sócios não é a mesma coisa que quem recebeu, e as duas estão certas.**
+> Eu tinha lido a distribuição de janeiro como 115.000 + 60.000 + 46.250, que é o que o
+> extrato mostra; a dele é 92.500 + 82.500 + 46.250, que é de quem o dinheiro é. Somam os
+> mesmos R$ 221.250, e a diferença são R$ 22.500 que caíram na conta do Custodio e são do
+> Jacob. **O razão registra quem recebeu**, porque é isso que o extrato prova; a repartição
+> vive na planilha. Nenhum número do app muda por causa disso — mas os dois existem, e
+> confundi-los seria inventar um pagamento que não houve.
+
+**Um defeito que o próprio dry run mostrou:** junho do Custodio não movia. A planilha
+arredonda 14.599,00 e o razão tem 14.598,93, então a diferença dava −R$ 0,07 e o mês inteiro
+era pulado — deixando pró-labore preso em 6.10. **A correção não foi tolerância**, que seria
+pôr um limiar em cima de dinheiro: diferença negativa quer dizer que **não houve
+distribuição**, e tudo daquele mês é pró-labore. A conclusão não depende do tamanho da
+diferença, então não precisa de limiar.
+
+**Aplicado na sequência:** mais 42 lançamentos — **R$ 106.250,00** para 99.04 e
+**R$ 313.014,93** para 6.11 —, com 39 espelhos apagados e 40 criados. O saldo continuou em
+R$ 711.916,33 e o custo caiu exatamente os R$ 30.000 previstos (saem R$ 60.000 de
+distribuição, entram R$ 30.000 de pró-labore que estava sem conta).
+
+**O estado final das três contas é a conferência:**
+
+| | |
+|---|---|
+| `6.11 Pró-labore` | **R$ 313.014,93** |
+| `99.04 Distribuição de lucros` | **R$ 442.500,00** |
+| soma | **R$ 755.514,93** — a linha `Distribuição de Lucro` da planilha, ao centavo |
+| `6.10 Freelancers` | R$ 901.092,02 — o time, agora sem sócios dentro |
+
+Cobertura 92,2% → **92,7% (989 de 1.067)**, o que falta decidir de R$ 245.066,84 para
+**R$ 158.816,84**, e o resultado acumulado em **R$ 1.512.875,50**. Os 13 meses seguem com
+resíduo zero e o `verify:rls` deu 7/7.
 
 > **O plano B do SISPAG ficou perigoso, e isso é consequência prática.** Aplicar
-> `Outros (SISPAG)` nos oito lotes jogaria R$ 76.250 de distribuição de lucro **dentro do
-> custo** — o oposto do que esta decisão acabou de consertar. Em compensação, três dos oito
-> ficaram identificados pela medição, e o bloco em aberto cai de R$ 95.950 para **R$ 19.700**.
+> `Outros (SISPAG)` nos oito lotes jogaria R$ 76.250 de distribuição e pró-labore **dentro
+> do custo genérico** — o oposto do que esta decisão consertou. Com os três resolvidos, o
+> bloco em aberto cai de R$ 95.950 para **R$ 19.700**.
 
 **A ponte precisou de uma linha nova, e o motivo é a lição da D109.** Depois de aplicar,
 `Saídas de caixa sem competência` saltou de R$ 222.984,67 para R$ 724.234,67 — e o handover
@@ -1608,6 +1654,44 @@ sentido oposto no mesmo dia (D99): custo sem categoria **continua** aparecendo c
 > população — o time inteiro, sócios incluídos. Nenhum dos dois estava errado sobre o nome.
 > O que estava errado era ter distribuição de lucro misturada dentro, e é isso que impedia
 > comparar as duas DREs linha a linha.
+
+---
+
+### D111 — A FDN Telecom não era telecom, e a D101 tinha escrito isso
+A D101 olhou a `FDN TELECOM` — 2 linhas, R$ 10.000 — e **recusou de propósito**, deixando o
+motivo escrito:
+
+> *"O nome diz telecom, mas `- Claro e TIM` vale **R$ 394,92 no ano inteiro**. R$ 5.000 por
+> mês não é conta de telefone. O nome está mentindo sobre a natureza, ou é outra coisa."*
+
+Era outra coisa. O Andre respondeu em 26/08/2026: **é por onde o Nicholas Forte recebe.** É o
+mesmo padrão do ETG (o Esdras) e do Aparecido (o João Beato) — quem paga não é quem trabalha
+(D104) —, e nenhum casamento automático chegaria nele, porque o nome da empresa não tem
+relação nenhuma com o nome da pessoa.
+
+**As duas planilhas confirmam por caminhos separados, e a defasagem da D101 aparece de novo:**
+
+| | jan | fev | mar |
+|---|---|---|---|
+| razão (FDN Telecom) | — | 5.000 | 5.000 |
+| aba `Pessoas` (caixa) | 0 | 5.000 | 5.000 |
+| aba `Colaboradores` (competência) | 5.000 | 5.000 | — |
+
+O caixa bate **ao centavo, mês a mês**, com o razão; a competência vem um mês à frente,
+exatamente como a D101 mediu no imposto e no jurídico. O `VÍNCULO` das duas abas é
+`FREELANCER`, então a conta é **6.10**, e não o `6.11 Pró-labore` que a D110 acabou de criar.
+
+→ Entrou no `CONFIRMADOS` do `propose:suppliers`, que é onde mora evidência vinda da planilha
+do Andre. **Aplicado:** 1 regra por documento → 2 lançamentos, **R$ 10.000,00**, e o resultado
+caiu de R$ 1.522.875,50 para **R$ 1.512.875,50** — custo que estava só no caixa entrando na
+DRE, que é o comportamento que a D85 previu e nomeia na ponte.
+
+As contrapartes sem dono caem de 7 para **6**, e de R$ 126.865,68 para **R$ 116.865,68**.
+
+> **Vale registrar o que a recusa da D101 valeu.** Ela podia ter chutado `- Claro e TIM` pelo
+> nome e teria errado a conta e a pessoa. Em vez disso escreveu o que **não** fechava e
+> deixou a pergunta em aberto por dois dias. É o mesmo mecanismo da D100 retendo Hold Beauty
+> e Hogrefe: uma recusa bem escrita é o que faz a resposta certa ser possível depois.
 
 ---
 

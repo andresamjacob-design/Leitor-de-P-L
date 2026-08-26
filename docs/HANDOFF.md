@@ -125,7 +125,7 @@ npm run import:invoices     # faturas de cartão em massa
 | | |
 |---|---|
 | Razão de caixa | **1.067 lançamentos**, 06/08/2025 a 31/07/2026 |
-| Categorizados | **984 (92,2%)** — 83 sem conta |
+| Categorizados | **989 (92,7%)** — 78 sem conta |
 | Competência | 284 linhas de receita + 640 de custo |
 | Receita reconhecida | **R$ 3.556.736,91** (jan–ago/2026) |
 | Contratos | 80 (65 ativos, 15 concluídos), 95 parcelas mensais |
@@ -157,9 +157,10 @@ npm run import:invoices     # faturas de cartão em massa
   meses, **ao centavo** (D108). Nos outros dois sobram R$ 169,00 e R$ 218,88, que são dois
   estornos pequenos sem documento para parear. A distância somada é **R$ 387,88**.
 
-- **Os salários dos sócios mais a distribuição batem com a linha `Distribuição de Lucro`
-  da planilha de caixa**, ao centavo, nos sete meses (D110). R$ 313.014,93 + R$ 442.500,00 =
-  **R$ 755.514,93**. É a conferência que separou custo de retirada.
+- **O pró-labore mais a distribuição batem com a linha `Distribuição de Lucro` da planilha
+  de caixa**, ao centavo, nos sete meses (D110). `6.11` marca **R$ 313.014,93** e `99.04`
+  marca **R$ 442.500,00**; somados, **R$ 755.514,93**. É a conferência que separou custo de
+  retirada, e ela fecha nas duas contas ao mesmo tempo.
 
 > A quarta é de outra natureza que as três primeiras: elas são o sistema conferindo contra
 > si mesmo e contra o banco; esta é o sistema conferindo contra **outro** sistema, que tem
@@ -280,11 +281,18 @@ e que na DRE dele *só os salários* entram, enquanto no fluxo entra tudo.
 - **O método é dele:** a aba `Colaboradores` traz o salário mensal de cada sócio
   (`CUSTODIO`, `JACOB`, `LEONARDO`); o que passa disso é distribuição. De março em diante ela
   é **zero** — os R$ 15.000 mensais são só salário.
-- **Aplicado:** 8 lançamentos, R$ 336.250,00, e o resultado acumulado subiu de
-  R$ 1.156.625,50 para **R$ 1.492.875,50**. O saldo não se moveu.
-- **Três dos oito lotes SISPAG anônimos ficaram identificados de brinde:** 46.250 + 15.000 +
-  15.000 = R$ 76.250, a distribuição de janeiro que faltava, e o R$ 46.250 reaparece nomeado
-  no Leonardo em 10/02.
+- **Ele chamou os R$ 15.000 mensais de pró-labore**, e o app tinha `6.11 Pró-labore` vazia
+  desde o seed — eles estavam em `6.10 Freelancers`, que é o nome errado para o que são.
+- **Três dos oito lotes SISPAG anônimos ficaram identificados:** 46.250 + 15.000 + 15.000 =
+  R$ 76.250. O R$ 46.250 reaparece **nomeado no Leonardo em 10/02**, e é essa repetição — não
+  a soma — que prova a leitura.
+- **Aplicado em duas rodadas:** 50 lançamentos ao todo. `99.04` ficou com R$ 442.500,00,
+  `6.11` com R$ 313.014,93, e `6.10` com R$ 901.092,02, que é o time sem sócios dentro. O
+  resultado acumulado subiu de R$ 1.156.625,50 para **R$ 1.522.875,50**, e o saldo não se
+  moveu em nenhuma das duas.
+- **A FDN Telecom era o Nicholas Forte** (D111) — a D101 tinha recusado escrevendo *"o nome
+  está mentindo sobre a natureza, ou é outra coisa"*, e era outra coisa. Mais 2 lançamentos,
+  R$ 10.000, e o resultado fechou em **R$ 1.512.875,50**.
 
 ### A ponte entre os dois razões
 
@@ -412,8 +420,8 @@ diferenças dos 13 meses:
 |---|---|
 | Receita reconhecida no mês | + R$ 3.556.736,91 |
 | Entradas de caixa sem competência | − R$ 2.830.308,69 |
-| Distribuição de lucro aos sócios | + R$ 501.250,00 |
-| **Saídas de caixa sem competência** | **+ R$ 222.984,67** |
+| Distribuição de lucro aos sócios | + R$ 607.500,00 |
+| **Saídas de caixa sem competência** | **+ R$ 136.734,67** |
 | Custo de compra no cartão | − R$ 219.356,95 |
 | Devolução de distribuição | − R$ 165.000,00 |
 
@@ -440,7 +448,7 @@ categorizadas, o custo cresce e o resultado cai, **sem o caixa mudar um centavo*
 
 ## 6. O que falta
 
-**83 lançamentos, R$ 245.066,84.** Quase tudo depende de uma resposta, não de código —
+**78 lançamentos, R$ 158.816,84.** Quase tudo depende de uma resposta, não de código —
 e a maior parte já tem dono conhecido.
 
 Rode **`npm run decisoes`** (as perguntas com a evidência do lado) e **`npm run pendencias`**
@@ -455,8 +463,8 @@ Rode **`npm run decisoes`** (as perguntas com a evidência do lado) e **`npm run
 
 | bloco | linhas | valor | o que destrava |
 |---|---|---|---|
-| **7 contrapartes sem dono** | 11 | **R$ 126.865,68** | Santa Monica (R$ 84.620), Taliêco (R$ 24.000), FDN Telecom (R$ 10.000), WCommerce (R$ 4.805), Ricardo de Freitas (R$ 3.000), INPI (R$ 440), Keepclear (R$ 0,01). **O Andre disse que vai achar.** Eram 31. |
-| **Lotes SISPAG sem nome** | 8 | **R$ 95.950,00** | ⚠️ **O plano B ficou perigoso (D110).** Três dos oito são distribuição e salário de sócio — 46.250 + 15.000 + 15.000 = R$ 76.250 —, e aplicar `Outros (SISPAG)` jogaria isso **dentro do custo**, o oposto do que a D110 acabou de consertar. O que sobra de verdade sem dono é **R$ 19.700** (jan 500 + 5.000, fev 1.200, mar 3.000 + 10.000). Para os R$ 76.250 basta o Andre confirmar a leitura; para os R$ 19.700, o detalhe do lote no internet banking. |
+| **6 contrapartes sem dono** | 9 | **R$ 116.865,68** | Santa Monica (R$ 84.620), Taliêco (R$ 24.000), WCommerce (R$ 4.805), Ricardo de Freitas (R$ 3.000), INPI (R$ 440), Keepclear (R$ 0,01). **O Andre disse que vai achar.** Eram 31; a FDN Telecom saiu na D111. |
+| **Lotes SISPAG sem nome** | 5 | **R$ 19.700,00** | Eram 8, R$ 95.950. Três eram distribuição e pró-labore de sócio e foram resolvidos na D110 — aplicar `Outros (SISPAG)` neles teria jogado R$ 76.250 dentro do custo genérico. Os cinco que sobram (jan 500 + 5.000, fev 1.200, mar 3.000 + 10.000) só saem com o detalhe do lote no internet banking. |
 | ~~**`BOLETOS RECEBIDOS`**~~ | ~~8~~ | ~~R$ 43.100,00~~ | ✅ **Fechado em 26/08 (D109): é a Mash.** |
 | **Cartão e miúdos** | 64 | R$ 22.251,16 | 24 descrições que ninguém sabe o que são (`SQ *DREAMFORCE SF`, `ASA*MARIA CLARA`, `PIU R E P L EP`). Pior retorno por minuto da lista. |
 
@@ -576,11 +584,10 @@ contrato no Storage).
 1. ~~**Perguntar se a fatura do cartão conta como saída.**~~ ✅ **D108**.
 2. ~~**Fechar os boletos.**~~ ✅ **D109**. ~~**A folha de terceiros.**~~ ✅ **D110** — não era
    salário × freelancer; era distribuição de lucro dentro do custo, R$ 442.500.
-3. **Confirmar a leitura dos três lotes de janeiro** (46.250 + 15.000 + 15.000 = R$ 76.250):
-   é a única coisa nesta lista que **não depende de arquivo nenhum chegar**, só de o Andre
-   dizer sim. Fecha a distribuição de janeiro e derruba o bloco SISPAG para R$ 19.700.
-4. **Esperar as 7 contrapartes e o extrato da Gabriel.** Os dois estão com ele; nada a fazer
-   até chegarem — R$ 126.865,68 e a segunda empresa.
+3. ~~**Confirmar os três lotes de janeiro.**~~ ✅ **D110** — ele confirmou com uma linha,
+   `15000+15000+15000+(92500+82500+46250)`, e o bloco SISPAG caiu para R$ 19.700.
+4. **Esperar as 6 contrapartes e o extrato da Gabriel.** Os dois estão com ele; nada a fazer
+   até chegarem — R$ 116.865,68 e a segunda empresa. **É tudo o que resta de grande.**
 
 > **Não invente tarefa em cima do que está esperando arquivo.** Das pendências grandes, só a
 > do item 3 é executável hoje. As outras duas são "chegou?" e, se a resposta for não, a
@@ -709,6 +716,21 @@ Aprendidos neste trabalho:
   imposto **acima** do lucro bruto; o app põe em `4.01` **dentro** do custo. Medi sem tirar
   os dois lados e concluí que o SISPAG *afastava* o app da planilha; alinhado, ele
   **aproxima**. A conclusão inverteu de sinal por causa da fronteira de uma linha.
+- **Uma recusa bem escrita é o que faz a resposta certa ser possível depois.** A D101 olhou
+  a FDN Telecom e não chutou `- Claro e TIM` pelo nome: escreveu **o que não fechava** —
+  *"R$ 5.000 por mês não é conta de telefone"* — e deixou a pergunta aberta. Dois dias depois
+  o Andre disse que é por onde o Nicholas Forte recebe (D111). Se ela tivesse chutado, teria
+  errado a conta **e** a pessoa, e ninguém teria voltado a olhar.
+- **Diferença negativa não é mês ilegível — é mês sem distribuição.** Junho do Custodio não
+  movia porque a planilha arredonda 14.599,00 e o razão tem 14.598,93: a subtração dava
+  −R$ 0,07 e o mês inteiro era pulado, deixando pró-labore preso em 6.10. **A saída não é
+  tolerância**, que seria pôr um limiar em cima de dinheiro. É notar que a conclusão não
+  depende do tamanho da diferença: se não sobra nada acima do salário, não houve distribuição,
+  e é só isso que a linha precisa dizer.
+- **Recusar um mês inteiro por causa de um lançamento é mais caro do que parece.** A primeira
+  versão do `socios` pulava o mês quando a distribuição não casava, e com isso deixava para
+  trás também o pró-labore daquele mês, que não tinha problema nenhum. Separe o que a dúvida
+  alcança do que ela não alcança.
 - **Um padrão que fecha aritmeticamente ainda pode estar particionado no lugar errado.**
   Cada sócio recebe R$ 2.000 no dia 5 e ~R$ 13.000 no dia 20 — a forma exata de pró-labore
   mínimo mais distribuição, e a soma batia com a planilha nos seis meses. Eu ia separar por

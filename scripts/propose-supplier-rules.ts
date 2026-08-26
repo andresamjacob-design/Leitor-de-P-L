@@ -87,6 +87,21 @@ const CONFIRMADOS: { taxId: string; code: string; why: string; amount?: string }
     why: "Conex & Result é contabilidade",
   },
   {
+    // ---- confirmado pelo Andre em 26/08/2026 ----
+    // A D101 recusou esta contraparte escrevendo *"o nome diz telecom, mas `- Claro e TIM`
+    // vale R$ 394,92 no ano inteiro; R$ 5.000 por mês não é conta de telefone — o nome está
+    // mentindo sobre a natureza, ou é outra coisa"*. Era outra coisa: **é por onde o
+    // Nicholas Forte recebe**, como o ETG é o Esdras e o Aparecido é o João Beato.
+    //
+    // As duas planilhas confirmam por caminhos separados, e a defasagem da D101 aparece
+    // de novo: a aba `Pessoas` (caixa) traz Nicholas Forte com 5.000 em **fev e mar**, que é
+    // exatamente o que o razão tem (10/02 e 10/03); a `Colaboradores` (competência) traz
+    // 5.000 em **jan e fev**, um mês à frente. Vínculo FREELANCER, então 6.10.
+    taxId: "10679752000184",
+    code: "6.10",
+    why: "FDN Telecom é por onde o Nicholas Forte recebe — 2× R$ 5.000 batem com a aba Pessoas",
+  },
+  {
     // `- Penalties & Settlements` vale 45.000,00 em fevereiro e 45.000,00 no ano inteiro.
     // No razão há um único pagamento à Maruri: 45.000,00 em 09/02/2026. Valor exato, mês
     // exato, e único dos dois lados. A Maruri ainda aparece na aba `Vendas e Perdas`, que
