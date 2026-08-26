@@ -119,7 +119,17 @@ function sectionOf(
   if (kind === "transfer" && !(entry.categoryId && oneLegged.has(entry.categoryId))) {
     return "transfer";
   }
+  // Retirada de sócio devolvida **não é entrada** (D113). Ela fica do lado das saídas,
+  // abatendo — porque o que aconteceu foi uma distribuição menor, não um recebimento. Pôr
+  // no `in` faria a empresa parecer ter ganhado dinheiro ao ter uma retirada estornada.
+  if (kind === "owner_draw") return "out";
   return entry.direction;
+}
+
+/** True quando a linha abate a própria seção em vez de somar a ela (D113). */
+function abate(entry: FlowEntry, categories: Map<string, FlowCategory>): boolean {
+  const kind = entry.categoryId ? categories.get(entry.categoryId)?.kind : undefined;
+  return kind === "owner_draw" && entry.direction === "in";
 }
 
 /** Signed contribution to the account balance. */
@@ -343,9 +353,11 @@ export function buildCashFlow({
     const rows = buckets.get(section) as Map<string, Cents[]>;
     const values = rows.get(key) ?? zeros(periods.length);
     // A transfer row keeps its own sign so an inflow and an outflow can cancel out;
-    // the in/out sections are magnitudes, because their sign is the section itself.
-    values[index] =
-      (values[index] as Cents) + (section === "transfer" ? signed(entry) : entry.amount);
+    // the in/out sections are magnitudes, because their sign is the section itself. A
+    // retirada devolvida é a exceção: ela está na seção de saídas e abate (D113).
+    const contribuicao =
+      section === "transfer" ? signed(entry) : abate(entry, categoryById) ? -entry.amount : entry.amount;
+    values[index] = (values[index] as Cents) + contribuicao;
     rows.set(key, values);
   }
 

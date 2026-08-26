@@ -459,3 +459,62 @@ describe("linhas agrupadas (D112)", () => {
     );
   });
 });
+
+describe("devolução de retirada não é entrada (D113)", () => {
+  const socios = [{ label: "Sócios — pró-labore e distribuição", categoryIds: new Set(["pro", "dist"]) }];
+
+  function comSocios(entries: FlowEntry[]) {
+    return buildCashFlow({
+      periods: periodRange("2026-01-01", "2026-01-31"),
+      accounts: [BANK],
+      entries,
+      categories: CATEGORIES,
+      mergedRows: socios,
+    });
+  }
+
+  it("a devolução abate as saídas em vez de virar entrada", () => {
+    // Sem par para o `refundedEntryIds` casar: documentos diferentes, então as duas pernas
+    // sobrevivem e é aqui que a regra precisa valer.
+    const r = comSocios([
+      entry("2026-01-09", "100.000,00", "out", "dist"),
+      entry("2026-01-15", "40.000,00", "in", "dist"),
+    ]);
+    const entradas = r.sections.find((s) => s.key === "in");
+    const saidas = r.sections.find((s) => s.key === "out");
+
+    expect(entradas?.total).toBe(parseMoney("0,00"));
+    expect(saidas?.total).toBe(parseMoney("60.000,00"));
+  });
+
+  it("o saldo continua certo — abater na saída é o mesmo que somar na entrada", () => {
+    const r = comSocios([
+      entry("2026-01-09", "100.000,00", "out", "dist"),
+      entry("2026-01-15", "40.000,00", "in", "dist"),
+    ]);
+
+    // 10.000 de abertura − 100.000 + 40.000
+    expect(r.closing[0]).toBe(-parseMoney("50.000,00"));
+  });
+
+  it("uma retirada inteiramente devolvida deixa a linha em zero", () => {
+    const r = comSocios([
+      entry("2026-01-09", "30.000,00", "out", "dist"),
+      entry("2026-01-15", "30.000,00", "in", "dist"),
+    ]);
+
+    expect(r.sections.find((s) => s.key === "out")?.total).toBe(parseMoney("0,00"));
+    expect(r.closing[0]).toBe(parseMoney("10.000,00"));
+  });
+
+  it("o sentido oposto: devolução de custo comum continua sendo entrada", () => {
+    // A regra é dos sócios, não de toda devolução. Escrito no mesmo dia (D99).
+    const r = comSocios([
+      entry("2026-01-09", "10.000,00", "out", "sal"),
+      entry("2026-01-15", "3.000,00", "in", "sal"),
+    ]);
+
+    expect(r.sections.find((s) => s.key === "in")?.total).toBe(parseMoney("3.000,00"));
+    expect(r.sections.find((s) => s.key === "out")?.total).toBe(parseMoney("10.000,00"));
+  });
+});

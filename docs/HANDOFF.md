@@ -291,6 +291,9 @@ e que na DRE dele *só os salários* entram, enquanto no fluxo entra tudo.
   `6.11` com R$ 313.014,93, e `6.10` com R$ 901.092,02, que é o time sem sócios dentro. O
   resultado acumulado subiu de R$ 1.156.625,50 para **R$ 1.522.875,50**, e o saldo não se
   moveu em nenhuma das duas.
+- **Retirada devolvida não é entrada** (D113): ela abate a distribuição em vez de aparecer
+  do lado das entradas, na ponte e no fluxo. Somadas as duas linhas davam o número certo;
+  separadas, cada uma mentia.
 - **No fluxo de caixa as duas viraram uma linha só** (D112), porque o caixa não distingue o
   que a DRE precisa distinguir — é como a planilha dele já lança, dentro do bloco `Pessoas`.
   Agrupar não move dinheiro, e há teste provando que o total da seção e o fechamento do mês
@@ -425,10 +428,14 @@ diferenças dos 13 meses:
 |---|---|
 | Receita reconhecida no mês | + R$ 3.556.736,91 |
 | Entradas de caixa sem competência | − R$ 2.830.308,69 |
-| Distribuição de lucro aos sócios | + R$ 607.500,00 |
+| Distribuição de lucro aos sócios | + R$ 442.500,00 |
 | **Saídas de caixa sem competência** | **+ R$ 136.734,67** |
 | Custo de compra no cartão | − R$ 219.356,95 |
-| Devolução de distribuição | − R$ 165.000,00 |
+
+> **A linha dos sócios é líquida de propósito (D113).** Ela chegou a ser duas — distribuição
+> bruta e devolução —, e separadas as duas mentiam: a empresa não distribuiu R$ 607.500, e
+> devolução de retirada não é dinheiro ganho. O que houve foi uma distribuição de
+> R$ 442.500.
 
 > **As duas linhas de sócios nasceram na D110, e a razão é a lição da D109.** Depois de mover
 > a distribuição para `99.04`, a linha do meio saltou para R$ 724.234,67 — e ela é lida como

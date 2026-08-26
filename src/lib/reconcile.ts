@@ -50,7 +50,11 @@ export type MonthBuckets = {
    * mesmo rótulo transforma uma escolha em pendência e infla a lista de tarefas.
    */
   saidasDeSocios: Cents;
-  /** O outro lado: devolução de retirada, pelo mesmo motivo. */
+  /**
+   * Retirada devolvida. Existe como balde separado porque o razão a guarda como entrada,
+   * mas **não vira linha própria na ponte** (D113): ela abate `saidasDeSocios`, porque o
+   * que aconteceu foi uma distribuição menor, não um recebimento.
+   */
   entradasDeSocios: Cents;
   /** Saídas do mês cuja competência caiu em outro mês. */
   saidasComEspelhoEmOutroMes: Cents;
@@ -106,14 +110,13 @@ export function buildBridge(buckets: MonthBuckets): Bridge {
       why: "dinheiro pago que ainda não virou custo porque está sem categoria — vai pesar no resultado quando alguém responder",
     },
     {
+      // Líquida de propósito (D113): retirada devolvida **não é entrada**. Mostrar
+      // "distribuiu 607.500" e "recebeu de volta 165.000" faz a empresa parecer ter
+      // distribuído o que não distribuiu, e faz a devolução parecer dinheiro ganho. O que
+      // aconteceu é uma distribuição de 442.500, e é isso que a linha diz.
       label: "Distribuição de lucro aos sócios",
-      amount: buckets.saidasDeSocios,
-      why: "D24 e D110 — sai do caixa e fica fora da DRE por decisão, não por pendência",
-    },
-    {
-      label: "Devolução de distribuição",
-      amount: -buckets.entradasDeSocios,
-      why: "o outro lado da linha de cima: retirada que voltou (D103)",
+      amount: buckets.saidasDeSocios - buckets.entradasDeSocios,
+      why: "D24 e D110 — sai do caixa e fica fora da DRE por decisão; devolução abate, não entra",
     },
     {
       label: "Saídas cuja competência é de outro mês",

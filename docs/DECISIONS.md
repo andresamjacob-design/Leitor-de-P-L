@@ -1759,6 +1759,51 @@ falha se alguém inverter isso por engano.
 
 ---
 
+### D113 — Retirada devolvida não é entrada
+A D110 pôs a distribuição em `99.04` e a D112 a juntou ao pró-labore no fluxo. Nas duas eu
+deixei a devolução aparecendo do lado das **entradas** — na ponte com linha própria
+(`Devolução de distribuição`, −R$ 165.000) e no fluxo como um `in` qualquer. O Andre corrigiu
+em 26/08/2026: *"reembolsos de distribuição não ficam como entrada, eles ficam inexistentes ou
+subtraídos à diferença"*.
+
+**Ele está certo, e o erro é de leitura, não de conta.** Somadas, as duas linhas davam o
+número certo; separadas, cada uma mentia:
+
+- *"distribuiu R$ 607.500"* — a empresa não distribuiu isso. O par da D103 saiu duas vezes e
+  voltou uma; o que aconteceu foi uma distribuição de **R$ 442.500**.
+- *"recebeu R$ 165.000"* — devolução de retirada não é dinheiro ganho. Pôr no meio das
+  entradas a faz parecer receita, e é exatamente o defeito que a D82 e a D99 existem para
+  evitar, agora do lado de fora da DRE.
+
+É a mesma família da D107: *o fluxo mostra o que saiu da conta e não voltou*. Ali o par
+sumia dos dois lados; aqui ele **abate**, porque o que sobra depois do abate é dinheiro que
+de fato saiu.
+
+→ Duas mudanças, e as duas são de apresentação:
+
+- **Na ponte**, uma linha só, líquida: `saidasDeSocios − entradasDeSocios`. O balde de
+  entrada continua existindo, porque o razão guarda a devolução como entrada e é dali que o
+  número vem; ele só deixa de virar linha.
+- **No fluxo**, `owner_draw` vai para a seção de saídas **nos dois sentidos**, e a entrada
+  contribui com sinal negativo. Isso cobre o caso que hoje não existe e amanhã pode existir:
+  uma devolução que o `refundedEntryIds` (D107) não case — documento diferente, valor
+  diferente, fora dos 90 dias — sobreviveria como receita. Agora não.
+
+**Abater na saída é aritmeticamente o mesmo que somar na entrada**, porque o relatório
+calcula `operacional = entradas − saídas`. O saldo não se move, e há teste provando: uma
+retirada de R$ 100.000 com R$ 40.000 devolvidos fecha o mês em −R$ 50.000 sobre a abertura,
+como fecharia de qualquer jeito.
+
+**Medido:** a linha da ponte foi de duas (+R$ 607.500 e −R$ 165.000) para **uma, de
+R$ 442.500,00**, e os 13 meses continuam com resíduo zero. Nenhuma escrita no banco.
+
+**Seis testes novos, 413 → 419**, e um deles é o do sentido oposto no mesmo dia (D99):
+**devolução de custo comum continua sendo entrada.** A regra é dos sócios, não de toda
+devolução — e sem esse teste alguém a generalizaria por engano, que é como a D86 travou uma
+ponta e deixou a outra aberta.
+
+---
+
 ## Parte 13 — Decisões da Fase 8
 
 ### D68 — Escritor de XLSX próprio, com entradas sem compressão

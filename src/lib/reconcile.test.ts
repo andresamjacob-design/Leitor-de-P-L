@@ -241,3 +241,35 @@ describe("retirada de sócio (D110)", () => {
     expect(bridge.residual).toBe(ZERO);
   });
 });
+
+describe("devolução de retirada não é entrada (D113)", () => {
+  it("a devolução abate a distribuição, e não vira linha própria", () => {
+    // O caso da D103: saiu 115.000 duas vezes e voltou uma. A empresa distribuiu 115.000.
+    const parcela = parseMoney("115.000,00");
+    const bridge = buildBridge(
+      buckets({
+        caixaOperacional: -parcela,
+        saidasDeSocios: parcela * 2n,
+        entradasDeSocios: parcela,
+      }),
+    );
+    const socios = significantLines(bridge).filter((l) => l.label.includes("sócios"));
+
+    expect(socios).toHaveLength(1);
+    expect(socios[0]?.amount).toBe(parcela);
+    expect(significantLines(bridge).map((l) => l.label)).not.toContain(
+      "Devolução de distribuição",
+    );
+    expect(bridge.residual).toBe(ZERO);
+  });
+
+  it("uma distribuição inteiramente devolvida some da ponte", () => {
+    const valor = parseMoney("40.000,00");
+    const bridge = buildBridge(
+      buckets({ saidasDeSocios: valor, entradasDeSocios: valor }),
+    );
+
+    expect(significantLines(bridge)).toHaveLength(0);
+    expect(bridge.residual).toBe(ZERO);
+  });
+});
