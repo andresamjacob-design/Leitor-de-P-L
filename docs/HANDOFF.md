@@ -127,7 +127,7 @@ npm run import:invoices     # faturas de cartão em massa
 | | |
 |---|---|
 | Razão de caixa | **1.067 lançamentos**, 06/08/2025 a 31/07/2026 |
-| Categorizados | **990 (92,8%)** — 77 sem conta |
+| Categorizados | **997 (93,4%)** — 70 sem conta |
 | Competência | 284 linhas de receita + 640 de custo |
 | Receita reconhecida | **R$ 3.556.736,91** (jan–ago/2026) |
 | Contratos | 80 (65 ativos, 15 concluídos), 95 parcelas mensais |
@@ -462,7 +462,7 @@ categorizadas, o custo cresce e o resultado cai, **sem o caixa mudar um centavo*
 
 ## 6. O que falta
 
-**77 lançamentos, R$ 155.816,84.** Quase tudo depende de uma resposta, não de código —
+**70 lançamentos, R$ 41.951,17.** Quase tudo depende de uma resposta, não de código —
 e a maior parte já tem dono conhecido.
 
 Rode **`npm run decisoes`** (as perguntas com a evidência do lado) e **`npm run pendencias`**
@@ -477,7 +477,7 @@ Rode **`npm run decisoes`** (as perguntas com a evidência do lado) e **`npm run
 
 | bloco | linhas | valor | o que destrava |
 |---|---|---|---|
-| **6 contrapartes sem dono** | 9 | **R$ 116.865,68** | Santa Monica (R$ 84.620), Taliêco (R$ 24.000), WCommerce (R$ 4.805), Ricardo de Freitas (R$ 3.000), INPI (R$ 440), Keepclear (R$ 0,01). **O Andre disse que vai achar.** Eram 31; a FDN Telecom saiu na D111. |
+| ~~**Contrapartes sem dono**~~ | 1 | **R$ 0,01** | ✅ **Fechado em 26/08 (D111, D115, D117).** Eram 31. Sobrou a **Keepclear**, o centavo de teste, **sem conta de propósito**: não é receita nem custo, e qualquer conta seria uma afirmação falsa sobre ele. |
 | **Lotes SISPAG sem nome** | 5 | **R$ 19.700,00** | Eram 8, R$ 95.950. Três eram distribuição e pró-labore de sócio e foram resolvidos na D110 — aplicar `Outros (SISPAG)` neles teria jogado R$ 76.250 dentro do custo genérico. Os cinco que sobram (jan 500 + 5.000, fev 1.200, mar 3.000 + 10.000) só saem com o detalhe do lote no internet banking. |
 | ~~**`BOLETOS RECEBIDOS`**~~ | ~~8~~ | ~~R$ 43.100,00~~ | ✅ **Fechado em 26/08 (D109): é a Mash.** |
 | **Cartão e miúdos** | 64 | R$ 22.251,16 | 24 descrições que ninguém sabe o que são (`SQ *DREAMFORCE SF`, `ASA*MARIA CLARA`, `PIU R E P L EP`). Pior retorno por minuto da lista. |
@@ -600,8 +600,10 @@ contrato no Storage).
    salário × freelancer; era distribuição de lucro dentro do custo, R$ 442.500.
 3. ~~**Confirmar os três lotes de janeiro.**~~ ✅ **D110** — ele confirmou com uma linha,
    `15000+15000+15000+(92500+82500+46250)`, e o bloco SISPAG caiu para R$ 19.700.
-4. **Esperar as 6 contrapartes e o extrato da Gabriel.** Os dois estão com ele; nada a fazer
-   até chegarem — R$ 116.865,68 e a segunda empresa. **É tudo o que resta de grande.**
+4. ~~**As contrapartes.**~~ ✅ **D111, D115 e D117** — as 31 viraram uma, e a que sobrou é
+   um centavo de teste.
+5. **Esperar o extrato da Gabriel** e o detalhe dos 5 lotes SISPAG. **É tudo o que resta**,
+   fora R$ 22 mil de miudeza de cartão.
 
 > **Não invente tarefa em cima do que está esperando arquivo.** Das pendências grandes, só a
 > do item 3 é executável hoje. As outras duas são "chegou?" e, se a resposta for não, a
