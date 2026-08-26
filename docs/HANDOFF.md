@@ -43,6 +43,19 @@ pôr dado real dentro do que já existe, e consertar o que só aparece quando o 
 > A branch `worktree-auto-categorizacao` tem o trabalho posterior a isso e ainda não foi
 > mesclada; agora um PR dela contra `main` mostra só o que ela realmente mudou.
 
+### O documento de ações do Andre
+
+**https://claude.ai/code/artifact/921c9b4d-41fa-45c5-b98e-3966672097f7**
+
+É o **único lugar onde o Andre vê a lista** do que depende dele. Republique o mesmo arquivo
+para manter o link — publicar sem passar a URL cria um artefato novo e ele fica com a versão
+velha na mão. Atualize sempre que o estado mudar; uma lista desatualizada é pior que
+nenhuma, porque ele age em cima dela.
+
+> O portão de publicação exige ter **lido o arquivo salvo inteiro** (inclusive a linha 1, que
+> é o runtime injetado) *depois* da última leitura da URL, e na mesma sequência. Ler, publicar,
+> ler de novo não destrava — é buscar, ler tudo, publicar.
+
 ### Os dados reais
 
 `docs/reference/` — **está no `.gitignore` e nunca entra no git.** Tem extrato bancário,
