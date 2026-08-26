@@ -109,6 +109,7 @@ npm run import:sispag       # troca os lotes SISPAG pelos pagamentos de dentro (
 npm run recategorize        # aplica o motor ao que já está no razão (D97)
 npm run boletos             # os BOLETOS RECEBIDOS da Mash (--ensaio / --aplicar, D109)
 npm run socios              # separa distribuição de lucro do salário dos sócios (D110)
+npm run comparar            # a DRE do app contra a da planilha, linha a linha (D114)
 
 npm run propose:rules       # regras de texto vindas da planilha
 npm run propose:parties     # casa nome da planilha ↔ contraparte do extrato
@@ -125,7 +126,7 @@ npm run import:invoices     # faturas de cartão em massa
 | | |
 |---|---|
 | Razão de caixa | **1.067 lançamentos**, 06/08/2025 a 31/07/2026 |
-| Categorizados | **989 (92,7%)** — 78 sem conta |
+| Categorizados | **990 (92,8%)** — 77 sem conta |
 | Competência | 284 linhas de receita + 640 de custo |
 | Receita reconhecida | **R$ 3.556.736,91** (jan–ago/2026) |
 | Contratos | 80 (65 ativos, 15 concluídos), 95 parcelas mensais |
@@ -460,7 +461,7 @@ categorizadas, o custo cresce e o resultado cai, **sem o caixa mudar um centavo*
 
 ## 6. O que falta
 
-**78 lançamentos, R$ 158.816,84.** Quase tudo depende de uma resposta, não de código —
+**77 lançamentos, R$ 155.816,84.** Quase tudo depende de uma resposta, não de código —
 e a maior parte já tem dono conhecido.
 
 Rode **`npm run decisoes`** (as perguntas com a evidência do lado) e **`npm run pendencias`**

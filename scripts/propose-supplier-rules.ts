@@ -102,6 +102,20 @@ const CONFIRMADOS: { taxId: string; code: string; why: string; amount?: string }
     why: "FDN Telecom é por onde o Nicholas Forte recebe — 2× R$ 5.000 batem com a aba Pessoas",
   },
   {
+    // O MEI do `Ricardo`, backend, linha 32 da aba `Pessoas` — apontada pelo Andre.
+    //
+    // **Não é o Ricardo Custodio**, e a diferença é o documento: o sócio é CPF, este é CNPJ
+    // de MEI. Casar por nome aqui teria juntado um freelancer de backend com uma retirada de
+    // sócio, que é a armadilha da D100 na sua forma mais cara.
+    //
+    // A linha 32 vale R$ 3.000 em **janeiro** e zero nos outros sete meses; o razão tem um
+    // único pagamento a este CNPJ, R$ 3.000 em 30/01. Mês exato, valor exato, único dos dois
+    // lados. Vínculo FREELANCER, então 6.10.
+    taxId: "35611661000138",
+    code: "6.10",
+    why: "o MEI do Ricardo backend — R$ 3.000 em jan, único dos dois lados (aba Pessoas, linha 32)",
+  },
+  {
     // `- Penalties & Settlements` vale 45.000,00 em fevereiro e 45.000,00 no ano inteiro.
     // No razão há um único pagamento à Maruri: 45.000,00 em 09/02/2026. Valor exato, mês
     // exato, e único dos dois lados. A Maruri ainda aparece na aba `Vendas e Perdas`, que

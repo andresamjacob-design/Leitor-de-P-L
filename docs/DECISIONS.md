@@ -1804,6 +1804,86 @@ ponta e deixou a outra aberta.
 
 ---
 
+### D114 — A DRE do app é a mesma da planilha em 31 linhas, e a defasagem não é geral
+A comparação linha a linha estava travada por um defeito, não por critério: **R$ 442.500 de
+distribuição de lucro dentro de `6.10 Freelancers`** (D110). Comparar uma linha que carrega
+retirada de sócio contra uma que não carrega não diz nada. Separadas as contas, a pergunta
+passou a ter resposta.
+
+→ `npm run comparar` põe as duas lado a lado. Só o **bloco de custo**, e as exclusões são
+deliberadas: receita já tem conferência própria e mais forte, e **o imposto sai dos dois
+lados** — a planilha o põe acima do lucro bruto e o app em `4.01` dentro do custo, e comparar
+sem alinhar isso inverte o sinal da conclusão (a armadilha que a D101 quase publicou).
+
+**A hipótese que eu construí o script para testar estava errada.** A D101 achou a planilha
+lançando *um mês à frente do caixa* e provou em quatro linhas; o app espelha custo no mês do
+`occurred_on` (D2a). Eu esperava, então, que a DRE do app fosse a dela **inteira** deslocada
+um mês. Não é:
+
+| | |
+|---|---|
+| fecham melhor **alinhadas** | **31 linhas** |
+| fecham melhor **defasadas um mês** | 5 linhas |
+| não fecham em nenhum dos dois | 1 linha (`- Salários`) |
+
+E **16 dessas 31 fecham 7 de 7 meses, ao centavo** — Plano de Saúde, Clicksign, Gsuite, Wix,
+Slack, Plaud, Claude, Trello, Canva, Vindi, ChatGPT, Railway, Claro e TIM, Linkedin, Penalties
+e Brindes. Nessas linhas os dois sistemas não são parecidos: são idênticos.
+
+**A defasagem é de boleto, não de tudo.** As cinco que fecham defasadas — `- Juridico` (7/7),
+`- Agência Ciclo` (7/7), `- Escola.i` (6/7), `- Tarefy`, `- Bank Charges` — são pagas por
+boleto ou por folha. Compra de cartão tem a mesma data nos dois sistemas, e é por isso que a
+maioria alinha. A D101 continua certa; o que estava errado era eu **generalizá-la**.
+
+**`- Salários` não fecha em nenhum dos dois, e é o esperado:** R$ 1.368.044,69 na planilha
+contra R$ 1.214.106,95 no app. A dela é competência pura (a aba `Colaboradores`), a do app é
+o mês em que o dinheiro saiu. É a única linha em que os dois discordam por desenho.
+
+**O que a comparação achou de errado**, e isto é o que justifica a ferramenta existir:
+
+- **`- Viagem e evento`: R$ 26.507,94 na planilha, R$ 0,00 no app.** O razão tem um único
+  pagamento nessa ordem: **R$ 26.507,93 à `B.HUB - CORPORATE EVENTS` em 10/04**, sentado em
+  `6.10 Freelancers`. Mês exato, valor exato a menos do centavo que a planilha arredonda, e o
+  nome da contraparte diz o que ela é. **O app está contando um fornecedor de eventos como
+  folha de terceiros.**
+- **`- Entertainment`: R$ 2.219,55 na planilha, R$ 0,00 no app.** O razão tem esse valor
+  exato em `SALESFORCE26*CNXREG`, 05/03, classificado em **7.02 Salesforce**. `CNXREG` é
+  inscrição no Connections — um evento, não a assinatura do software. Os dois lados têm o
+  dinheiro; discordam sobre a natureza, e essa é escolha do Andre.
+- **`- Alimentação` e `- Travel Meals` caem as duas em 9.03** (D106). Comparadas em separado,
+  cada uma lia o mesmo valor do app e as duas pareciam erradas; o script soma as linhas da
+  planilha que dividem uma conta antes de comparar.
+
+> **Uma armadilha nova, e cara, achada escrevendo isto:** importar `TO_CODE` do
+> `propose-rules.ts` **executa o script inteiro**. A primeira versão do `comparar` rodava um
+> `propose:rules` completo contra o banco a cada execução, em silêncio, só por causa de um
+> `import`. O mapa mudou para `scripts/plano-de-contas.ts`, que não tem efeito nenhum.
+> Duplicá-lo também não servia: duas cópias divergem no dia em que alguém corrige uma só.
+
+---
+
+### D115 — Dois pagamentos que o Andre apontou, e por que o documento decidiu
+Em 26/08/2026 o Andre olhou a lista das contrapartes sem dono e disse: *"FDN Telecom e Ricardo
+são respectivamente pagamento do Nicolas Forte e de um Ricardo presente na linha 32 da parte
+de pessoas do fluxo"*. A primeira virou a D111; a segunda é esta.
+
+**`RICARDO DE FREITAS OLIVEIRA`, CNPJ de MEI, R$ 3.000 em 30/01.** A linha 32 da aba `Pessoas`
+traz `FREELANCER · Ricardo · Backend · gestor Leonardo Oliveira`, com **R$ 3.000 em janeiro e
+zero nos outros sete meses**. O razão tem um único pagamento a esse documento, R$ 3.000 em
+30/01. Mês exato, valor exato, único dos dois lados — o padrão da D101.
+
+> **E aqui o documento não é formalidade, é o que separa duas pessoas.** O outro Ricardo do
+> projeto é o **Ricardo Custodio**, sócio, cujas retiradas a D110 acabou de tirar do custo.
+> Casar por nome teria juntado um freelancer de backend com distribuição de lucro. O sócio é
+> CPF e este é CNPJ de MEI — a regra do projeto (*casar sempre por documento*) existe
+> exatamente para o dia em que dois nomes iguais são duas pessoas.
+
+**Aplicado:** 1 regra por documento → 1 lançamento, **R$ 3.000,00** em 6.10, e o resultado caiu
+de R$ 1.512.875,50 para **R$ 1.509.875,50**. Cobertura 92,7% → **92,8% (990 de 1.067)**, e as
+contrapartes sem dono caem de 6 para **5**. `verify:rls` 7/7, 13 meses com resíduo zero.
+
+---
+
 ## Parte 13 — Decisões da Fase 8
 
 ### D68 — Escritor de XLSX próprio, com entradas sem compressão

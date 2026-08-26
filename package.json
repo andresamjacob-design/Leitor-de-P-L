@@ -39,7 +39,8 @@
     "import:sispag": "vite-node --config vitest.config.ts scripts/import-sispag.ts",
     "recategorize": "vite-node --config vitest.config.ts scripts/recategorize.ts",
     "boletos": "vite-node --config vitest.config.ts scripts/partir-boletos.ts",
-    "socios": "vite-node --config vitest.config.ts scripts/distribuicao-socios.ts"
+    "socios": "vite-node --config vitest.config.ts scripts/distribuicao-socios.ts",
+    "comparar": "vite-node --config vitest.config.ts scripts/comparar-dre.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.4",
