@@ -1,4 +1,4 @@
-# Handover — 25/08/2026
+# Handover — 26/08/2026
 
 Onde tudo está, o que foi feito, e o que falta. Escrito para quem chega sem contexto
 nenhum, inclusive eu mesmo numa conversa nova.
@@ -130,7 +130,7 @@ npm run import:invoices     # faturas de cartão em massa
 | Itaucard 5780 | cartão | 0,00 | 468 | |
 | Itaucard 8299 | cartão | 0,00 | 48 | |
 
-**Três conferências que fecham hoje:**
+**Quatro conferências que fecham hoje** — a quarta nasceu em 26/08:
 
 - A conta corrente marca **226.916,33**, que é o `SALDO TOTAL DISPONÍVEL` declarado pelo
   banco em 31/07/2026. Ao centavo.
@@ -139,12 +139,20 @@ npm run import:invoices     # faturas de cartão em massa
 - **A DRE e o fluxo de caixa fecham nos 13 meses, com resíduo zero** (`verify:reconcile`,
   D85). Os dois razões não batem — não é para baterem —, mas toda diferença entre eles tem
   nome.
+- **As saídas do fluxo batem com a aba `Summary` da planilha de caixa** em cinco dos sete
+  meses, **ao centavo** (D108). Nos outros dois sobram R$ 169,00 e R$ 218,88, que são dois
+  estornos pequenos sem documento para parear. A distância somada é **R$ 387,88**.
+
+> A quarta é de outra natureza que as três primeiras: elas são o sistema conferindo contra
+> si mesmo e contra o banco; esta é o sistema conferindo contra **outro** sistema, que tem
+> critério próprio. É por isso que ela não é `verify:` nenhum — não há como falhar
+> automaticamente sem transformar a escolha do Andre em regra de código.
 
 ---
 
 ## 4. O que foi feito
 
-**55 commits** na branch, de `aa9250d` (onde o `main` está). Por tema, não por
+**58 commits** na branch, de `aa9250d` (onde o `main` está). Por tema, não por
 ordem — e o fio que liga quase tudo é o mesmo: **o dado real chegou e mostrou onde o
 sistema mentia.**
 
@@ -218,6 +226,25 @@ O dado real acabou; o que destravou o resto foram respostas dele, e três mudara
 - **O fluxo mostra o que saiu e não voltou** (D107). Pagamento estornado some das duas
   colunas. O par exige documento, valor **e categoria** iguais — a terceira condição é a D83,
   e é o que impede a Ciclo de ter um recebimento anulado contra um pagamento legítimo.
+
+### As duas últimas respostas, e o que elas custaram para executar (D108–D109)
+
+- **Uma transferência só é transferência quando as duas pernas estão no relatório** (D108).
+  O Andre respondeu que a fatura do cartão conta como saída. O que quase entrou no código
+  foi uma exceção — *"`99.02` é o caso especial"*. A regra verdadeira já estava escrita em
+  `CASH_ACCOUNT_TYPES`: o CDB está dentro do relatório, o cartão não está. Cinco dos sete
+  meses foram a **R$ 0,00** contra a aba `Summary`, e a distância somada caiu de
+  R$ 224.672,43 para **R$ 387,88**. A DRE não se mexeu — lá o custo é a compra, não a fatura.
+- **Os boletos se identificaram por eliminação** (D109). Das quatro candidatas a dona da
+  parcela de R$ 5.000, três **já estão no razão com nome próprio** nos mesmos meses — se
+  fossem o boleto, teriam pago duas vezes. Sobrou a Mash, e o contrato `project` dela fecha
+  em R$ 20.000 = 4 × 5.000. Não é o script adivinhando identidade (D87): é medir quem não
+  pode ser, sobrar um, e o dono confirmar.
+- **Três boletos eram uma linha de extrato com duas contas dentro.** R$ 8.300 é 3.300 do
+  Ongoing mais 5.000 do Projeto, e por isso o banco escreve "boletos" no plural. O Andre
+  mandou partir; `npm run boletos` faz isso com **trava de saldo como condição de saída**, e
+  a filha que sobrevive **herda o `dedup_hash` da mãe** — sem isso, reimportar o extrato
+  dobraria os R$ 8.300 em silêncio.
 
 ### A ponte entre os dois razões
 
@@ -348,13 +375,17 @@ diferenças dos 13 meses:
 | **Saídas de caixa sem competência** | **+ R$ 222.984,67** |
 | Custo de compra no cartão | − R$ 219.356,95 |
 
-A linha do meio é a lista de tarefas em forma de número: **R$ 285 mil que saiu do caixa e
-ainda não pesa na DRE**, porque essas linhas não têm categoria. Conforme forem
+A linha do meio é a lista de tarefas em forma de número: **R$ 222.984,67 que saiu do caixa
+e ainda não pesa na DRE**, porque essas linhas não têm categoria. Conforme forem
 categorizadas, o custo cresce e o resultado cai, **sem o caixa mudar um centavo**.
 
 > Ela era **R$ 1.281.607,12** até 20/08. O SISPAG levou R$ 863.414 embora de uma vez, a
-> D98 mais R$ 32.370 e a D100 mais R$ 27.945 — e essas quedas, medidas na ponte, são a
-> prova de que nada se perdeu pelo caminho.
+> D98 mais R$ 32.370, a D100 mais R$ 27.945 e a D101 mais R$ 72.493 — e essas quedas,
+> medidas na ponte, são a prova de que nada se perdeu pelo caminho.
+
+> **Os boletos da D109 não a moveram, e está certo.** São entrada, não saída; e receita
+> nasce de contrato e NF (SPEC §5), então categorizar recebimento não cria espelho de
+> competência. É o mesmo comportamento da D102 e da D105.
 
 ---
 
@@ -376,7 +407,7 @@ Rode **`npm run decisoes`** (as perguntas com a evidência do lado) e **`npm run
 | bloco | linhas | valor | o que destrava |
 |---|---|---|---|
 | **7 contrapartes sem dono** | 11 | **R$ 126.865,68** | Santa Monica (R$ 84.620), Taliêco (R$ 24.000), FDN Telecom (R$ 10.000), WCommerce (R$ 4.805), Ricardo de Freitas (R$ 3.000), INPI (R$ 440), Keepclear (R$ 0,01). **O Andre disse que vai achar.** Eram 31. |
-| **Lotes SISPAG sem nome** | 8 | **R$ 95.950,00** | Só o detalhe do lote no internet banking. **Plano B combinado: se não achar, entra como `Outros (SISPAG)`.** |
+| **Lotes SISPAG sem nome** | 8 | **R$ 95.950,00** | Só o detalhe do lote no internet banking. **Em 26/08 o Andre escolheu esperar**, sabendo o efeito: aplicar `Outros (SISPAG)` derruba o resultado em R$ 95.950 (jan 81.750, fev 1.200, mar 13.000) e **aproxima** da DRE dele, porque o app está abaixo dela em janeiro e março. O plano B segue disponível e é reversível por regra. |
 | ~~**`BOLETOS RECEBIDOS`**~~ | ~~8~~ | ~~R$ 43.100,00~~ | ✅ **Fechado em 26/08 (D109): é a Mash.** |
 | **Cartão e miúdos** | 64 | R$ 22.251,16 | 24 descrições que ninguém sabe o que são (`SQ *DREAMFORCE SF`, `ASA*MARIA CLARA`, `PIU R E P L EP`). Pior retorno por minuto da lista. |
 
@@ -428,6 +459,38 @@ Em compensação, a **RiHappy pagou R$ 12.000 duas vezes** em 29/07 e a planilha
 > no **fluxo**, R$ 24.000 no mês em que foi pago. É exatamente como os dois razões já se
 > separam (D2).
 
+### A DRE do app e a da planilha ainda não são comparáveis linha a linha
+
+Apareceu medindo o SISPAG para responder ao Andre, e é maior que o SISPAG. **Não é defeito
+de nenhum dos dois** — é critério diferente, e as três conferências do sistema seguem
+fechando. Mas quer dizer que *"a DRE do app bate com a minha"* é projeto separado.
+
+| jan–jul | planilha | app |
+|---|---|---|
+| `- Salários` | **R$ 1.368.044,67** | **R$ 0,00** |
+| `6.10 Freelancers` / `- Freelancers (Outras empresas)` | R$ 140.943,01 | **R$ 1.570.356,95** |
+
+É o mesmo dinheiro em linhas diferentes: o SISPAG é a folha de terceiros, e a planilha a
+chama de salário. A linha `- Freelancers (Outras empresas)` dela vale **20.134,72 todo mês,
+idêntico** — é média, não pagamento.
+
+**E a D101 vale para o imposto, provada ao centavo.** O `4.01` do app é sempre o mês
+anterior da planilha, porque o imposto é pago no mês seguinte e ela o lança na competência:
+
+| app | = planilha de |
+|---|---|
+| março 65.041,67 | **fevereiro** 65.041,67 |
+| abril 59.503,00 | **março** 59.503,00 |
+| julho 73.230,57 | **junho** 73.230,57 |
+
+> ⚠️ **Cuidado ao comparar as duas DREs:** a planilha põe imposto **acima** do lucro bruto e
+> o app põe em `4.01` **dentro** do custo. Comparar `Custos Operacionais` contra o custo do
+> app sem tirar o `4.01` dos dois lados inverte o sinal da conclusão — eu cheguei a medir
+> assim e concluí o contrário do que era verdade.
+
+**A pergunta que abre esse projeto é do Andre:** a folha de terceiros aparece como salário
+ou como freelancer? Enquanto não houver resposta, não vale mexer.
+
 ### Depende de arquivo ou chave que não chegou
 
 | # | O que falta |
@@ -455,13 +518,17 @@ contrato no Storage).
 
 ### Se for fazer só três coisas
 
-1. ~~**Perguntar se a fatura do cartão conta como saída.**~~ **Feito em 25/08 (D108)** — cinco
-   dos sete meses foram a zero ao centavo.
-2. **Fechar os boletos.** A parcela de R$ 5.000 é da **Mash (Service)**, medido e não
-   adivinhado (D109) — falta só o Andre confirmar e dizer como partir os três boletos de
-   R$ 8.300, que carregam duas contas dentro.
+1. ~~**Perguntar se a fatura do cartão conta como saída.**~~ ✅ **D108** — cinco dos sete
+   meses foram a zero ao centavo.
+2. ~~**Fechar os boletos.**~~ ✅ **D109** — era a Mash, por eliminação, e os três de R$ 8.300
+   foram partidos a pedido dele.
 3. **Esperar as 7 contrapartes e o extrato da Gabriel.** Os dois estão com ele; nada a fazer
-   até chegarem.
+   até chegarem. **É literalmente tudo o que resta que não seja miudeza de cartão** —
+   R$ 222.815,68 dos R$ 245.066,84.
+
+> Se sobrar tempo e não chegar nada: a pergunta da folha de terceiros (salário × freelancer)
+> é a que destrava a comparação linha a linha entre as duas DREs, e é do Andre. Não vale
+> começar sem ela.
 
 ---
 
@@ -570,6 +637,26 @@ Aprendidos neste trabalho:
   mesmo valor, ninguém ganhou nem gastou: o dinheiro trocou de bolso.
 - **Backtick dentro de comentário SQL fecha o template literal.** Comentar `--` dentro de
   uma query em template string é seguro; citar um nome de coluna com crase, não.
+- **Partir um lançamento em dois exige herdar o `dedup_hash`.** O hash existe para que
+  reimportar o mesmo extrato não crie o mesmo movimento duas vezes. Se as duas filhas
+  ganhassem hash honesto do próprio conteúdo, o arquivo original — que traz a linha inteira
+  — voltaria a entrar como novidade, e ninguém veria. A filha que sobrevive fica com o hash
+  da mãe: ele deixa de descrever o conteúdo dela e passa a dizer o que o campo existe para
+  dizer, *"aquele movimento já está representado aqui"*.
+- **Um número que ninguém reconhece não é conferência, é decoração.** A trava de saldo do
+  `boletos` começou somando só os movimentos e imprimiu **R$ −25.460,21**; com a abertura
+  mas com os cartões dentro, **R$ 484.744,56**; só com as contas de caixa, R$ 711.916,33.
+  Nas três versões o *delta* era zero e a trava passava — o errado era o número impresso,
+  que **parecia** saldo. Só se soube qual era o certo porque R$ 711.916,33 já estava neste
+  handover, e essa conta não tinha entrado na consulta.
+- **Comparar duas DREs exige alinhar onde cada uma põe o imposto.** A planilha do Andre põe
+  imposto **acima** do lucro bruto; o app põe em `4.01` **dentro** do custo. Medi sem tirar
+  os dois lados e concluí que o SISPAG *afastava* o app da planilha; alinhado, ele
+  **aproxima**. A conclusão inverteu de sinal por causa da fronteira de uma linha.
+- **Data lida como `Date` num script de diagnóstico anda um dia para trás.** A regra do
+  projeto — data é string `YYYY-MM-DD` — vale também para consulta de investigação: os oito
+  lotes SISPAG apareceram como 08/01 e 19/01 num rascunho e são 09/01 e 20/01. `::text` na
+  query resolve, e é o que evita descrever ao Andre uma data que o extrato dele não tem.
 
 ---
 
