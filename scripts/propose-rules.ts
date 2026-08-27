@@ -220,6 +220,33 @@ const STATEMENT_RULES: { pattern: string; code: string; direction: Direction; no
   { pattern: "SISPAG TRIBUTOS", code: "4.01", direction: "out", note: "tributo pago em lote" },
   { pattern: "PAGAMENTOS TRIB", code: "4.01", direction: "out", note: "tributo pago por código de barras" },
   { pattern: "ANUIDADE", code: "11.01", direction: "out", note: "anuidade do cartão" },
+
+  // ---- tarifa bancária e o estorno dela (D121) ----
+  //
+  // O Andre perguntou se a saída de R$ 169 que sobrava na ponte não tinha sido estornada. Foi:
+  // `TAR PLANO ADAPT 1 02/26` saiu em 03/03 e voltou em 05/03. Os dois estavam sem conta, e
+  // por isso o estorno não abatia nada — a DRE contava a tarifa e ignorava a devolução.
+  //
+  // Olhando a família inteira, o mesmo valia para 21 estornos de anuidade: `11.01` tinha
+  // R$ 1.861,50 de tarifa cobrada e **nenhum** dos R$ 1.288,73 devolvidos. A tarifa líquida
+  // de verdade é R$ 741,77.
+  //
+  // **Entrada em conta de custo precisa de regra explícita** — a D86 barra o histórico de
+  // fazer isso, e deixa a exceção escrita: regra pode, porque tem `direction` para declarar
+  // que quis. É o mesmo caminho da D103, com as devoluções do Ricardo.
+  //
+  // O par não pode ser resolvido pelo `refundedEntryIds` (D107) e nunca vai poder: aquele
+  // exige documento, e **tarifa de banco não tem contraparte** — o banco não é contraparte no
+  // extrato, é o próprio extrato. O que faz os dois se cancelarem aqui é o espelho de
+  // competência: saída entra como custo positivo, entrada como negativo (D2a).
+  { pattern: "ESTORNO ANUIDADE", code: "11.01", direction: "in", note: "anuidade estornada pelo banco" },
+  { pattern: "ESTORNO TAR", code: "11.01", direction: "in", note: "tarifa estornada pelo banco" },
+  { pattern: "TAR PLANO ADAPT", code: "11.01", direction: "out", note: "tarifa de plano de conta" },
+  // O banco escreve o mesmo estorno de três jeitos, e `ESTORNO ANUIDADE` não pega
+  // `ESTORNO DE ANUIDADE` — a preposição no meio. E o de IOF é **11.02**, não tarifa:
+  // devolver o custo de IOF alivia o IOF, não a anuidade.
+  { pattern: "ESTORNO DE ANUIDADE", code: "11.01", direction: "in", note: "anuidade estornada, outra grafia do banco" },
+  { pattern: "ESTORNO CUSTO DE IOF", code: "11.02", direction: "in", note: "IOF estornado pelo banco" },
 ];
 
 type Direction = "in" | "out";

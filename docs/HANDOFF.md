@@ -130,7 +130,7 @@ npm run import:invoices     # faturas de cartão em massa
 | | |
 |---|---|
 | Razão de caixa | **1.067 lançamentos**, 06/08/2025 a 31/07/2026 |
-| Categorizados | **1.002 (93,9%)** — 65 sem conta |
+| Categorizados | **1.024 (96,0%)** — 43 sem conta |
 | Competência | 284 linhas de receita + 640 de custo |
 | Receita reconhecida | **R$ 3.556.736,91** (jan–ago/2026) |
 | Contratos | 80 (65 ativos, 15 concluídos), 95 parcelas mensais |
@@ -437,12 +437,13 @@ diferenças dos 13 meses:
 | Folha paga, com competência na planilha | + R$ 1.224.299,02 |
 | Distribuição de lucro aos sócios | + R$ 442.500,00 |
 | Custo de compra no cartão | − R$ 219.356,95 |
-| **Saídas de caixa sem competência** | **+ R$ 169,00** |
+| **Saídas de caixa sem competência** | **R$ 0,00** |
 
-> **A linha de baixo era a lista de tarefas do projeto, e acabou.** Ela valia
-> **R$ 1.281.607,12** em 20/08 e hoje vale **R$ 169,00** — o estorno de março que a D107
-> nomeou e nunca teve par. O que a esvaziou não foi só categorizar: foi a D120 tirar a folha
-> de dentro dela e pôr num balde que diz a verdade sobre o que ela é.
+> **A linha de baixo era a lista de tarefas do projeto, e acabou de vez.** Ela valia
+> **R$ 1.281.607,12** em 20/08 e hoje tem **zero linhas**: não sobra um centavo de dinheiro
+> que saiu do caixa e não tenha destino declarado na DRE. O que a esvaziou foram duas coisas
+> — a D120 tirando a folha de dentro dela, e a D121 achando que os últimos R$ 169 eram uma
+> **cobrança** que o banco estornou, não o estorno.
 
 > **A linha dos sócios é líquida de propósito (D113).** Ela chegou a ser duas — distribuição
 > bruta e devolução —, e separadas as duas mentiam: a empresa não distribuiu R$ 607.500, e
@@ -472,7 +473,7 @@ categorizadas, o custo cresce e o resultado cai, **sem o caixa mudar um centavo*
 
 ## 6. O que falta
 
-**65 lançamentos, R$ 22.251,17** — só cartão e miudeza. Quase tudo depende de uma resposta, não de código —
+**43 lançamentos, R$ 20.793,44** — só cartão e miudeza. Quase tudo depende de uma resposta, não de código —
 e a maior parte já tem dono conhecido.
 
 Rode **`npm run decisoes`** (as perguntas com a evidência do lado) e **`npm run pendencias`**

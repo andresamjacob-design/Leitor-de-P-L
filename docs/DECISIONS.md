@@ -2187,6 +2187,60 @@ pagamento a mais virava custo em silêncio.
 
 ---
 
+### D121 — "Essa saída de 169 não foi estornada?" — foi, e mais vinte outras
+A D120 deixou a linha `Saídas de caixa sem competência` em R$ 169,00, e eu a descrevi como
+*"o estorno de março que a D107 nomeou e nunca teve par"*. O Andre perguntou:
+
+> *"Essa saída de 169 não foi estornada posteriormente?"*
+
+Foi. E a descrição estava errada de um jeito específico: **aquilo não era o estorno, era a
+cobrança.** Os dois estão no razão desde sempre:
+
+```
+03/03  saída    R$ 169,00   TAR PLANO ADAPT 1  02/26
+05/03  entrada  R$ 169,00   ESTORNO TAR PLANO ADAPT1
+```
+
+O banco cobrou a tarifa e devolveu dois dias depois. **Os dois estavam sem conta**, então o
+estorno não abatia nada — e eu vinha citando a cobrança como se fosse a devolução.
+
+**Olhando a família inteira, era muito maior que R$ 169.** A conta `11.01` tinha
+**R$ 1.861,50 de tarifa cobrada e nenhum dos R$ 1.288,73 devolvidos** — 21 estornos de
+anuidade parados sem categoria desde a importação. A DRE contava tarifa que o banco tinha
+estornado.
+
+**Por que o pareamento da D107 nunca ia resolver isso, e não é defeito dela.** Aquele exige
+mesmo documento — *"sem identidade não há par; nome não basta para anular dinheiro"* —, e
+**tarifa de banco não tem contraparte**: o banco não é contraparte no extrato, é o próprio
+extrato. O que faz os dois se cancelarem aqui é outro mecanismo, o espelho de competência
+(D2a): saída entra como custo positivo, entrada como negativo.
+
+→ Cinco regras de texto com sentido, em `STATEMENT_RULES`. **Entrada em conta de custo exige
+regra explícita** — a D86 barra o histórico de fazer isso e deixa a exceção escrita: regra
+pode, porque tem `direction` para declarar que quis. É o caminho da D103.
+
+**O banco escreve o mesmo estorno de três jeitos**, e a primeira leva de regras pegou só dois:
+`ESTORNO ANUIDADE` não alcança `ESTORNO DE ANUIDADE` — a preposição no meio. E `ESTORNO CUSTO
+DE IOF` é **11.02**, não tarifa: devolver custo de IOF alivia o IOF, não a anuidade. Cinco
+linhas sobraram na primeira rodada e apareceram porque eu fui olhar o que restou em vez de
+confiar no total.
+
+**Aplicado:** 22 lançamentos, e o resultado **subiu R$ 1.119,73** — custo que a empresa não
+teve. Tarifas mais IOF ficaram em **R$ 3.810,21 líquidos**. Cobertura 93,9% → **96,0%
+(1.024 de 1.067)**.
+
+> **E a linha da ponte foi a zero.** `Saídas de caixa sem competência` valia
+> **R$ 1.281.607,12** em 20/08 — era a lista de tarefas do projeto em forma de número — e
+> hoje tem **zero linhas**. Não sobra um centavo de dinheiro que saiu do caixa e não tenha
+> destino declarado na DRE.
+
+> **A lição é sobre a descrição, não sobre a tarifa.** Eu carreguei "o estorno de março" por
+> três decisões (D107, D108, D120) sem nunca abrir as duas linhas. O rótulo estava
+> aproximadamente certo — havia um estorno envolvido — e por isso passou. **Número pequeno
+> com nome plausível é o que menos se confere**, e este escondia vinte e um irmãos.
+
+---
+
 ## Parte 13 — Decisões da Fase 8
 
 ### D68 — Escritor de XLSX próprio, com entradas sem compressão
