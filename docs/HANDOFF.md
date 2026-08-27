@@ -109,6 +109,7 @@ npm run import:sispag       # troca os lotes SISPAG pelos pagamentos de dentro (
 npm run recategorize        # aplica o motor ao que já está no razão (D97)
 npm run boletos             # os BOLETOS RECEBIDOS da Mash (--ensaio / --aplicar, D109)
 npm run lotes               # os últimos lotes SISPAG, nomeados pelo banco (D118)
+npm run corrigir            # conta errada em linha que já tem conta (D119)
 npm run socios              # separa distribuição de lucro do salário dos sócios (D110)
 npm run comparar            # a DRE do app contra a da planilha, linha a linha (D114)
 npm run comparar:fluxo      # o fluxo do app contra a aba Expenses, linha a linha (D116)

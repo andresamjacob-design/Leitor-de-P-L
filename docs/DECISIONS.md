@@ -2081,6 +2081,49 @@ só o bloco de cartão e miudezas. **O bloco SISPAG acabou.**
 
 ---
 
+### D119 — A linha categorizada errada não tinha ferramenta nenhuma
+O `recategorize` e o `propose:suppliers` filtram `category_id is null` — os dois **só
+preenchem lacuna**. É a escolha certa: decidir por cima de uma decisão existente é diferente
+de decidir onde não havia nada. E tem um efeito colateral que ninguém tinha notado: **uma
+linha categorizada errada sobrevive a tudo.** Nenhum comando do projeto a alcança.
+
+A comparação com as duas planilhas (D114, D116) achou dois casos, e **nenhum é decisão nova**:
+
+- **Conex & Result, 4 linhas, R$ 4.800.** A regra por documento diz `8.01` desde 24/08 —
+  resposta do Andre na D104, *"Conex & Result é contabilidade"*. Janeiro, fevereiro e março
+  obedecem; **abril a julho ficaram em `6.10`**, categorizados pelo histórico do SISPAG antes
+  da regra existir. O app estava contradizendo a própria regra.
+
+  A planilha mediu o estrago ao centavo antes de eu entender a causa: `Contabilidade (Boleto)`
+  vale R$ 2.400 em abr/mai/jul e R$ 3.450 em jun, e o app tinha **exatamente R$ 1.200 a menos
+  em cada um dos quatro meses**.
+- **B.HUB, R$ 26.507,93** (D114): fornecedor de eventos contado como folha de terceiros.
+
+**A pergunta óbvia era por que não varrer automaticamente**, aplicando toda regra explícita
+ao que a contradiz. Medi antes de escrever, e o número respondeu:
+
+> **R$ 1.014.064,93 em lançamentos contradizem alguma regra explícita por documento** — e
+> quase tudo são os sócios em `6.11`, que a **D110 pôs lá de propósito**. As regras que dizem
+> `6.10` são as antigas, de quando a folha inteira era uma conta só.
+
+**Uma varredura automática teria desfeito a D110 inteira, em silêncio, no mesmo dia em que
+ela foi escrita.** Regra explícita não é prova de estar atualizada — é prova de que alguém
+decidiu aquilo *um dia*. Então a tabela é escrita, como a dos lotes da D118, e cada linha diz
+por quê.
+
+→ `npm run corrigir`. As travas: o documento tem de ter **exatamente** o número de linhas
+declarado somando **exatamente** o valor declarado, senão recusa; o saldo não pode se mover;
+e o custo total **não pode mudar**, porque as duas correções trocam despesa por despesa — só
+a linha em que o custo aparece muda. Essa última é a conferência mais forte que o script tem,
+porque ela falharia se eu tivesse errado a conta de destino.
+
+**Aplicado em 27/08/2026:** 5 linhas, saldo em R$ 711.916,33 antes e depois, custo total
+inalterado. No `comparar:fluxo` as linhas que fecham os sete meses foram de 22 para **23**, e
+**a distância somada caiu de R$ 57.577,17 para R$ 26.525,41** — R$ 31.051,76 de uma vez, com
+zero centavo de dinheiro novo entrando na DRE.
+
+---
+
 ## Parte 13 — Decisões da Fase 8
 
 ### D68 — Escritor de XLSX próprio, com entradas sem compressão
