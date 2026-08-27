@@ -2124,6 +2124,69 @@ zero centavo de dinheiro novo entrando na DRE.
 
 ---
 
+### D120 — A folha em competência deixa de nascer do caixa
+O Andre definiu o critério de aceitação em 27/08/2026, e ele é mais estreito do que o projeto
+vinha assumindo:
+
+> *"O app tem que me dar duas coisas apenas: um fluxo de caixa igual ao que tenho na planilha
+> e, em outra aba, o DRE igual à planilha de DRE que tenho. Os salários presentes na planilha
+> de fluxo devem bater com a aba de fluxo do app, e os presentes na aba de DRE devem bater com
+> os da planilha do DRE."*
+
+Eu vinha chamando a diferença de `- Salários` de **"por desenho"** — competência contra caixa,
+os dois certos cada um no seu regime. Estava errado sobre o que ele precisava: os dois regimes
+existirem não obriga a DRE do app a datar folha pelo pagamento.
+
+**A medição mostrou que não havia atalho.** Nem alinhado nem defasado fecha:
+
+| | app × DRE, mesmo mês | app × DRE, mês anterior |
+|---|---|---|
+| janeiro | −163.652 | — |
+| abril | +68.861 | +15.156 |
+| julho | −32.999 | −1.825 |
+
+Não existe um deslocamento único que sirva, porque **cada pessoa tem o seu ritmo de
+pagamento**. Marcar `competence_period` linha a linha (D2b) exigiria casar pagamento →
+pessoa → mês, ou seja, casar **nome com documento** — a coisa que este projeto mais evita.
+
+→ O caminho escolhido foi o outro: **a folha em competência é lida da aba `Colaboradores`**,
+que é a fonte de competência dele, e o pagamento **deixa de espelhar**. Não é atalho — é o
+desenho que o sistema já tinha: dois razões separados (D2), `source = 'accrual'` já no enum,
+e o `recognize:manual` já fazendo exatamente isso para contratos de valor variável.
+
+**A trava que vale mais que as outras não depende de mim.** As 58 linhas de pessoa da aba
+somam **exatamente** a linha de totais da própria aba, nos sete meses. O script confere isso
+antes de escrever, então a conferência é *a planilha sendo consistente consigo mesma*, e não
+eu tendo somado certo.
+
+**Aplicado:** 230 linhas de competência criadas (R$ 1.055.029,69 em `6.10`, R$ 313.015,00 em
+`6.11`), 221 espelhos de caixa removidos (R$ 1.223.299,02). O saldo ficou em R$ 711.916,33 —
+**nenhum `cash_entries` foi tocado** — e o custo subiu os R$ 144.745,67 previstos. O resultado
+acumulado foi para **R$ 1.231.564,16**.
+
+**`- Salários` passou a fechar 7 de 7 meses: R$ 1.368.044,69 dos dois lados, ao centavo.** E o
+`comparar` passou de *"1 linha não fecha em nenhum dos dois"* para **zero**.
+
+**A ponte precisou de um balde novo, pela lição da D113.** A folha paga sem espelho cairia em
+`saidasSemEspelho`, cujo rótulo diz *ainda* sem competência — e R$ 1,2 milhão de folha viraria
+lista de tarefas. Agora ela tem linha própria, **`Folha paga, com competência na planilha`**, e
+o efeito disso é o número que fecha esta decisão:
+
+> **`Saídas de caixa sem competência` está em R$ 169,00.** Ela começou o projeto em
+> **R$ 1.281.607,12** — a "lista de tarefas em forma de número" da §5.4 do handover. O que
+> sobra é o estorno de março que a D107 nomeou e nunca teve par.
+
+**A consequência que vale saber, e que é o ponto:** a DRE deixou de derivar do caixa para a
+folha. Se existir pagamento que a `Colaboradores` não tem, ou pessoa na planilha que nunca foi
+paga, **os dois não se cancelam mais** — a ponte mostra em vez de esconder. Antes, um
+pagamento a mais virava custo em silêncio.
+
+> **Isto cobre jan–jul/2026, e só.** Para os meses seguintes o Andre disse *"ajustamos os
+> próximos meses juntos"* — o script recusa rodar de novo no mesmo período em vez de duplicar,
+> e a decisão sobre como a folha entra daqui para frente continua aberta.
+
+---
+
 ## Parte 13 — Decisões da Fase 8
 
 ### D68 — Escritor de XLSX próprio, com entradas sem compressão

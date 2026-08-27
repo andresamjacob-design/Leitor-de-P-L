@@ -12,6 +12,7 @@ function buckets(overrides: Partial<MonthBuckets> = {}): MonthBuckets {
     entradasSemEspelho: ZERO,
     saidasSemEspelho: ZERO,
     saidasDeSocios: ZERO,
+    saidasDeFolha: ZERO,
     entradasDeSocios: ZERO,
     saidasComEspelhoEmOutroMes: ZERO,
     entradasComEspelhoEmOutroMes: ZERO,

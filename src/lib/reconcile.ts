@@ -51,6 +51,16 @@ export type MonthBuckets = {
    */
   saidasDeSocios: Cents;
   /**
+   * Folha paga cuja competência **não** vem do dia do pagamento (D120).
+   *
+   * Desde a D120 a folha em competência é lida da aba `Colaboradores`, que é a fonte de
+   * competência do Andre, e o pagamento deixou de espelhar — senão o custo entraria duas
+   * vezes. Sem um balde próprio ela cairia em `saidasSemEspelho`, cujo rótulo diz *ainda*
+   * sem competência, e R$ 1,2 milhão de folha viraria lista de tarefas. É a mesma lição da
+   * D113, e o mesmo remédio.
+   */
+  saidasDeFolha: Cents;
+  /**
    * Retirada devolvida. Existe como balde separado porque o razão a guarda como entrada,
    * mas **não vira linha própria na ponte** (D113): ela abate `saidasDeSocios`, porque o
    * que aconteceu foi uma distribuição menor, não um recebimento.
@@ -110,6 +120,11 @@ export function buildBridge(buckets: MonthBuckets): Bridge {
       why: "dinheiro pago que ainda não virou custo porque está sem categoria — vai pesar no resultado quando alguém responder",
     },
     {
+      label: "Folha paga, com competência na planilha",
+      amount: buckets.saidasDeFolha,
+      why: "D120 — a competência da folha vem da aba `Colaboradores`, não do dia do pagamento; o pagamento não espelha para o custo não entrar duas vezes",
+    },
+    {
       // Líquida de propósito (D113): retirada devolvida **não é entrada**. Mostrar
       // "distribuiu 607.500" e "recebeu de volta 165.000" faz a empresa parecer ter
       // distribuído o que não distribuiu, e faz a devolução parecer dinheiro ganho. O que
@@ -141,7 +156,7 @@ export function buildBridge(buckets: MonthBuckets): Bridge {
     {
       label: "Custo sem caixa nenhum",
       amount: -buckets.custoSemCaixa,
-      why: "contrato, POC ou plano manual — competência que não tem, e não deve ter, linha de caixa",
+      why: "contrato, POC, plano manual ou a folha lida da `Colaboradores` (D120) — competência que não tem, e não deve ter, linha de caixa própria",
     },
     {
       label: "Ajuste manual em espelho",

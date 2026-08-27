@@ -41,6 +41,12 @@ const sql = postgres(url, { max: 1, connect_timeout: 20 });
 
 /** As contas que carregam dinheiro de verdade. O cartão é passivo, e fica fora (D-C). */
 const CASH_TYPES = ["bank", "cash", "investment"];
+/**
+ * As contas de folha, cuja competência vem da aba `Colaboradores` desde a D120. O pagamento
+ * delas não espelha, e por isso precisa de um balde próprio: sem ele cairia no de "ainda sem
+ * categoria" e R$ 1,2 milhão de folha viraria pendência.
+ */
+const PAYROLL_CODES = ["6.10", "6.11"];
 
 function iso(value: unknown): string {
   if (value instanceof Date) return value.toISOString().slice(0, 10);
@@ -68,6 +74,7 @@ try {
       operacional: string | null;
       entradas_sem_espelho: string | null;
       saidas_sem_espelho: string | null;
+      saidas_folha: string | null;
       saidas_socios: string | null;
       entradas_socios: string | null;
       saidas_espelho_outro_mes: string | null;
@@ -82,6 +89,7 @@ try {
              r.period  as espelho_periodo,
              r.amount  as espelho_valor,
              coalesce(c.kind::text, '') as conta_kind,
+             coalesce(c.code, '') as conta_code,
              case when e.direction = 'out' then e.amount else -e.amount end as esperado
       from cash_entries e
       join accounts a on a.id = e.account_id
@@ -94,7 +102,10 @@ try {
     select mes as period,
       sum(case when direction = 'in' then amount else -amount end) as operacional,
       sum(amount) filter (where direction = 'in'  and espelho is null and conta_kind <> 'owner_draw') as entradas_sem_espelho,
-      sum(amount) filter (where direction = 'out' and espelho is null and conta_kind <> 'owner_draw') as saidas_sem_espelho,
+      sum(amount) filter (where direction = 'out' and espelho is null and conta_kind <> 'owner_draw'
+                            and conta_code <> all(${PAYROLL_CODES})) as saidas_sem_espelho,
+      sum(amount) filter (where direction = 'out' and espelho is null
+                            and conta_code = any(${PAYROLL_CODES})) as saidas_folha,
       sum(amount) filter (where direction = 'out' and espelho is null and conta_kind =  'owner_draw') as saidas_socios,
       sum(amount) filter (where direction = 'in'  and espelho is null and conta_kind =  'owner_draw') as entradas_socios,
       sum(amount) filter (where direction = 'out' and espelho is not null and espelho_periodo <> mes) as saidas_espelho_outro_mes,
@@ -131,6 +142,7 @@ try {
   const entradasSem = index(cash.map((r) => ({ period: r.period, v: r.entradas_sem_espelho })));
   const saidasSem = index(cash.map((r) => ({ period: r.period, v: r.saidas_sem_espelho })));
   const saidasSocios = index(cash.map((r) => ({ period: r.period, v: r.saidas_socios })));
+  const saidasFolha = index(cash.map((r) => ({ period: r.period, v: r.saidas_folha })));
   const entradasSocios = index(cash.map((r) => ({ period: r.period, v: r.entradas_socios })));
   const saidasOutro = index(cash.map((r) => ({ period: r.period, v: r.saidas_espelho_outro_mes })));
   const entradasOutro = index(cash.map((r) => ({ period: r.period, v: r.entradas_espelho_outro_mes })));
@@ -167,6 +179,7 @@ try {
       entradasSemEspelho: at(entradasSem, period),
       saidasSemEspelho: at(saidasSem, period),
       saidasDeSocios: at(saidasSocios, period),
+      saidasDeFolha: at(saidasFolha, period),
       entradasDeSocios: at(entradasSocios, period),
       saidasComEspelhoEmOutroMes: at(saidasOutro, period),
       entradasComEspelhoEmOutroMes: at(entradasOutro, period),
