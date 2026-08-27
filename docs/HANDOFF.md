@@ -110,6 +110,7 @@ npm run recategorize        # aplica o motor ao que já está no razão (D97)
 npm run boletos             # os BOLETOS RECEBIDOS da Mash (--ensaio / --aplicar, D109)
 npm run lotes               # os últimos lotes SISPAG, nomeados pelo banco (D118)
 npm run corrigir            # conta errada em linha que já tem conta (D119)
+npm run folha               # a folha em competência, lida da Colaboradores (D120)
 npm run socios              # separa distribuição de lucro do salário dos sócios (D110)
 npm run comparar            # a DRE do app contra a da planilha, linha a linha (D114)
 npm run comparar:fluxo      # o fluxo do app contra a aba Expenses, linha a linha (D116)
@@ -431,10 +432,17 @@ diferenças dos 13 meses:
 | | |
 |---|---|
 | Receita reconhecida no mês | + R$ 3.556.736,91 |
-| Entradas de caixa sem competência | − R$ 2.830.308,69 |
+| Entradas de caixa sem competência | − R$ 2.831.308,69 |
+| Custo sem caixa nenhum | − R$ 1.368.044,69 |
+| Folha paga, com competência na planilha | + R$ 1.224.299,02 |
 | Distribuição de lucro aos sócios | + R$ 442.500,00 |
-| **Saídas de caixa sem competência** | **+ R$ 136.734,67** |
 | Custo de compra no cartão | − R$ 219.356,95 |
+| **Saídas de caixa sem competência** | **+ R$ 169,00** |
+
+> **A linha de baixo era a lista de tarefas do projeto, e acabou.** Ela valia
+> **R$ 1.281.607,12** em 20/08 e hoje vale **R$ 169,00** — o estorno de março que a D107
+> nomeou e nunca teve par. O que a esvaziou não foi só categorizar: foi a D120 tirar a folha
+> de dentro dela e pôr num balde que diz a verdade sobre o que ela é.
 
 > **A linha dos sócios é líquida de propósito (D113).** Ela chegou a ser duas — distribuição
 > bruta e devolução —, e separadas as duas mentiam: a empresa não distribuiu R$ 607.500, e
