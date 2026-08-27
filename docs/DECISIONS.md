@@ -2015,6 +2015,72 @@ somada caiu de R$ 69.783,55 para **R$ 49.397,17**.
 
 ---
 
+### D118 — Os últimos lotes SISPAG, e dois que o banco deixou ambíguos
+A D96 abriu 34 lotes e decompôs R$ 1.221.679,97 em 116 pagamentos com nome e documento.
+**Oito não tinham nome nem no PDF itemizado.** Três se identificaram por aritmética na D110 —
+eram pró-labore e distribuição de sócio — e cinco sobraram, R$ 19.700, esperando o detalhe no
+internet banking. O Andre trouxe a lista em 27/08/2026, e ela soma **exatamente R$ 19.700,00**.
+
+| data | valor | quem | conta |
+|---|---|---|---|
+| 20/01 | 500,00 | Erick Nogueira Alvarez | 6.10 |
+| 21/01 | 5.000,00 | Danillo Costa (advogado) | 8.02 |
+| 05/02 | 1.200,00 | contabilidade | 8.01 |
+| 05/03 | 10.000,00 | Angela Nascimento Vaz | 6.10 |
+| 05/03 | 3.000,00 | João Ruocco | 6.10 |
+
+**Estes vêm escritos, e não derivados, porque não havia de onde derivar.** Lote anônimo não
+tem contraparte: regra por documento não alcança, regra por texto lê `PAGAMENTOS A
+FORNECEDORES`, e o razão não tem nada a promover (D100). A única fonte era o banco, e ela
+chegou como uma lista. Escrever a lista é honesto; inferi-la seria adivinhar.
+
+**Sobre o de R$ 10.000 o Andre escreveu:** *"aqui pode ser o pagamento do Aparecido Ribeiro
+(João Beato) ou da Angela Nascimento"*. É a D109 outra vez — medir quem **não pode** ser:
+
+- **O Aparecido já tem R$ 10.000 nomeado em março** no razão. Se o lote fosse dele, teria
+  recebido duas vezes no mesmo mês.
+- **A Angela tem fevereiro e abril e não tem março**, e a aba `Pessoas` diz que ela recebeu
+  R$ 10.000 nos três.
+
+Sobra uma. O mesmo teste confirma o **João Ruocco**: R$ 3.000 em fev e abr, março faltando, e
+a planilha diz que havia.
+
+> **E vale dizer o que a desambiguação *não* muda:** os dois caem em **6.10** de qualquer
+> jeito. A escolha entre Aparecido e Angela move o nome, não a conta — então nenhum número
+> deste script depende dela. Registrar isso é o que impede a próxima pessoa de achar que a
+> contabilidade ficou pendurada num palpite.
+
+**Dois fechamentos que ninguém foi procurar, e que a lista produziu sozinha:**
+
+- **`Time - Freelancers` de janeiro vale R$ 3.500** na planilha de fluxo, e é Erick Nogueira
+  (500) mais o Ricardo backend (3.000, D115). O lote de 20/01 completa a linha ao centavo.
+- **`Legal & Professional Fees` de janeiro vale R$ 10.000** e o razão só tinha R$ 5.000
+  nomeados ao Danillo. O lote de 21/01 é exatamente a metade que faltava.
+
+→ `npm run lotes`. **A trava mais útil não olha o banco de dados:** a tabela tem de somar
+R$ 19.700,00, que é o total que o banco entregou, e o script para antes de qualquer consulta
+se não somar. Uma conferência que não depende de eu ter somado certo vale mais que três que
+dependem. As outras: data e valor exatos, sem conta e sem documento, um candidato por lote, e
+o saldo não pode se mover.
+
+**A contraparte continua vazia de propósito.** O banco mandou **nomes**, não documentos, e
+este projeto casa por documento (D40). Gravar nome em `counterparty_name` criaria base para
+casamento automático depois — a armadilha da D100, agora oferecida de bandeja.
+
+**Aplicado em 27/08/2026:** 5 lotes, **R$ 19.700,00**, 5 espelhos criados. O saldo ficou em
+R$ 711.916,33 antes e depois e o custo subiu exatamente os R$ 19.700 previstos. Cobertura
+93,4% → **93,9% (1.002 de 1.067)**, e o que falta decidir caiu para **R$ 22.251,17** — que é
+só o bloco de cartão e miudezas. **O bloco SISPAG acabou.**
+
+> **Uma coisa que ficou pior e está certa.** A distância do `comparar:fluxo` subiu de
+> R$ 49.397,17 para R$ 57.577,17. Não é regressão: é o app passando a ter dinheiro que a
+> planilha distribui em linhas diferentes. O `Legal` do app ficou R$ 440 acima do dele, e os
+> R$ 440 são o INPI (D117) — pago em maio, enquanto o `- Juridico` da DRE dele é zero de
+> março em diante. **Categorizar certo pode afastar de uma planilha que agrupa diferente**, e
+> confundir as duas coisas seria voltar a otimizar para o número em vez de para o fato.
+
+---
+
 ## Parte 13 — Decisões da Fase 8
 
 ### D68 — Escritor de XLSX próprio, com entradas sem compressão

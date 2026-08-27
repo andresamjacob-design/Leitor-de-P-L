@@ -41,7 +41,8 @@
     "boletos": "vite-node --config vitest.config.ts scripts/partir-boletos.ts",
     "socios": "vite-node --config vitest.config.ts scripts/distribuicao-socios.ts",
     "comparar": "vite-node --config vitest.config.ts scripts/comparar-dre.ts",
-    "comparar:fluxo": "vite-node --config vitest.config.ts scripts/comparar-fluxo.ts"
+    "comparar:fluxo": "vite-node --config vitest.config.ts scripts/comparar-fluxo.ts",
+    "lotes": "vite-node --config vitest.config.ts scripts/lotes-sispag.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.4",

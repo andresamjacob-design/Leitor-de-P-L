@@ -108,6 +108,7 @@ npm run vincular            # põe o CNPJ do extrato no cliente que já existe (
 npm run import:sispag       # troca os lotes SISPAG pelos pagamentos de dentro (D96)
 npm run recategorize        # aplica o motor ao que já está no razão (D97)
 npm run boletos             # os BOLETOS RECEBIDOS da Mash (--ensaio / --aplicar, D109)
+npm run lotes               # os últimos lotes SISPAG, nomeados pelo banco (D118)
 npm run socios              # separa distribuição de lucro do salário dos sócios (D110)
 npm run comparar            # a DRE do app contra a da planilha, linha a linha (D114)
 npm run comparar:fluxo      # o fluxo do app contra a aba Expenses, linha a linha (D116)
@@ -127,7 +128,7 @@ npm run import:invoices     # faturas de cartão em massa
 | | |
 |---|---|
 | Razão de caixa | **1.067 lançamentos**, 06/08/2025 a 31/07/2026 |
-| Categorizados | **997 (93,4%)** — 70 sem conta |
+| Categorizados | **1.002 (93,9%)** — 65 sem conta |
 | Competência | 284 linhas de receita + 640 de custo |
 | Receita reconhecida | **R$ 3.556.736,91** (jan–ago/2026) |
 | Contratos | 80 (65 ativos, 15 concluídos), 95 parcelas mensais |
@@ -462,7 +463,7 @@ categorizadas, o custo cresce e o resultado cai, **sem o caixa mudar um centavo*
 
 ## 6. O que falta
 
-**70 lançamentos, R$ 41.951,17.** Quase tudo depende de uma resposta, não de código —
+**65 lançamentos, R$ 22.251,17** — só cartão e miudeza. Quase tudo depende de uma resposta, não de código —
 e a maior parte já tem dono conhecido.
 
 Rode **`npm run decisoes`** (as perguntas com a evidência do lado) e **`npm run pendencias`**
@@ -478,7 +479,7 @@ Rode **`npm run decisoes`** (as perguntas com a evidência do lado) e **`npm run
 | bloco | linhas | valor | o que destrava |
 |---|---|---|---|
 | ~~**Contrapartes sem dono**~~ | 1 | **R$ 0,01** | ✅ **Fechado em 26/08 (D111, D115, D117).** Eram 31. Sobrou a **Keepclear**, o centavo de teste, **sem conta de propósito**: não é receita nem custo, e qualquer conta seria uma afirmação falsa sobre ele. |
-| **Lotes SISPAG sem nome** | 5 | **R$ 19.700,00** | Eram 8, R$ 95.950. Três eram distribuição e pró-labore de sócio e foram resolvidos na D110 — aplicar `Outros (SISPAG)` neles teria jogado R$ 76.250 dentro do custo genérico. Os cinco que sobram (jan 500 + 5.000, fev 1.200, mar 3.000 + 10.000) só saem com o detalhe do lote no internet banking. |
+| ~~**Lotes SISPAG sem nome**~~ | — | — | ✅ **Acabou em 27/08 (D118).** Eram 8 e R$ 95.950: três eram pró-labore e distribuição de sócio (D110) e cinco o banco nomeou. Dois vinham ambíguos e se resolveram por eliminação, como na D109. |
 | ~~**`BOLETOS RECEBIDOS`**~~ | ~~8~~ | ~~R$ 43.100,00~~ | ✅ **Fechado em 26/08 (D109): é a Mash.** |
 | **Cartão e miúdos** | 64 | R$ 22.251,16 | 24 descrições que ninguém sabe o que são (`SQ *DREAMFORCE SF`, `ASA*MARIA CLARA`, `PIU R E P L EP`). Pior retorno por minuto da lista. |
 
@@ -602,8 +603,9 @@ contrato no Storage).
    `15000+15000+15000+(92500+82500+46250)`, e o bloco SISPAG caiu para R$ 19.700.
 4. ~~**As contrapartes.**~~ ✅ **D111, D115 e D117** — as 31 viraram uma, e a que sobrou é
    um centavo de teste.
-5. **Esperar o extrato da Gabriel** e o detalhe dos 5 lotes SISPAG. **É tudo o que resta**,
-   fora R$ 22 mil de miudeza de cartão.
+5. ~~**Os lotes SISPAG.**~~ ✅ **D118** — o banco nomeou os cinco.
+6. **Esperar o extrato da Gabriel.** É a única frente grande que resta. Fora dela sobram
+   R$ 22.251,17 de cartão e miudeza, e a chave da API.
 
 > **Não invente tarefa em cima do que está esperando arquivo.** Das pendências grandes, só a
 > do item 3 é executável hoje. As outras duas são "chegou?" e, se a resposta for não, a
