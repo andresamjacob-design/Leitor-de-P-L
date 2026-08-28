@@ -2284,6 +2284,33 @@ sabe.
 > *quais* linhas continuavam sem conta é que a ausência virou pergunta. Um contador de
 > sucesso não é conferência; conferência é olhar o que sobrou.
 
+### D123 — A Receita Federal dá nome ao CNPJ sem dono, e o Node quase não perguntou
+O Andre pediu para eu investigar o repositório `public-apis/public-apis` atrás de algo que
+ajudasse a reconhecer contraparte mais rápido. Não existe API pública que categorize
+descrição de extrato bancário — isso continua sendo o motor, `src/lib/categorize/engine.ts`
+— mas existe **BrasilAPI**, dado público da Receita Federal, sem chave: CNPJ → razão social.
+
+→ `src/lib/cnpj-lookup.ts`, `fetch` puro como a chamada de IA (D61), e nunca lança: rede
+fora ou CNPJ não encontrado devolve `null` e quem chama segue exatamente como se o
+enriquecimento não existisse. Não é identidade (D87) — é o mesmo tipo de fato que
+`formatTaxId` já mostra, só que vindo de fora em vez de calculado. Ligado em `npm run
+decisoes` §1, na lista de CNPJs sem dono: mostra razão social e nome fantasia ao lado do
+nome truncado que o banco mandou, e usa os dois nomes para sugerir candidatos entre os
+clientes sem documento — antes só o nome do banco entrava nessa comparação.
+
+**O bug que quase passou.** Testado com `curl`, funcionava; rodando dentro do script, a
+seção nunca imprimia nada — **nem erro**, porque a função é desenhada para nunca lançar.
+`curl` manda um `User-Agent` por padrão; o `fetch` do Node não manda nenhum, e o CDN da
+BrasilAPI devolve 403 pra isso. Sem o `User-Agent` explícito, o enriquecimento inteiro
+ficaria mudo para sempre, parecendo "funcionando" porque nunca quebrava nada — a mesma
+armadilha da D96, um mapa que mente com confiança.
+
+**A prova que sobrou.** Rodando contra o único CNPJ sem dono hoje (R$ 0,01, 29/01/2026), o
+banco tinha chamado a contraparte de `KEEPCLEAR LICENCIAMENTOS E SERVICOS LTDA`; a Receita
+Federal, hoje, chama o mesmo CNPJ de `LINKANA TECNOLOGIA LTDA` (fantasia `LINKANA`, ATIVA
+desde 2018). Confirmado por `curl` direto, fora do código — os dígitos batem, `32138431000105`
+nos dois lados. O Andre decidiu deixar como teste vivo, sem resolver quem é.
+
 ---
 
 ## Parte 13 — Decisões da Fase 8

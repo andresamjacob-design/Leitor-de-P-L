@@ -39,6 +39,7 @@
 import postgres from "postgres";
 import { loadEnvLocal } from "./load-env.ts";
 import { formatBRL, fromNumeric } from "@/lib/money";
+import { lookupCnpj } from "@/lib/cnpj-lookup";
 
 loadEnvLocal();
 
@@ -153,9 +154,21 @@ try {
     const fixo = distintos.size === 1 && valores.length >= 2;
     const total = fromNumeric(row.total_entrada);
 
+    // Dado público da Receita Federal, via BrasilAPI — nunca decide quem é a contraparte
+    // (D87), só troca o nome truncado do banco por um que se reconhece de olho.
+    const cnpj = row.doc.length === 14 ? await lookupCnpj(row.doc) : null;
+
     console.log(
       `${BOLD}${row.nome.slice(0, 52)}${RESET} ${DIM}${mask(row.doc)}${RESET}`,
     );
+    if (cnpj) {
+      const inativa = cnpj.situacao && cnpj.situacao.toUpperCase() !== "ATIVA";
+      console.log(
+        `   ${DIM}Receita Federal:${RESET} ${cnpj.razaoSocial}` +
+          (cnpj.nomeFantasia ? ` ${DIM}(${cnpj.nomeFantasia})${RESET}` : "") +
+          (inativa ? ` ${RED}— situação: ${cnpj.situacao}${RESET}` : ""),
+      );
+    }
     const saiuTotal = fromNumeric(row.total_saida);
     console.log(
       `   entrou ${GREEN}${formatBRL(total).padStart(14)}${RESET} em ${row.entradas} linhas` +
@@ -183,7 +196,9 @@ try {
       );
     }
 
-    const meus = tokens(row.nome);
+    const meus = tokens(
+      [row.nome, cnpj?.razaoSocial, cnpj?.nomeFantasia].filter(Boolean).join(" "),
+    );
     const parecidos = candidatos.filter((candidate) => {
       const alvo = tokens(candidate.name);
       return (
