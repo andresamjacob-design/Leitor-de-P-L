@@ -1,10 +1,10 @@
-# Handover — 26/08/2026
+# Handover — 28/08/2026
 
 Onde tudo está, o que foi feito, e o que falta. Escrito para quem chega sem contexto
 nenhum, inclusive eu mesmo numa conversa nova.
 
 Leia junto quando precisar do detalhe: `docs/PLAN.md` (o roteiro original),
-`docs/DECISIONS.md` (decisões numeradas D1–D109 e pendências Q2–Q18) e `README.md`.
+`docs/DECISIONS.md` (decisões numeradas D1–D122 e pendências Q2–Q18) e `README.md`.
 
 ---
 
@@ -131,11 +131,11 @@ npm run import:invoices     # faturas de cartão em massa
 |---|---|
 | Razão de caixa | **1.067 lançamentos**, 06/08/2025 a 31/07/2026 |
 | Categorizados | **1.044 (97,8%)** — 23 sem conta |
-| Competência | 284 linhas de receita + 640 de custo |
+| Competência | 284 de receita (206 do motor + 78 manuais) · 823 de custo, sendo **593 espelho de caixa e 230 de folha lida da planilha** (D120) |
 | Receita reconhecida | **R$ 3.556.736,91** (jan–ago/2026) |
 | Contratos | 80 (65 ativos, 15 concluídos), 95 parcelas mensais |
 | Clientes / pessoas | 73 / 40 |
-| Regras | 196 |
+| Regras | 223 |
 | Importações | 23 |
 | Notas fiscais | **0** |
 
@@ -149,7 +149,10 @@ npm run import:invoices     # faturas de cartão em massa
 | Itaucard 5780 | cartão | 0,00 | 468 | |
 | Itaucard 8299 | cartão | 0,00 | 48 | |
 
-**Cinco conferências que fecham hoje** — a quarta e a quinta nasceram em 26/08:
+**Sete conferências que fecham hoje.** As três primeiras são o sistema conferindo contra si
+mesmo e contra o banco; as quatro últimas são o sistema conferindo contra **as planilhas do
+Andre**, que têm critério próprio — e é por isso que nenhuma delas é um `verify:`. Transformar
+a escolha dele em regra de código seria tirá-la dele.
 
 - A conta corrente marca **226.916,33**, que é o `SALDO TOTAL DISPONÍVEL` declarado pelo
   banco em 31/07/2026. Ao centavo.
@@ -158,20 +161,25 @@ npm run import:invoices     # faturas de cartão em massa
 - **A DRE e o fluxo de caixa fecham nos 13 meses, com resíduo zero** (`verify:reconcile`,
   D85). Os dois razões não batem — não é para baterem —, mas toda diferença entre eles tem
   nome.
+- **Nenhuma saída de caixa fica sem competência** (D120, D121). Essa linha da ponte valia
+  **R$ 1.281.607,12** em 20/08 — era a lista de tarefas do projeto em forma de número — e hoje
+  tem **zero linhas**.
 - **As saídas do fluxo batem com a aba `Summary` da planilha de caixa** em cinco dos sete
-  meses, **ao centavo** (D108). Nos outros dois sobram R$ 169,00 e R$ 218,88, que são dois
-  estornos pequenos sem documento para parear. A distância somada é **R$ 387,88**.
-
+  meses, **ao centavo** (D108). Nos outros dois sobram R$ 169,00 e R$ 218,88, dois estornos
+  pequenos sem documento para parear. A distância somada é **R$ 387,88**, e ela **não se moveu
+  quando a D116 quebrou a fatura nas compras** — o que prova que a quebra só mudou composição.
+- **As 31 linhas de custo da `DRE Geral` fecham com as do app** (D114, D120), e nenhuma delas
+  fica de fora em qualquer alinhamento. `- Salários` marca **R$ 1.368.044,69 dos dois lados,
+  nos sete meses**.
 - **A linha de sócios do fluxo bate com a linha `Distribuição de Lucro` da planilha de
   caixa, mês a mês, nos sete meses, com distância somada R$ 0,00** (D110 e D112). `6.11`
   marca **R$ 313.014,93** e `99.04` marca **R$ 442.500,00**; somados, **R$ 755.514,93**. A
   D110 provou a soma; a D112 provou **cada mês**, que é mais forte — uma soma pode fechar com
   dois erros que se cancelam.
 
-> A quarta é de outra natureza que as três primeiras: elas são o sistema conferindo contra
-> si mesmo e contra o banco; esta é o sistema conferindo contra **outro** sistema, que tem
-> critério próprio. É por isso que ela não é `verify:` nenhum — não há como falhar
-> automaticamente sem transformar a escolha do Andre em regra de código.
+> **A que ainda não fecha é o fluxo por sub-linha** — 23 das linhas da aba `Expenses` fecham
+> os sete meses, e a distância somada é R$ 26.082,92. A causa é agrupamento, não conta, e o
+> conserto é o passo 1 da §6.
 
 ---
 
@@ -306,6 +314,46 @@ e que na DRE dele *só os salários* entram, enquanto no fluxo entra tudo.
 - **A FDN Telecom era o Nicholas Forte** (D111) — a D101 tinha recusado escrevendo *"o nome
   está mentindo sobre a natureza, ou é outra coisa"*, e era outra coisa. Mais 2 lançamentos,
   R$ 10.000, e o resultado fechou em **R$ 1.512.875,50**.
+
+### As duas planilhas viraram critério de aceitação (D111–D122)
+
+Em 27/08 o Andre estreitou o que o app tem de entregar, e a frase é o critério:
+
+> *"O app tem que me dar duas coisas apenas: um fluxo de caixa igual ao que tenho na planilha
+> e, em outra aba, o DRE igual à planilha de DRE que tenho."*
+
+Isso transformou "comparar as duas DREs" de curiosidade em obrigação, e o que se seguiu saiu
+quase todo de **medir uma contra a outra**:
+
+- **A comparação linha a linha existe** — `npm run comparar` (competência) e
+  `npm run comparar:fluxo` (caixa), D114 e D116. A hipótese com que construí o primeiro
+  estava errada: eu esperava a DRE do app ser a dele deslocada um mês, e **31 linhas fecham
+  alinhadas** contra 6 defasadas. A defasagem é de boleto e folha, não de tudo.
+- **A fatura do cartão deixou de ser uma linha e virou as compras dentro dela** (D116), no mês
+  em que foi paga, como a planilha dele faz. Cada arquivo de fatura importado é uma fatura, e
+  13 dos 14 pagamentos casam com uma delas ao centavo. **Antes disso, `Gsuite` no fluxo valia
+  zero.**
+- **A folha em competência passou a ser lida da aba `Colaboradores`** (D120) e o pagamento
+  deixou de espelhar. `- Salários` fecha **7 de 7 meses, R$ 1.368.044,69 dos dois lados**, e o
+  comparador foi de uma linha que não fechava em nenhum alinhamento para **zero**.
+- **O bloco SISPAG acabou** (D118): dos oito lotes sem nome, três eram pró-labore e
+  distribuição de sócio e cinco o banco nomeou. Dois vinham ambíguos e se resolveram por
+  eliminação, como na D109.
+- **As 31 contrapartes sem dono viraram uma** (D111, D115, D117). Santa Monica e WCommerce
+  ganharam conta própria — `6.12`, criada porque ele separa freelancer-empresa do time nos
+  dois arquivos. Sobrou a Keepclear, R$ 0,01, sem conta de propósito.
+- **Duas linhas estavam na conta errada e nenhuma ferramenta as alcançava** (D119). O
+  `recategorize` e o `propose:suppliers` filtram `category_id is null`: linha categorizada
+  errada sobrevivia a tudo. Corrigir as duas derrubou a distância do fluxo em R$ 31 mil **sem
+  um centavo de dinheiro novo** na DRE.
+- **A pergunta dele sobre R$ 169 achou 21 estornos** (D121). Aquilo era a *cobrança*, não o
+  estorno, e a conta de tarifas tinha R$ 1.861,50 cobrados e nenhum dos R$ 1.288,73 devolvidos.
+- **E o construtor de regras jogava o sentido fora** (D122), em dois lugares. Toda regra de
+  entrada cujo texto já viesse do bloco de custo da planilha sumia em silêncio.
+
+> **O número que fecha o arco:** `Saídas de caixa sem competência` valia **R$ 1.281.607,12**
+> em 20/08 e hoje tem **zero linhas**. Não sobra um centavo que tenha saído do caixa sem
+> destino declarado na DRE.
 
 ### A ponte entre os dois razões
 
@@ -471,62 +519,79 @@ categorizadas, o custo cresce e o resultado cai, **sem o caixa mudar um centavo*
 
 ---
 
-## 6. O que falta
+## 6. O que falta, e em que ordem
 
-**23 lançamentos, R$ 8.352,10** — R$ 6.552,08 líquidos, só descrição de cartão que ninguém reconhece. Quase tudo depende de uma resposta, não de código —
-e a maior parte já tem dono conhecido.
+**23 lançamentos, R$ 8.352,10** — R$ 6.552,08 líquidos. É só descrição de cartão que ninguém
+reconhece. **Nenhum outro bloco de categorização resta.**
 
-Rode **`npm run decisoes`** (as perguntas com a evidência do lado) e **`npm run pendencias`**
-(o quadro por dinheiro).
+Rode **`npm run pendencias`** (o quadro por dinheiro) e **`npm run decisoes`** (as perguntas
+com a evidência do lado). Para medir contra as planilhas: **`npm run comparar`** e
+**`npm run comparar:fluxo`**.
 
-> ℹ️ Depois de responder qualquer coisa: **`npm run vincular`** grava a identidade e
-> **`npm run recategorize`** leva ao razão. É o `recategorize` que converte resposta em
-> número na DRE (D97), e ele separa **regra de palpite** — regra entra com `--aplicar`,
-> histórico exige `--incluir-historico`.
+> ℹ️ Depois de responder qualquer coisa: **`npm run vincular`** grava identidade,
+> **`npm run propose:suppliers`** promove a regra por documento e **`npm run recategorize`**
+> leva ao razão. Para linha **já categorizada** e errada, é **`npm run corrigir`** (D119) —
+> nenhum dos outros alcança.
 
-### O que sobrou, por bloco
+### Onde as duas abas estão hoje
 
-| bloco | linhas | valor | o que destrava |
+| | |
+|---|---|
+| **DRE × planilha de DRE** | **31 de 31 linhas fecham**; zero não fecham em nenhum alinhamento |
+| **Fluxo × aba `Expenses`** | 23 linhas fecham os 7 meses; distância somada **R$ 26.082,92** |
+| Saídas do fluxo × aba `Summary` | 5 dos 7 meses ao centavo, distância R$ 387,88 (D108) |
+
+### O que falta, por natureza
+
+| bloco | quem resolve | valor | o que é |
 |---|---|---|---|
-| ~~**Contrapartes sem dono**~~ | 1 | **R$ 0,01** | ✅ **Fechado em 26/08 (D111, D115, D117).** Eram 31. Sobrou a **Keepclear**, o centavo de teste, **sem conta de propósito**: não é receita nem custo, e qualquer conta seria uma afirmação falsa sobre ele. |
-| ~~**Lotes SISPAG sem nome**~~ | — | — | ✅ **Acabou em 27/08 (D118).** Eram 8 e R$ 95.950: três eram pró-labore e distribuição de sócio (D110) e cinco o banco nomeou. Dois vinham ambíguos e se resolveram por eliminação, como na D109. |
-| ~~**`BOLETOS RECEBIDOS`**~~ | ~~8~~ | ~~R$ 43.100,00~~ | ✅ **Fechado em 26/08 (D109): é a Mash.** |
-| **Cartão e miúdos** | 64 | R$ 22.251,16 | 24 descrições que ninguém sabe o que são (`SQ *DREAMFORCE SF`, `ASA*MARIA CLARA`, `PIU R E P L EP`). Pior retorno por minuto da lista. |
+| **23 descrições de cartão** | **o Andre** | R$ 8.352,10 | `SQ *DREAMFORCE SF`, `ASA*MARIA CLARA` ×3, `APPLE.COM/US`, `PIU R E P L EP`. Três faturas resolvem quase tudo: **out/2025, mai/2026 e jun/2026**. |
+| **Extrato do Itaú da Gabriel** | **o Andre** | R$ 259.845,85 | Q2. Destrava mover a receita de agosto para a segunda empresa. Sem ele, ela ficaria com receita e nenhum caixa para conferir. |
+| **`ANTHROPIC_API_KEY`** | **o Andre** | — | Q18. Não bloqueia nada, mas o caminho de IA **quebra na primeira chamada real** — ver abaixo. |
+| **Os grupos do fluxo** | **eu** | — | O fluxo precisa agrupar como a planilha dele. Não depende de nada dele. |
+| **O prefill do provider** | **eu** | — | Dez minutos, e tem de ser antes da chave. |
 
-### ~~Os boletos quase se explicaram sozinhos~~ — fechados em 26/08 (D109)
+### Próximos passos, em ordem
 
-**Os dois lados são a Mash**, e a parcela de R$ 5.000 se identificou por eliminação: das
-quatro candidatas, três já estão no razão **com nome próprio** nos mesmos meses (Afubra por
-TED, Star Palestras e Asaptech por recebimento nomeado) — se fossem o boleto, teriam pago
-duas vezes. A Mash é a única que a planilha diz ter pago e o razão nunca mostra. E o contrato
-`project` dela, já cadastrado, tem total de **R$ 20.000** = 4 × 5.000.
+1. **Construir os grupos do fluxo** — `Pessoas`, `Gerais e Admnistrativos`, `Cost of Goods`,
+   `Travel`, `Legal`, `Insurance`, `Other Expenses`, `Imposto`. É o que falta para a aba de
+   fluxo ficar com a cara da planilha dele, e **não depende de resposta nenhuma**.
 
-`7 × 3.300 + 4 × 5.000 = R$ 43.100`, ao centavo.
+   > **A Agência Ciclo é a prova de que isto é agrupamento e não conta.** R$ 4.000/mês que a
+   > aba `Pessoas` do fluxo conta como pessoal e a `DRE Geral` lança em linha própria — e a
+   > aba `Colaboradores` **não tem**. Com ela dentro de `Pessoas`, o bloco fecha em **6 dos 7
+   > meses ao centavo**; o sétimo erra os R$ 218,88 do estorno de julho sem par.
+   >
+   > O mecanismo existe: `mergedRows` em `buildCashFlow` (D112) junta contas numa linha, e o
+   > construtor puro continua sem conhecer código de conta — quem escolhe é o carregador.
+   > Falta a camada de **grupo com sub-linhas**, que é o formato da planilha dele.
 
-Os três boletos de R$ 8.300 eram **uma linha de extrato com duas contas dentro**; o Andre
-mandou partir. `npm run boletos` faz isso com trava de saldo — recusa gravar se o caixa se
-mover. Aplicado: 3.01 ficou com R$ 23.100 e 3.02 com **exatamente R$ 20.000**, o total do
-contrato, que era a evidência da identificação voltando pelo outro lado.
+2. **Consertar o prefill antes de pedir a chave.** `src/lib/data/ai-suggestions.ts:110` manda
+   `prefill: "["` e o modelo padrão é `claude-sonnet-5` — prefill de última mensagem
+   `assistant` **retorna 400** no Sonnet 5, no Opus 5 e na família 4.6/4.7/4.8. O substituto é
+   *structured outputs* (`output_config.format`). Todo o caminho de IA foi testado com modelo
+   simulado, e simulado nunca recusa nada.
 
-### ~~Uma pergunta de apresentação, esperando resposta (D107)~~
+   > **Modelo recomendado: `claude-opus-5`.** O razão inteiro, do zero, custa ~US$ 1,75; a
+   > diferença para o mais barato é um dólar e quarenta. A tarefa é ler descrição truncada de
+   > cartão e saber o que é, que é exatamente onde a capacidade aparece. `ANTHROPIC_MODEL`
+   > troca sem mexer em código.
 
-**Respondida em 25/08/2026: a fatura conta como saída.** Ver D108. A regra que entrou no
-código não cita `99.02` — é *uma transferência só é transferência quando as duas pernas estão
-no relatório*. O CDB tem as duas e continua se cancelando; o cartão fica fora (D-C), então a
-fatura tem uma perna só.
+3. **As 23 descrições**, quando ele abrir as três faturas.
 
-Medido contra a aba `Summary` da planilha: **cinco dos sete meses foram a R$ 0,00 exatos**, e
-a distância somada caiu de R$ 224.672,43 para **R$ 387,88** — o que sobra são os dois estornos
-pequenos de março (R$ 169,00) e julho (R$ 218,88), sem documento para parear. O saldo final
-não se moveu: R$ 711.916,33 antes e depois.
+4. **O extrato da Gabriel**, quando chegar.
 
-Na DRE nada mudou, e é de propósito: lá o custo continua sendo a compra, não a fatura.
+### O que a comparação com o fluxo ainda mostra, e por quê
 
-### As sete linhas que o histórico resolveria
+Dos R$ 26.082,92 de distância, quase tudo tem causa nomeada:
 
-R$ 70.011,97. O motor sabe a resposta, mas por **inferência**, não por regra — estão paradas
-de propósito (D97). `npm run recategorize -- --aplicar --incluir-historico` se quiser que
-entrem.
+- **`Time`**: a planilha dele conta a Agência Ciclo dentro; o app ainda não (passo 1).
+- **`Passagem`, `Hotels`, `Alimentação`**: parte das 23 descrições do cartão.
+- **`Legal` e `Imposto`**: o app está **R$ 440 acima** e a planilha R$ 440 abaixo — é o
+  **INPI** (D117), registro de marca pago em maio, enquanto o `- Juridico` dele é zero de
+  março em diante. **O app tem um fato que a planilha lança em outro lugar**, e tirar de lá
+  para melhorar o número seria otimizar para a planilha em vez de para o razão.
+- **`IOF` e `Tarefy`**: mês de corte diferente.
 
 ### Julho não fecha com a planilha, e vale olhar
 
@@ -541,58 +606,26 @@ Em compensação, a **RiHappy pagou R$ 12.000 duas vezes** em 29/07 e a planilha
 > no **fluxo**, R$ 24.000 no mês em que foi pago. É exatamente como os dois razões já se
 > separam (D2).
 
-### A DRE do app e a da planilha ainda não são comparáveis linha a linha
+### A folha dos próximos meses, combinada e ainda aberta
 
-Apareceu medindo o SISPAG para responder ao Andre, e é maior que o SISPAG. **Não é defeito
-de nenhum dos dois** — é critério diferente, e as três conferências do sistema seguem
-fechando. Mas quer dizer que *"a DRE do app bate com a minha"* é projeto separado.
-
-| jan–jul | planilha | app |
-|---|---|---|
-| `- Salários` | **R$ 1.368.044,67** | **R$ 0,00** |
-| `6.10 Freelancers` / `- Freelancers (Outras empresas)` | R$ 140.943,01 | **R$ 1.570.356,95** |
-
-É o mesmo dinheiro em linhas diferentes: o SISPAG é a folha de terceiros, e a planilha a
-chama de salário. A linha `- Freelancers (Outras empresas)` dela vale **20.134,72 todo mês,
-idêntico** — é média, não pagamento.
-
-**E a D101 vale para o imposto, provada ao centavo.** O `4.01` do app é sempre o mês
-anterior da planilha, porque o imposto é pago no mês seguinte e ela o lança na competência:
-
-| app | = planilha de |
-|---|---|
-| março 65.041,67 | **fevereiro** 65.041,67 |
-| abril 59.503,00 | **março** 59.503,00 |
-| julho 73.230,57 | **junho** 73.230,57 |
-
-> ⚠️ **Cuidado ao comparar as duas DREs:** a planilha põe imposto **acima** do lucro bruto e
-> o app põe em `4.01` **dentro** do custo. Comparar `Custos Operacionais` contra o custo do
-> app sem tirar o `4.01` dos dois lados inverte o sinal da conclusão — eu cheguei a medir
-> assim e concluí o contrário do que era verdade.
-
-**Respondido em 26/08/2026 (D110), e a resposta é que o dilema não existia.** O `- Salários`
-da planilha e o `6.10 Freelancers` do app são a **mesma população** — o time inteiro, sócios
-incluídos. Nenhum dos dois estava errado sobre o nome. O que impedia comparar linha a linha
-era ter **distribuição de lucro misturada dentro do custo**, R$ 442.500, e isso saiu.
-
-O que ainda separa as duas continua sendo critério, não defeito: a planilha lança por
-competência um mês à frente (D101), e o app por caixa. A comparação linha a linha ficou
-possível; ainda não foi feita.
+A D120 cobre **jan–jul/2026 e só**. O Andre disse *"ajustamos os próximos meses juntos"*, e o
+`npm run folha` **recusa rodar de novo no mesmo período** em vez de duplicar. Como a folha
+entra de agosto em diante é decisão que continua aberta — e é a única coisa do desenho que
+está pendente.
 
 ### Depende de arquivo ou chave que não chegou
 
 | # | O que falta |
 |---|---|
-| **Q2** | **Extrato do Itaú da Gabriel Sampaio Jacob.** O Andre confirmou: **só o que é de agosto em diante** migra, e ela recebe no Itaú. A conta é nova e pode não ter movimento ainda. Sem o extrato eu não movo os R$ 259.845,85 de agosto — a segunda empresa ficaria com receita e nenhum caixa para conferir. |
-| **Q18** | `ANTHROPIC_API_KEY` está **vazia**. Todo o caminho de IA foi testado com modelo simulado; nenhuma chamada real aconteceu. O Andre resolve com o chefe, por causa do pagamento. Não bloqueia nada. |
+| **Q2** | **Extrato do Itaú da Gabriel Sampaio Jacob.** Só o que é de agosto em diante migra, e ela recebe no Itaú. A conta é nova e pode não ter movimento ainda. |
+| **Q18** | `ANTHROPIC_API_KEY` vazia. O Andre resolve com o chefe, por causa do pagamento. Não bloqueia nada — mas ver o passo 2. |
 | **NFs** | Zero cadastradas. A Fase 5 concilia NF contra caixa e não tem dado nenhum. |
-| ~~Faturas 8299~~ | **set/out/nov de 2025 — sem acesso, buraco permanente.** O custo de cartão desses três meses nunca vai entrar. Não procure de novo. |
+| ~~Faturas 8299~~ | **set/out/nov de 2025 — sem acesso, buraco permanente.** Não procure de novo. |
+| **Fatura 8299 de maio/2026** | Nunca importada. É o único pagamento de fatura que a D116 não quebra: R$ 830,97 continua como linha única. |
 
-> **Sobre o rendimento do CDB:** o Andre disse que aparece no extrato, e para a **varredura
-> automática** é verdade. Mas R$ 485.000 aplicados desde junho renderam R$ 28,43 (jun) e
-> R$ 38,59 (jul) de rendimento **visível** — isso é a varredura, não o CDB. O rendimento dele
-> provavelmente só credita no resgate, então o saldo de R$ 485.000 é **só principal**. Não é
-> urgente; é uma coisa a saber.
+> **Sobre o rendimento do CDB:** R$ 485.000 aplicados desde junho renderam R$ 28,43 (jun) e
+> R$ 38,59 (jul) **visíveis** — isso é a varredura automática, não o CDB. O rendimento dele
+> provavelmente só credita no resgate, então o saldo é **só principal**. Não é urgente.
 
 ### Decisões antigas ainda abertas
 
@@ -601,27 +634,8 @@ possível; ainda não foi feita.
 contrato no Storage).
 
 > ~~**3.05 Receita financeira**~~ — **o Andre decidiu em 25/08 não criar.** Os rendimentos
-> ficam em `99.03`, que é transferência, e seguem **fora da DRE**. É decisão, não
-> esquecimento.
+> ficam em `99.03`, que é transferência, e seguem **fora da DRE**. É decisão, não esquecimento.
 
-### Se for fazer só três coisas
-
-1. ~~**Perguntar se a fatura do cartão conta como saída.**~~ ✅ **D108**.
-2. ~~**Fechar os boletos.**~~ ✅ **D109**. ~~**A folha de terceiros.**~~ ✅ **D110** — não era
-   salário × freelancer; era distribuição de lucro dentro do custo, R$ 442.500.
-3. ~~**Confirmar os três lotes de janeiro.**~~ ✅ **D110** — ele confirmou com uma linha,
-   `15000+15000+15000+(92500+82500+46250)`, e o bloco SISPAG caiu para R$ 19.700.
-4. ~~**As contrapartes.**~~ ✅ **D111, D115 e D117** — as 31 viraram uma, e a que sobrou é
-   um centavo de teste.
-5. ~~**Os lotes SISPAG.**~~ ✅ **D118** — o banco nomeou os cinco.
-6. **Esperar o extrato da Gabriel.** É a única frente grande que resta. Fora dela sobram
-   R$ 22.251,17 de cartão e miudeza, e a chave da API.
-
-> **Não invente tarefa em cima do que está esperando arquivo.** Das pendências grandes, só a
-> do item 3 é executável hoje. As outras duas são "chegou?" e, se a resposta for não, a
-> resposta certa é não fazer nada.
-
----
 
 ## 7. Armadilhas já pagas — não repetir
 
