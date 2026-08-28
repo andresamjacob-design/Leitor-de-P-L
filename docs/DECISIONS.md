@@ -2241,6 +2241,51 @@ teve. Tarifas mais IOF ficaram em **R$ 3.810,21 líquidos**. Cobertura 93,9% →
 
 ---
 
+### D122 — O construtor de regras jogava o sentido fora, em dois lugares
+O Andre aprovou em 28/08/2026 as nove descrições de cartão que eu tinha proposto e mandou
+aplicar também os estornos. As nove entraram; **os estornos não**, e o script disse
+`0 regras criadas` sem explicar o que tinha descartado.
+
+O defeito estava em dois lugares, e é o mesmo: **a chave de deduplicação era só o texto.**
+
+```ts
+const key = normalizeDescription(pattern);   // ao montar as propostas
+where entity_id = ... and pattern = ${proposal.pattern}   // ao gravar
+```
+
+O bloco de custo da planilha produz **sempre** `direction: "out"` (é o que impede `CICLO` de
+lançar os cinco recebimentos como despesa de agência). Então qualquer regra de **entrada**
+cujo texto já viesse de lá era descartada em silêncio. Foi o que aconteceu com
+`RAUL S RETAU → 9.03 in`: o apelido de restaurante já existia como saída desde a D106, e a
+devolução de R$ 251,00 ficou sem conta — **e o relatório a mostrou com a seta errada**,
+porque estava exibindo a regra que sobreviveu, não a que eu tinha escrito.
+
+**É a mesma classe de defeito que a D82, a D86 e a D99 consertaram no motor, agora em quem
+escreve as regras.** Uma contraparte pode estar dos dois lados do balcão — a Ciclo é o caso —,
+e uma chave que ignora sentido nega isso por construção.
+
+→ A chave passou a ser `texto|sentido` nos dois lugares. Na consulta ao banco o operador é
+**`is not distinct from`** e não `=`: `direction` é nulo nas regras que valem para os dois
+sentidos, e `null = null` é nulo em SQL — com `=`, toda regra sem sentido declarado passaria
+por inexistente e duplicaria a cada execução.
+
+**Aplicado:** 16 regras (9 aprovadas + 7 de estorno) → **20 lançamentos**. Cobertura 96,0% →
+**97,8% (1.044 de 1.067)**, e o que falta decidir caiu de R$ 20.793,44 para **R$ 8.352,10** —
+R$ 6.552,08 líquidos.
+
+Os pares que se anulam entraram nos dois sentidos e somam zero na DRE, que é o ponto: o Vimeo
+saiu R$ 5.094 e voltou R$ 5.085, e agora a DRE conta os R$ 9,00 de diferença em vez dos
+R$ 5.094 cheios. **Vimeo e Miro foram para `7.00`**, a conta genérica de ferramentas — nenhum
+dos dois tem linha própria na planilha do Andre, e inventar uma seria dizer mais do que se
+sabe.
+
+> **O que salvou aqui foi desconfiar de um relatório que parecia certo.** `0 regras criadas`
+> é uma saída plausível — significa "já está tudo lá" na maioria das execuções. Só olhando
+> *quais* linhas continuavam sem conta é que a ausência virou pergunta. Um contador de
+> sucesso não é conferência; conferência é olhar o que sobrou.
+
+---
+
 ## Parte 13 — Decisões da Fase 8
 
 ### D68 — Escritor de XLSX próprio, com entradas sem compressão

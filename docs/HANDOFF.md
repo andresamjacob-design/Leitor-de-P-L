@@ -130,7 +130,7 @@ npm run import:invoices     # faturas de cartão em massa
 | | |
 |---|---|
 | Razão de caixa | **1.067 lançamentos**, 06/08/2025 a 31/07/2026 |
-| Categorizados | **1.024 (96,0%)** — 43 sem conta |
+| Categorizados | **1.044 (97,8%)** — 23 sem conta |
 | Competência | 284 linhas de receita + 640 de custo |
 | Receita reconhecida | **R$ 3.556.736,91** (jan–ago/2026) |
 | Contratos | 80 (65 ativos, 15 concluídos), 95 parcelas mensais |
@@ -473,7 +473,7 @@ categorizadas, o custo cresce e o resultado cai, **sem o caixa mudar um centavo*
 
 ## 6. O que falta
 
-**43 lançamentos, R$ 20.793,44** — só cartão e miudeza. Quase tudo depende de uma resposta, não de código —
+**23 lançamentos, R$ 8.352,10** — R$ 6.552,08 líquidos, só descrição de cartão que ninguém reconhece. Quase tudo depende de uma resposta, não de código —
 e a maior parte já tem dono conhecido.
 
 Rode **`npm run decisoes`** (as perguntas com a evidência do lado) e **`npm run pendencias`**
@@ -759,6 +759,17 @@ Aprendidos neste trabalho:
   versão do `socios` pulava o mês quando a distribuição não casava, e com isso deixava para
   trás também o pró-labore daquele mês, que não tinha problema nenhum. Separe o que a dúvida
   alcança do que ela não alcança.
+- **Chave de deduplicação sem sentido descarta regra em silêncio.** O `propose:rules`
+  deduplicava por texto em dois lugares — ao montar as propostas e ao gravar —, e o bloco de
+  custo da planilha produz sempre `out`. Toda regra de **entrada** cujo texto já viesse de lá
+  sumia sem aviso, e o relatório ainda mostrava a seta da regra sobrevivente. É a D82/D86/D99
+  outra vez, agora em quem escreve as regras (D122).
+- **`null = null` é nulo em SQL, e por isso a consulta de existência usa `is not distinct
+  from`.** Com `=`, toda regra sem sentido declarado passa por inexistente e duplica a cada
+  execução.
+- **`0 regras criadas` é uma saída plausível, e por isso perigosa.** Na maioria das execuções
+  ela significa "já está tudo lá". Só olhando *quais* linhas continuavam sem conta é que a
+  ausência virou pergunta — contador de sucesso não é conferência.
 - **Um padrão que fecha aritmeticamente ainda pode estar particionado no lugar errado.**
   Cada sócio recebe R$ 2.000 no dia 5 e ~R$ 13.000 no dia 20 — a forma exata de pró-labore
   mínimo mais distribuição, e a soma batia com a planilha nos seis meses. Eu ia separar por

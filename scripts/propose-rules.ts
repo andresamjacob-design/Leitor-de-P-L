@@ -247,6 +247,46 @@ const STATEMENT_RULES: { pattern: string; code: string; direction: Direction; no
   // devolver o custo de IOF alivia o IOF, não a anuidade.
   { pattern: "ESTORNO DE ANUIDADE", code: "11.01", direction: "in", note: "anuidade estornada, outra grafia do banco" },
   { pattern: "ESTORNO CUSTO DE IOF", code: "11.02", direction: "in", note: "IOF estornado pelo banco" },
+
+  // ---- as descrições de cartão que o Andre aprovou em 28/08/2026 (D122) ----
+  //
+  // Eu propus e ele confirmou. **Foram propostas, não aplicadas**, e a distinção importa:
+  // nome de estabelecimento é evidência, não prova, e a D100 pagou caro por casar contraparte
+  // por semelhança de texto. O que autoriza estas é ele ter dito sim, não elas parecerem
+  // óbvias para mim.
+  //
+  // Combustível e táxi entram em `9.04` junto do Uber, como a D106 já tinha estabelecido —
+  // a linha da planilha se chama `Uber e Transporte` e cobre táxi, estacionamento e locadora.
+  { pattern: "POSTO DE SER", code: "9.04", direction: "out", note: "posto de combustível — pega `POSTO DE SER-CT` e `POSTO DE SERVICOS`" },
+  { pattern: "AUTO POSTO", code: "9.04", direction: "out", note: "posto de combustível" },
+  { pattern: "EVERALDO TAX", code: "9.04", direction: "out", note: "táxi" },
+
+  { pattern: "VAI DE PROMO", code: "9.01", direction: "out", note: "site de passagem promocional" },
+  { pattern: "EBN*TRIP", code: "9.01", direction: "out", note: "Trip.com" },
+
+  { pattern: "ASSIST CARD", code: "9.05", direction: "out", note: "seguro de viagem" },
+  { pattern: "BRASILIA AIR", code: "9.05", direction: "out", note: "aeroporto de Brasília" },
+  { pattern: "CARTS SFO", code: "9.05", direction: "out", note: "carrinho no aeroporto de San Francisco" },
+  { pattern: "WI-FI ONBOARD", code: "9.05", direction: "out", note: "wi-fi de bordo" },
+
+  // ---- os estornos de cartão, aprovados no mesmo dia ----
+  //
+  // Cada um destes é **compra e devolução da mesma coisa**, e a conta tem de ser a mesma nos
+  // dois sentidos — é isso que faz o espelho de competência somar zero (D2a). Sem a regra do
+  // sentido `in`, a devolução ficaria sem conta e a DRE contaria a compra inteira, que é
+  // exatamente o defeito que a D121 achou nas tarifas do banco.
+  //
+  // Vimeo e Miro vão para **7.00**, a conta genérica de ferramentas: nenhum dos dois tem
+  // linha própria na planilha do Andre, e inventar uma seria dizer mais do que se sabe. O
+  // `pl.ts` agrupa por `dreGroup` e não por hierarquia, então lançar no pai não conta duas
+  // vezes.
+  { pattern: "VIMEO", code: "7.00", direction: "out", note: "assinatura de vídeo" },
+  { pattern: "VIMEO", code: "7.00", direction: "in", note: "a mesma assinatura, estornada três dias depois" },
+  { pattern: "MIRO.COM", code: "7.00", direction: "out", note: "assinatura de quadro branco" },
+  { pattern: "MIRO.COM", code: "7.00", direction: "in", note: "a mesma assinatura, estornada no dia seguinte" },
+  { pattern: "GOL LINHAS", code: "9.01", direction: "in", note: "centavo estornado pela companhia aérea" },
+  { pattern: "LATAM AIR", code: "9.01", direction: "in", note: "centavo estornado pela companhia aérea" },
+  { pattern: "RAUL S RETAU", code: "9.03", direction: "in", note: "restaurante estornado" },
 ];
 
 type Direction = "in" | "out";
@@ -286,6 +326,19 @@ function readSheetLines(): { label: string; code: string }[] {
 
 function proposalsFrom(lines: { label: string; code: string }[]): Proposal[] {
   const out: Proposal[] = [];
+  /**
+   * A chave leva o **sentido**, e não só o texto (D122).
+   *
+   * Deduplicar só pelo padrão descartava em silêncio toda regra de entrada cujo texto já
+   * viesse do bloco de custo da planilha — que produz sempre `out`. Foi assim que
+   * `RAUL S RETAU → 9.03 in` sumiu sem aviso: o apelido de restaurante já existia como
+   * saída, e a devolução ficou sem conta.
+   *
+   * Sentido é o que a D82, a D86 e a D99 existem para proteger, e uma contraparte pode estar
+   * dos dois lados do balcão — a Ciclo é o caso. Uma chave que ignora sentido é a mesma
+   * classe de defeito que aquelas decisões consertaram no motor, agora em quem escreve as
+   * regras.
+   */
   const seen = new Set<string>();
 
   for (const line of lines) {
@@ -293,8 +346,8 @@ function proposalsFrom(lines: { label: string; code: string }[]): Proposal[] {
     const list = patterns.length > 0 ? patterns : [];
 
     for (const pattern of list) {
-      const key = normalizeDescription(pattern);
-      if (key === "" || seen.has(key)) continue;
+      const key = `${normalizeDescription(pattern)}|out`;
+      if (normalizeDescription(pattern) === "" || seen.has(key)) continue;
       seen.add(key);
       // Every one of these comes from the *cost* block of the sheet, so it describes money
       // leaving. Saying so is what keeps `CICLO` from booking the five Ciclo receipts as
@@ -304,7 +357,7 @@ function proposalsFrom(lines: { label: string; code: string }[]): Proposal[] {
   }
 
   for (const rule of STATEMENT_RULES) {
-    const key = normalizeDescription(rule.pattern);
+    const key = `${normalizeDescription(rule.pattern)}|${rule.direction}`;
     if (seen.has(key)) continue;
     seen.add(key);
     out.push({
@@ -424,9 +477,19 @@ try {
       const category = byCode.get(proposal.code);
       if (!category) continue;
 
+      // `is not distinct from` e não `=`, porque `direction` é nulo nas regras que valem
+      // para os dois sentidos, e `null = null` é nulo em SQL — a comparação simples deixaria
+      // toda regra sem sentido declarado passar por inexistente e duplicar a cada execução.
+      //
+      // O sentido entra na chave pelo mesmo motivo da dedup lá em cima (D122): sem ele, uma
+      // regra de entrada cujo texto já existe como saída **nunca é criada**, e o script
+      // reporta "0 regras criadas" sem dizer que descartou alguma.
       const exists = await sql`
         select 1 from categorization_rules
-        where entity_id = ${entity.id} and pattern = ${proposal.pattern} limit 1`;
+        where entity_id = ${entity.id}
+          and pattern = ${proposal.pattern}
+          and direction is not distinct from ${proposal.direction}
+        limit 1`;
       if (exists.length > 0) continue;
 
       await sql`
