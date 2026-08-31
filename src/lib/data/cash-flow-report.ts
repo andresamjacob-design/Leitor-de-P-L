@@ -18,13 +18,20 @@
  * e não volta.
  */
 
-import { buildCashFlow, periodRange, type CashFlowReport, type FlowCategory } from "@/lib/cash-flow";
+import {
+  buildCashFlow,
+  periodRange,
+  type CashFlowReport,
+  type CashFlowRow,
+  type FlowCategory,
+} from "@/lib/cash-flow";
 import { quebrarFaturas, type Fatura, type Pagamento } from "@/lib/card-bills";
 import { listAccounts, type Account } from "@/lib/data/accounts";
 import { listCategories, type Category } from "@/lib/data/categories";
 import { listCashEntries } from "@/lib/data/cash-entries";
 import { isCashAccount } from "@/lib/ledger-types";
 import type { IsoDate } from "@/lib/dates";
+import { sum, type Cents } from "@/lib/money";
 
 /** `99.02` — Pagamento de fatura de cartão. O cartão fica fora do relatório (D-C). */
 const CARD_BILL_CODE = "99.02";
@@ -35,7 +42,146 @@ const CARD_BILL_CODE = "99.02";
  * do Andre já lança, dentro do bloco `Pessoas`.
  */
 const SOCIOS_CODES = ["6.11", "99.04"];
-const SOCIOS_LABEL = "Sócios — pró-labore e distribuição";
+export const SOCIOS_LABEL = "Sócios — pró-labore e distribuição";
+
+/**
+ * Código de conta → grupo do fluxo, lido da coluna B da aba `Expenses` da
+ * `Fluxo de Caixa - 2026.xlsx` do Andre, linha por linha. Isto não soma conta nenhuma —
+ * é agrupamento visual, e o total de cada grupo é a soma das linhas que já existiam
+ * (`groupCashFlowRows`, abaixo).
+ *
+ * Duas entradas não vêm direto da leitura da planilha:
+ *
+ *   - **`8.03` (Agência Ciclo) → `Pessoas`.** A aba `Colaboradores`, de onde a `Expenses`
+ *     é gerada, não lista a Ciclo — mas medido contra a `Expenses`, pô-la dentro de
+ *     `Pessoas` fecha o bloco em 6 dos 7 meses ao centavo. É decisão, não leitura direta.
+ *   - **`9.03` (Alimentação) → `Cost of Goods/Cost of Services`, nunca `Travel`.** A
+ *     planilha tem as duas linhas — `Alimentação` num grupo, `Travel Meals` no outro —,
+ *     mas o razão tem uma conta só para as duas: confirmado pelo Andre em 25/08/2026,
+ *     restaurante em viagem entra em `Alimentação` (D106). Só um grupo pode ficar com ela.
+ *
+ * `6.02`–`6.09` (Salários, Férias, 13º, Ticket, VT) nunca aparecem em `cash_entries` — o
+ * pagamento de folha sai como um lote só, em `6.10` — mas entram aqui do mesmo jeito: se um
+ * dia uma reclassificação manual usar um deles, a linha não deve cair fora de `Pessoas`.
+ *
+ * Um código que não aparece aqui não desaparece do relatório — vira "Sem grupo", visível
+ * como qualquer outra linha, nunca escondido.
+ */
+const GROUP_OF_CODE: Record<string, string> = {
+  // Pessoas
+  "6.02": "Pessoas",
+  "6.03": "Pessoas",
+  "6.04": "Pessoas",
+  "6.08": "Pessoas",
+  "6.09": "Pessoas",
+  "6.10": "Pessoas",
+  "6.11": "Pessoas",
+  "8.03": "Pessoas",
+  "99.04": "Pessoas",
+  // Miscellaneous Cost of Service
+  "6.12": "Miscellaneous Cost of Service",
+  "11.01": "Miscellaneous Cost of Service",
+  // Gerais e Admnistrativos
+  "7.00": "Gerais e Admnistrativos",
+  "7.01": "Gerais e Admnistrativos",
+  "7.02": "Gerais e Admnistrativos",
+  "7.03": "Gerais e Admnistrativos",
+  "7.04": "Gerais e Admnistrativos",
+  "7.05": "Gerais e Admnistrativos",
+  "7.06": "Gerais e Admnistrativos",
+  "7.07": "Gerais e Admnistrativos",
+  "7.08": "Gerais e Admnistrativos",
+  "7.09": "Gerais e Admnistrativos",
+  "7.10": "Gerais e Admnistrativos",
+  "7.11": "Gerais e Admnistrativos",
+  "7.12": "Gerais e Admnistrativos",
+  "7.13": "Gerais e Admnistrativos",
+  "7.14": "Gerais e Admnistrativos",
+  "7.15": "Gerais e Admnistrativos",
+  "7.16": "Gerais e Admnistrativos",
+  "7.17": "Gerais e Admnistrativos",
+  "7.18": "Gerais e Admnistrativos",
+  "7.19": "Gerais e Admnistrativos",
+  "8.01": "Gerais e Admnistrativos",
+  // Cost of Goods/Cost of Services
+  "5.01": "Cost of Goods/Cost of Services",
+  "7.20": "Cost of Goods/Cost of Services",
+  "9.03": "Cost of Goods/Cost of Services",
+  "9.04": "Cost of Goods/Cost of Services",
+  "10.01": "Cost of Goods/Cost of Services",
+  // Travel
+  "9.01": "Travel",
+  "9.02": "Travel",
+  "9.05": "Travel",
+  // Legal
+  "8.02": "Legal",
+  // Insurance
+  "6.06": "Insurance",
+  "6.07": "Insurance",
+  // Other Expenses
+  "10.02": "Other Expenses",
+  "11.02": "Other Expenses",
+  "11.03": "Other Expenses",
+  // Imposto
+  "4.01": "Imposto",
+};
+
+/** De cima para baixo, na mesma ordem da aba `Expenses`. */
+const GROUP_SORT_ORDER: readonly string[] = [
+  "Pessoas",
+  "Miscellaneous Cost of Service",
+  "Gerais e Admnistrativos",
+  "Cost of Goods/Cost of Services",
+  "Travel",
+  "Legal",
+  "Insurance",
+  "Other Expenses",
+  "Imposto",
+];
+
+export type CashFlowGroup = {
+  label: string;
+  rows: CashFlowRow[];
+  totals: Cents[];
+  total: Cents;
+};
+
+/**
+ * Agrupa as linhas de uma seção como a aba `Expenses` do Andre agrupa as dela.
+ *
+ * Não soma conta nenhuma — os membros continuam sendo as mesmas linhas que
+ * `buildCashFlow` já produziu, só reunidas visualmente; o total do grupo é a soma delas,
+ * não um novo número. A linha de sócios (D112, `mergedRows`) não tem `code` — é
+ * reconhecida pelo rótulo, porque já é ela mesma o resultado de uma soma anterior.
+ */
+export function groupCashFlowRows(
+  rows: readonly CashFlowRow[],
+  periodCount: number,
+): { groups: CashFlowGroup[]; ungrouped: CashFlowRow[] } {
+  const byGroup = new Map<string, CashFlowRow[]>();
+  const ungrouped: CashFlowRow[] = [];
+
+  for (const row of rows) {
+    const label =
+      row.label === SOCIOS_LABEL ? "Pessoas" : row.code ? GROUP_OF_CODE[row.code] : undefined;
+    if (!label) {
+      ungrouped.push(row);
+      continue;
+    }
+    byGroup.set(label, [...(byGroup.get(label) ?? []), row]);
+  }
+
+  const groups = [...byGroup]
+    .map(([label, groupRows]): CashFlowGroup => {
+      const totals = Array.from({ length: periodCount }, (_, index) =>
+        sum(groupRows.map((row) => row.values[index] as Cents)),
+      );
+      return { label, rows: groupRows, totals, total: sum(totals) };
+    })
+    .sort((a, b) => GROUP_SORT_ORDER.indexOf(a.label) - GROUP_SORT_ORDER.indexOf(b.label));
+
+  return { groups, ungrouped };
+}
 
 export type CashFlowView = {
   report: CashFlowReport;

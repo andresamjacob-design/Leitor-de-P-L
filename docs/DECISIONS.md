@@ -2334,6 +2334,51 @@ um dólar e quarenta no razão inteiro.
 falso e nunca chamaram a rede, então a mudança de schema não tocou neles; só
 `provider.test.ts` precisou trocar a asserção do modelo padrão.
 
+### D125 — A aba de fluxo ganha grupo com sub-linha, sem inventar mapa nenhum
+O item 1 do handover: fazer as Saídas do fluxo se parecerem com a aba `Expenses` da
+`Fluxo de Caixa - 2026.xlsx` — grupo, as linhas de dentro, subtotal — em vez da lista
+achatada por conta que já existia. `mergedRows` (D112) resolve "várias contas viram uma
+linha"; isto é outra coisa, "várias linhas continuam sendo elas mesmas, só reunidas".
+
+**O mapa código → grupo não foi digitado de memória.** Vim de dois lados e cruzei:
+
+1. Um script descartável leu a coluna B da aba `Expenses` linha por linha (o grupo, em
+   fill-down) junto da coluna E (o rótulo), e devolveu as 51 linhas reais da planilha —
+   9 grupos, não os 8 que eu tinha ouvido: falta `Miscellaneous Cost of Service`, e o nome
+   certo é `Cost of Goods/Cost of Services`, com barra.
+2. Outro script descartável consultou `cash_entries` de verdade (bank **e** cartão, as
+   duas — só bank teria escondido toda compra categorizada no lado do cartão) e devolveu
+   todo código de conta que a DD Group já usou em saída. Todos os 41 batem com um grupo do
+   passo 1, menos `99.02` (pagamento de fatura sem quebrar — fica sem grupo de propósito).
+
+**Duas linhas da planilha pedem o mesmo código, e só uma pode ficar com ele:**
+
+- `9.03 Alimentação` aparece em `Cost of Goods/Cost of Services` *e*, como `Travel Meals`,
+  em `Travel` — mas o razão tem uma conta só para as duas, e o Andre já decidiu qual
+  (D106, 25/08/2026): restaurante em viagem entra em `Alimentação`. `9.03` fica em
+  `Cost of Goods/Cost of Services`, nunca em `Travel`.
+- `8.03 Agência` (a Agência Ciclo) não existe na aba `Expenses` — a `Colaboradores`, de
+  onde ela é gerada, não a lista. O handover já tinha medido: posta dentro de `Pessoas`, o
+  bloco fecha em 6 dos 7 meses ao centavo. Entra em `Pessoas` por essa medição, não porque
+  a planilha diz.
+
+→ `groupCashFlowRows` em `cash-flow-report.ts`, função pura sobre as linhas que
+`buildCashFlow` já produziu — não refaz a soma, só reúne visualmente e soma o que já
+existia. A linha de sócios (D112) não tem `code`; é reconhecida pelo rótulo, porque já é
+ela mesma o resultado de uma soma anterior. `cash-flow.ts`, com seus 33 testes, não mudou
+uma linha — quem escolhe o grupo continua sendo o carregador, nunca o motor.
+
+**O que não bate com grupo nenhum não desaparece.** Vira "Sem grupo", visível como
+qualquer linha — hoje só `99.02` residual cairia ali, o resto de fatura que a D116 não
+conseguiu quebrar (o mesmo R$ 830,97 de maio que o handover já apontava como nunca
+importado).
+
+Sete testes novos em `cash-flow-report.test.ts`, 435 → **442**. `npm run typecheck` e
+`npm run lint` passam. **O que não deu para provar:** a tela em si — a auth é magic link
+para o email do Andre, e não há sessão para eu abrir o navegador. Verificado pelo que dá
+para verificar sem login: os dois scripts descartáveis (apagados depois), a leitura direta
+da planilha e do banco, e os testes unitários da função pura.
+
 ---
 
 ## Parte 13 — Decisões da Fase 8
