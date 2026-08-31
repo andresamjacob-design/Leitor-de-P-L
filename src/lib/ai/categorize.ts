@@ -69,6 +69,29 @@ Regras:
 Formato de cada item:
 {"ref":"...","category_code":"...","client_id":null,"person_id":null,"confidence":0.9,"reasoning":"..."}`;
 
+/**
+ * `output_config.format` — o schema é o que garante o array sem prosa em volta, agora que
+ * o prefill de `[` não existe mais. `client_id`/`person_id` entram em `required` porque
+ * `additionalProperties: false` exige todas as chaves; a opcionalidade continua sendo
+ * `null`, do jeito que o `SYSTEM_PROMPT` já pedia.
+ */
+export const RESPONSE_SCHEMA: Record<string, unknown> = {
+  type: "array",
+  items: {
+    type: "object",
+    properties: {
+      ref: { type: "string" },
+      category_code: { type: "string" },
+      client_id: { anyOf: [{ type: "string" }, { type: "null" }] },
+      person_id: { anyOf: [{ type: "string" }, { type: "null" }] },
+      confidence: { type: "number" },
+      reasoning: { type: "string" },
+    },
+    required: ["ref", "category_code", "client_id", "person_id", "confidence", "reasoning"],
+    additionalProperties: false,
+  },
+};
+
 /** The prompt. Amounts are deliberately absent — see the module header. */
 export function buildCategorizationPrompt(
   subjects: readonly AiSubject[],

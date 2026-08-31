@@ -2311,6 +2311,29 @@ Federal, hoje, chama o mesmo CNPJ de `LINKANA TECNOLOGIA LTDA` (fantasia `LINKAN
 desde 2018). Confirmado por `curl` direto, fora do código — os dígitos batem, `32138431000105`
 nos dois lados. O Andre decidiu deixar como teste vivo, sem resolver quem é.
 
+### D124 — O prefill morreu com Sonnet 5, e o schema o substitui em vez de imitá-lo
+O handover já sabia: `prefill: "["` em `ai-suggestions.ts` e `prefill: "{"` em
+`contratos/extrair/actions.ts` devolvem 400 em Sonnet 5, Opus 5 e toda a família 4.6+ —
+prefill de última mensagem `assistant` foi removido. O substituto documentado é
+`output_config.format`, que não é um truque de abrir a resposta com um caractere: é um
+JSON Schema que a API valida antes de devolver.
+
+→ `AiRequest.prefill` virou `AiRequest.responseSchema` em `provider.ts`, carregado como
+`output_config.format.schema` no corpo do `fetch` — sem SDK novo, mesmo `fetch` puro da D61.
+Os dois chamadores ganharam schema: `RESPONSE_SCHEMA` em `categorize.ts` (array de
+sugestões) e em `contract.ts` (objeto com os dez campos do contrato). Os dois usam o mesmo
+padrão — toda chave em `required`, valor `anyOf: [tipo, null]` — porque `additionalProperties:
+false` exige a chave presente, e "campo que o contrato não tem" continua sendo `null`, não
+ausência, exatamente como `parseContractDraft` e `parseCategorization` já esperavam.
+
+→ `DEFAULT_MODEL` virou `claude-opus-5` (era `claude-sonnet-5`), como o handover recomendou:
+a tarefa é ler descrição truncada e saber o que é, e a diferença de custo entre os dois é
+um dólar e quarenta no razão inteiro.
+
+`npm run check` continua em 435 testes — os dois arquivos de teste da IA usam um provedor
+falso e nunca chamaram a rede, então a mudança de schema não tocou neles; só
+`provider.test.ts` precisou trocar a asserção do modelo padrão.
+
 ---
 
 ## Parte 13 — Decisões da Fase 8
