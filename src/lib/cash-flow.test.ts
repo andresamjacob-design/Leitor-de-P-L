@@ -6,6 +6,8 @@ const CATEGORIES: FlowCategory[] = [
   { id: "rev", code: "3.01", name: "Receita — Suporte contínuo", kind: "revenue", sortOrder: 0 },
   { id: "sal", code: "6.02", name: "Salários", kind: "expense", sortOrder: 10 },
   { id: "tool", code: "7.01", name: "Google Workspace", kind: "expense", sortOrder: 20 },
+  { id: "pro", code: "6.11", name: "Pró-labore", kind: "expense", sortOrder: 11 },
+  { id: "dist", code: "99.04", name: "Distribuição de lucros", kind: "owner_draw", sortOrder: 95 },
   { id: "card", code: "99.02", name: "Pagamento de fatura", kind: "transfer", sortOrder: 90 },
   { id: "appl", code: "99.03", name: "Aplicação automática", kind: "transfer", sortOrder: 91 },
 ];
@@ -223,5 +225,296 @@ describe("buildCashFlow", () => {
 
     expect(result.closing).toEqual([]);
     expect(result.warnings).toHaveLength(1);
+  });
+});
+
+describe("pagamento devolvido não é gasto nem entrada (D107)", () => {
+  /** Como `entry`, mas com documento — o par só existe quando há identidade. */
+  function withDoc(base: FlowEntry, doc: string | null): FlowEntry {
+    return { ...base, counterpartyTaxId: doc };
+  }
+  const saidas = (r: ReturnType<typeof report>) =>
+    r.sections.find((s) => s.key === "out")!.total;
+  const entradas = (r: ReturnType<typeof report>) =>
+    r.sections.find((s) => s.key === "in")!.total;
+
+  it("o pagamento e a devolução somem das duas colunas, e o saldo não muda", () => {
+    const comPar = report([
+      withDoc(entry("2026-01-10", "1.000,00", "out", "sal"), "39880538803"),
+      withDoc(entry("2026-01-10", "1.000,00", "in", "sal"), "39880538803"),
+    ]);
+
+    expect(saidas(comPar)).toBe(0n);
+    expect(entradas(comPar)).toBe(0n);
+    // O saldo final é o mesmo que se nada tivesse acontecido — porque nada aconteceu.
+    expect(comPar.closing.at(-1)).toBe(BANK.openingBalance);
+  });
+
+  it("dois pagamentos e uma devolução deixam um pagamento de pé — o caso do Ricardo", () => {
+    const r = report([
+      withDoc(entry("2026-01-08", "115.000,00", "out", "sal"), "39880538803"),
+      withDoc(entry("2026-01-08", "115.000,00", "out", "sal"), "39880538803"),
+      withDoc(entry("2026-01-08", "115.000,00", "in", "sal"), "39880538803"),
+    ]);
+
+    expect(saidas(r)).toBe(parseMoney("115.000,00"));
+    expect(entradas(r)).toBe(0n);
+  });
+
+  it("categoria diferente não é devolução — é a D83, e é o que protege a Ciclo", () => {
+    // Um CNPJ que é cliente e fornecedor ao mesmo tempo: recebemos receita dele e pagamos
+    // custo a ele, pelo mesmo valor. Anular os dois inventaria um desconto que não existe.
+    const r = report([
+      withDoc(entry("2026-01-10", "4.000,00", "out", "sal"), "23757895000109"),
+      withDoc(entry("2026-01-20", "4.000,00", "in", "rev"), "23757895000109"),
+    ]);
+
+    expect(saidas(r)).toBe(parseMoney("4.000,00"));
+    expect(entradas(r)).toBe(parseMoney("4.000,00"));
+  });
+
+  it("sem documento não há par — nome não basta para anular dinheiro", () => {
+    const r = report([
+      entry("2026-01-10", "500,00", "out", "sal"),
+      entry("2026-01-11", "500,00", "in", "sal"),
+    ]);
+
+    expect(saidas(r)).toBe(parseMoney("500,00"));
+    expect(entradas(r)).toBe(parseMoney("500,00"));
+  });
+
+  it("devolução muito depois do pagamento não é daquele pagamento", () => {
+    const r = report([
+      withDoc(entry("2026-01-10", "800,00", "out", "sal"), "12345678901"),
+      withDoc(entry("2026-05-31", "800,00", "in", "sal"), "12345678901"),
+    ], "2026-01-01", "2026-05-31");
+
+    expect(saidas(r)).toBe(parseMoney("800,00"));
+  });
+});
+
+describe("transferência com uma perna só é saída (D108)", () => {
+  /** Como `report`, mas com o cartão declarado fora do relatório — que é o caso real. */
+  function comCartaoFora(entries: FlowEntry[], from = "2026-01-01", to = "2026-03-31") {
+    return buildCashFlow({
+      periods: periodRange(from, to),
+      accounts: [BANK],
+      entries,
+      categories: CATEGORIES,
+      oneLeggedTransferCategoryIds: new Set(["card"]),
+    });
+  }
+  const secao = (r: ReturnType<typeof report>, key: "in" | "out" | "transfer") =>
+    r.sections.find((s) => s.key === key)!.total;
+
+  it("o pagamento da fatura entra em saídas, e não em transferências", () => {
+    const r = comCartaoFora([entry("2026-01-15", "14.922,64", "out", "card")]);
+
+    expect(secao(r, "out")).toBe(parseMoney("14.922,64"));
+    expect(secao(r, "transfer")).toBe(0n);
+  });
+
+  it("a aplicação no CDB continua transferência — as duas pernas estão no relatório", () => {
+    const r = comCartaoFora([
+      entry("2026-01-15", "14.922,64", "out", "card"),
+      entry("2026-01-20", "485.000,00", "out", "appl"),
+    ]);
+
+    // Só a fatura mudou de lado. A aplicação é a prova de que a regra não é "toda
+    // transferência vira saída" — é "transferência sem contrapartida aqui dentro".
+    expect(secao(r, "out")).toBe(parseMoney("14.922,64"));
+    expect(secao(r, "transfer")).toBe(parseMoney("-485.000,00"));
+  });
+
+  it("mudar de seção não move dinheiro: o saldo final é o mesmo de antes", () => {
+    const lancamentos = [
+      entry("2026-01-10", "100.000,00", "in", "rev"),
+      entry("2026-01-15", "14.922,64", "out", "card"),
+    ];
+
+    expect(comCartaoFora(lancamentos).closing.at(-1)).toBe(
+      report([...lancamentos]).closing.at(-1),
+    );
+  });
+
+  it("o resultado operacional passa a sentir a fatura — é o número que bate com a planilha", () => {
+    const lancamentos = [
+      entry("2026-01-10", "100.000,00", "in", "rev"),
+      entry("2026-01-15", "14.922,64", "out", "card"),
+    ];
+
+    const antes = report([...lancamentos]).operating[0] as bigint;
+    const depois = comCartaoFora(lancamentos).operating[0] as bigint;
+
+    expect(antes).toBe(parseMoney("100.000,00"));
+    expect(depois).toBe(parseMoney("85.077,36"));
+    expect(antes - depois).toBe(parseMoney("14.922,64"));
+  });
+
+  it("a tela avisa, porque quem lê precisa saber por que a fatura está ali", () => {
+    const r = comCartaoFora([entry("2026-01-15", "14.922,64", "out", "card")]);
+
+    expect(r.warnings.some((w) => w.includes("Pagamento de fatura"))).toBe(true);
+    // E não avisa quando não há fatura no período — aviso que aparece sempre é ruído.
+    expect(
+      comCartaoFora([entry("2026-01-10", "100,00", "out", "sal")]).warnings.some((w) =>
+        w.includes("Pagamento de fatura"),
+      ),
+    ).toBe(false);
+  });
+
+  it("sem o conjunto, nada muda — o comportamento antigo continua sendo o padrão", () => {
+    const r = report([entry("2026-01-15", "14.922,64", "out", "card")]);
+
+    expect(secao(r, "out")).toBe(0n);
+    expect(secao(r, "transfer")).toBe(parseMoney("-14.922,64"));
+  });
+});
+
+describe("linhas agrupadas (D112)", () => {
+  const socios = [{ label: "Sócios — pró-labore e distribuição", categoryIds: new Set(["pro", "dist"]) }];
+
+  function agrupado(entries: FlowEntry[]) {
+    return buildCashFlow({
+      periods: periodRange("2026-01-01", "2026-01-31"),
+      accounts: [BANK],
+      entries,
+      categories: CATEGORIES,
+      mergedRows: socios,
+    });
+  }
+
+  const lancamentos = () => [
+    entry("2026-01-05", "15.000,00", "out", "pro"),
+    entry("2026-01-09", "60.000,00", "out", "dist"),
+    entry("2026-01-25", "1.000,00", "out", "tool"),
+  ];
+
+  it("pró-labore e distribuição viram uma linha só, com a soma das duas", () => {
+    const saidas = agrupado(lancamentos()).sections.find((s) => s.key === "out");
+    const linha = saidas?.rows.find((r) => r.label.startsWith("Sócios"));
+
+    expect(linha?.total).toBe(parseMoney("75.000,00"));
+    expect(saidas?.rows.map((r) => r.label)).not.toContain("Pró-labore");
+    expect(saidas?.rows.map((r) => r.label)).not.toContain("Distribuição de lucros");
+  });
+
+  it("agrupar não move dinheiro: o total da seção é o mesmo com e sem", () => {
+    // É a trava da D108 escrita como teste: mudar de apresentação não pode mudar número.
+    const com = agrupado(lancamentos()).sections.find((s) => s.key === "out");
+    const sem = report(lancamentos(), "2026-01-01", "2026-01-31").sections.find(
+      (s) => s.key === "out",
+    );
+
+    expect(com?.total).toBe(sem?.total);
+    expect(com?.total).toBe(parseMoney("76.000,00"));
+  });
+
+  it("o fechamento do mês não muda", () => {
+    expect(agrupado(lancamentos()).closing).toEqual(
+      report(lancamentos(), "2026-01-01", "2026-01-31").closing,
+    );
+  });
+
+  it("a linha do grupo aparece onde o primeiro membro apareceria, não no fim", () => {
+    // 6.11 tem sortOrder 11 e 99.04 tem 95. O grupo é dos sócios e pertence ao bloco de
+    // pessoal, que é onde a planilha do Andre também o põe.
+    const saidas = agrupado(lancamentos()).sections.find((s) => s.key === "out");
+
+    expect(saidas?.rows.map((r) => r.label)).toEqual([
+      "Sócios — pró-labore e distribuição",
+      "Google Workspace",
+    ]);
+  });
+
+  it("a linha do grupo não tem conta, porque são duas", () => {
+    const saidas = agrupado(lancamentos()).sections.find((s) => s.key === "out");
+    const linha = saidas?.rows.find((r) => r.label.startsWith("Sócios"));
+
+    expect(linha?.categoryId).toBeNull();
+    expect(linha?.code).toBeNull();
+  });
+
+  it("sem `mergedRows`, cada conta continua na sua linha", () => {
+    // O sentido oposto, escrito no mesmo dia (D99): o padrão é não agrupar nada.
+    const saidas = report(lancamentos(), "2026-01-01", "2026-01-31").sections.find(
+      (s) => s.key === "out",
+    );
+
+    expect(saidas?.rows.map((r) => r.label)).toContain("Pró-labore");
+    expect(saidas?.rows.map((r) => r.label)).toContain("Distribuição de lucros");
+  });
+
+  it("uma conta fora do grupo não é arrastada para ele", () => {
+    const saidas = agrupado([
+      entry("2026-01-05", "15.000,00", "out", "pro"),
+      entry("2026-01-20", "60.000,00", "out", "sal"),
+    ]).sections.find((s) => s.key === "out");
+
+    expect(saidas?.rows.find((r) => r.label === "Salários")?.total).toBe(
+      parseMoney("60.000,00"),
+    );
+    expect(saidas?.rows.find((r) => r.label.startsWith("Sócios"))?.total).toBe(
+      parseMoney("15.000,00"),
+    );
+  });
+});
+
+describe("devolução de retirada não é entrada (D113)", () => {
+  const socios = [{ label: "Sócios — pró-labore e distribuição", categoryIds: new Set(["pro", "dist"]) }];
+
+  function comSocios(entries: FlowEntry[]) {
+    return buildCashFlow({
+      periods: periodRange("2026-01-01", "2026-01-31"),
+      accounts: [BANK],
+      entries,
+      categories: CATEGORIES,
+      mergedRows: socios,
+    });
+  }
+
+  it("a devolução abate as saídas em vez de virar entrada", () => {
+    // Sem par para o `refundedEntryIds` casar: documentos diferentes, então as duas pernas
+    // sobrevivem e é aqui que a regra precisa valer.
+    const r = comSocios([
+      entry("2026-01-09", "100.000,00", "out", "dist"),
+      entry("2026-01-15", "40.000,00", "in", "dist"),
+    ]);
+    const entradas = r.sections.find((s) => s.key === "in");
+    const saidas = r.sections.find((s) => s.key === "out");
+
+    expect(entradas?.total).toBe(parseMoney("0,00"));
+    expect(saidas?.total).toBe(parseMoney("60.000,00"));
+  });
+
+  it("o saldo continua certo — abater na saída é o mesmo que somar na entrada", () => {
+    const r = comSocios([
+      entry("2026-01-09", "100.000,00", "out", "dist"),
+      entry("2026-01-15", "40.000,00", "in", "dist"),
+    ]);
+
+    // 10.000 de abertura − 100.000 + 40.000
+    expect(r.closing[0]).toBe(-parseMoney("50.000,00"));
+  });
+
+  it("uma retirada inteiramente devolvida deixa a linha em zero", () => {
+    const r = comSocios([
+      entry("2026-01-09", "30.000,00", "out", "dist"),
+      entry("2026-01-15", "30.000,00", "in", "dist"),
+    ]);
+
+    expect(r.sections.find((s) => s.key === "out")?.total).toBe(parseMoney("0,00"));
+    expect(r.closing[0]).toBe(parseMoney("10.000,00"));
+  });
+
+  it("o sentido oposto: devolução de custo comum continua sendo entrada", () => {
+    // A regra é dos sócios, não de toda devolução. Escrito no mesmo dia (D99).
+    const r = comSocios([
+      entry("2026-01-09", "10.000,00", "out", "sal"),
+      entry("2026-01-15", "3.000,00", "in", "sal"),
+    ]);
+
+    expect(r.sections.find((s) => s.key === "in")?.total).toBe(parseMoney("3.000,00"));
+    expect(r.sections.find((s) => s.key === "out")?.total).toBe(parseMoney("10.000,00"));
   });
 });

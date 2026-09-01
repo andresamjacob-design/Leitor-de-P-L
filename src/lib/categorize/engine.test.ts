@@ -16,6 +16,7 @@ function rule(overrides: Partial<Rule> = {}): Rule {
     matchType: "contains",
     pattern: "uber",
     counterpartyTaxId: null,
+    direction: null,
     amountMin: null,
     amountMax: null,
     accountId: null,
@@ -244,6 +245,35 @@ describe("matchPerson", () => {
   });
 });
 
+describe("direção", () => {
+  // The real case: `CICLO` is an agency this company pays *and* a client that pays it.
+  // A rule written for the expense used to swallow five receipts on the January statement.
+  it("não deixa uma regra de despesa pegar uma entrada", () => {
+    const despesa = rule({ pattern: "ciclo", direction: "out", categoryId: "agencia" });
+
+    const pagamento = suggestCategory(
+      subject({ description: "PIX ENVIADO CICLO ASSESSORIA", direction: "out" }),
+      { ...EMPTY, rules: [despesa] },
+    );
+    const recebimento = suggestCategory(
+      subject({ description: "RECEBIMENTOS CICLO - ASSESSORI", direction: "in" }),
+      { ...EMPTY, rules: [despesa] },
+    );
+
+    expect(pagamento?.categoryId).toBe("agencia");
+    expect(recebimento).toBeNull();
+  });
+
+  it("sem sentido definido, a regra continua valendo para os dois", () => {
+    const qualquer = rule({ pattern: "ciclo", direction: null, categoryId: "agencia" });
+    const recebimento = suggestCategory(
+      subject({ description: "RECEBIMENTOS CICLO", direction: "in" }),
+      { ...EMPTY, rules: [qualquer] },
+    );
+    expect(recebimento?.categoryId).toBe("agencia");
+  });
+});
+
 describe("proposeRuleFrom", () => {
   it("com CNPJ, a regra é por identidade e ignora a descrição", () => {
     expect(
@@ -261,5 +291,201 @@ describe("proposeRuleFrom", () => {
 
   it("uma descrição só de números não vira padrão vazio", () => {
     expect(proposeRuleFrom(subject({ description: "12345678" })).pattern).toBe("12345678");
+  });
+});
+
+describe("o histórico não põe entrada em conta de custo (D83)", () => {
+  const CUSTO = new Set(["freelancers", "agencia"]);
+
+  const historico = [
+    {
+      description: "PIX ENVIADO",
+      counterpartyTaxId: "12345678901",
+      categoryId: "freelancers",
+      clientId: null,
+      personId: "ricardo",
+      occurredOn: "2026-07-02",
+    },
+  ];
+
+  it("a devolução do Ricardo não volta para 6.10 pela camada de histórico", () => {
+    // Sem a trava, `history_tax_id` devolvia R$ 115.000 de custo negativo para a folha —
+    // medido rodando o motor sobre as 250 linhas sem conta do razão.
+    const devolucao = subject({
+      description: "PIX DEVOLVIDO RICARDO DE 09/01",
+      direction: "in",
+      amount: parseMoney("115.000,00"),
+      counterpartyTaxId: "12345678901",
+    });
+
+    expect(
+      suggestCategory(devolucao, { ...EMPTY, history: historico, costCategoryIds: CUSTO }),
+    ).toBeNull();
+  });
+
+  it("sem o conjunto de contas de custo, nada é bloqueado — a trava é opt-in", () => {
+    const devolucao = subject({
+      description: "PIX DEVOLVIDO RICARDO DE 09/01",
+      direction: "in",
+      counterpartyTaxId: "12345678901",
+    });
+
+    expect(suggestCategory(devolucao, { ...EMPTY, history: historico })?.categoryId).toBe(
+      "freelancers",
+    );
+  });
+
+  it("a saída do mesmo CNPJ continua indo para 6.10", () => {
+    const pagamento = subject({
+      description: "PIX ENVIADO",
+      direction: "out",
+      counterpartyTaxId: "12345678901",
+    });
+
+    expect(
+      suggestCategory(pagamento, { ...EMPTY, history: historico, costCategoryIds: CUSTO })
+        ?.categoryId,
+    ).toBe("freelancers");
+  });
+
+  it("uma regra explícita continua podendo — ela tem `direction` para dizer que quis", () => {
+    // O estorno de cartão em 7.02 é exatamente esse caso legítimo.
+    const estorno = subject({
+      description: "SALESFORCE TECNOLOGIA",
+      direction: "in",
+      accountId: "cartao",
+    });
+    const regra = rule({ pattern: "SALESFORCE", categoryId: "agencia" });
+
+    expect(
+      suggestCategory(estorno, { ...EMPTY, rules: [regra], costCategoryIds: CUSTO })?.categoryId,
+    ).toBe("agencia");
+  });
+
+  it("o histórico por descrição também é travado", () => {
+    const porDescricao = [
+      {
+        description: "PIX RECEBIDO CICLO",
+        counterpartyTaxId: null,
+        categoryId: "agencia",
+        clientId: "ciclo",
+        personId: null,
+        occurredOn: "2026-05-12",
+      },
+    ];
+
+    expect(
+      suggestCategory(subject({ description: "PIX RECEBIDO CICLO", direction: "in" }), {
+        ...EMPTY,
+        history: porDescricao,
+        costCategoryIds: CUSTO,
+      }),
+    ).toBeNull();
+  });
+});
+
+describe("o histórico também não põe saída em conta de receita (D99)", () => {
+  const CUSTO = new Set(["freelancers", "agencia"]);
+  const RECEITA = new Set(["referral", "projeto"]);
+
+  // Um só CNPJ dos dois lados do balcão. A Ciclo é cliente — paga referral todo mês — e é
+  // fornecedora, a agência que a empresa contrata. O mesmo documento, o mesmo nome.
+  const historico = [
+    {
+      description: "PIX RECEBIDO CICLO -12/05",
+      counterpartyTaxId: "11222333000109",
+      categoryId: "referral",
+      clientId: "ciclo",
+      personId: null,
+      occurredOn: "2026-05-11",
+    },
+  ];
+
+  it("o pagamento à Ciclo não vira receita pela camada de histórico", () => {
+    // Sem a trava, `history_tax_id` transformava três pagamentos de R$ 4.000 em
+    // R$ 12.000 de *receita* — medido no ensaio do `recategorize --incluir-historico`.
+    const pagamento = subject({
+      description: "PAGAMENTOS A FORNECEDORES",
+      direction: "out",
+      amount: parseMoney("4.000,00"),
+      counterpartyTaxId: "11222333000109",
+    });
+
+    expect(
+      suggestCategory(pagamento, {
+        ...EMPTY,
+        history: historico,
+        costCategoryIds: CUSTO,
+        revenueCategoryIds: RECEITA,
+      }),
+    ).toBeNull();
+  });
+
+  it("a entrada do mesmo CNPJ continua indo para a receita", () => {
+    const recebimento = subject({
+      description: "PIX RECEBIDO CICLO -09/06",
+      direction: "in",
+      counterpartyTaxId: "11222333000109",
+    });
+
+    expect(
+      suggestCategory(recebimento, {
+        ...EMPTY,
+        history: historico,
+        costCategoryIds: CUSTO,
+        revenueCategoryIds: RECEITA,
+      })?.categoryId,
+    ).toBe("referral");
+  });
+
+  it("sem o conjunto de contas de receita, nada é bloqueado — a trava é opt-in", () => {
+    const pagamento = subject({
+      description: "PAGAMENTOS A FORNECEDORES",
+      direction: "out",
+      counterpartyTaxId: "11222333000109",
+    });
+
+    expect(
+      suggestCategory(pagamento, { ...EMPTY, history: historico, costCategoryIds: CUSTO })
+        ?.categoryId,
+    ).toBe("referral");
+  });
+
+  it("uma regra explícita continua podendo — ela tem `direction` para dizer que quis", () => {
+    const pagamento = subject({ description: "BOLETO PAGO CICLO INTELI", direction: "out" });
+    const regra = rule({ pattern: "CICLO INTELI", categoryId: "referral" });
+
+    expect(
+      suggestCategory(pagamento, {
+        ...EMPTY,
+        rules: [regra],
+        costCategoryIds: CUSTO,
+        revenueCategoryIds: RECEITA,
+      })?.categoryId,
+    ).toBe("referral");
+  });
+
+  it("entrada numa conta que não é de custo passa normalmente", () => {
+    const receita = [
+      {
+        description: "RECEBIMENTOS MARY KAY",
+        counterpartyTaxId: "50050390000182",
+        categoryId: "receita-projeto",
+        clientId: "marykay",
+        personId: null,
+        occurredOn: "2026-06-05",
+      },
+    ];
+
+    expect(
+      suggestCategory(
+        subject({
+          description: "RECEBIMENTOS MARY KAY",
+          direction: "in",
+          counterpartyTaxId: "50050390000182",
+        }),
+        { ...EMPTY, history: receita, costCategoryIds: CUSTO },
+      )?.categoryId,
+    ).toBe("receita-projeto");
   });
 });

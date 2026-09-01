@@ -34,6 +34,13 @@ export type FlowCategory = {
   sortOrder: number;
 };
 
+/**
+ * `abatesSection` diz que a linha **desconta da própria seção** em vez de somar à de
+ * frente. Nasceu na D113 para retirada de sócio devolvida e virou campo na D116, quando a
+ * quebra da fatura passou a produzir contas que fecham negativas dentro de um ciclo — um
+ * estorno maior que a compra. A planilha do Andre faz igual: a linha `Bank Charges` dela
+ * vale **−37,50** em abril, dentro da despesa, e não vira receita.
+ */
 export type FlowEntry = {
   id: string;
   accountId: string;
@@ -42,6 +49,9 @@ export type FlowEntry = {
   amount: Cents;
   direction: EntryDirection;
   categoryId: string | null;
+  /** Só para casar pagamento com devolução; a identidade é o que torna o par confiável. */
+  counterpartyTaxId?: string | null;
+  abatesSection?: boolean;
 };
 
 export type CashFlowSectionKey = "in" | "out" | "transfer";
@@ -100,19 +110,124 @@ export function periodRange(from: IsoDate, to: IsoDate): Period[] {
  * A transfer is a transfer whichever way it points. Everything else follows its
  * direction, including an uncategorised entry — money that moved is money that moved,
  * and hiding it until someone categorises it would make the balance wrong.
+ *
+ * `oneLegged` is the exception, and it exists because **uma transferência só é
+ * transferência quando as duas pernas estão no relatório** (D108). A aplicação no CDB
+ * tem as duas — conta de aplicação é conta de caixa —, então ela se cancela e mostrar as
+ * duas pernas seria inflar as colunas. O pagamento da fatura tem uma só, porque o cartão
+ * fica fora deste relatório de propósito (D-C): daquele lado o dinheiro sai do banco e
+ * não volta, que é o critério da D107.
  */
 function sectionOf(
   entry: FlowEntry,
   categories: Map<string, FlowCategory>,
+  oneLegged: ReadonlySet<string>,
 ): CashFlowSectionKey {
   const kind = entry.categoryId ? categories.get(entry.categoryId)?.kind : undefined;
-  if (kind === "transfer") return "transfer";
+  if (kind === "transfer" && !(entry.categoryId && oneLegged.has(entry.categoryId))) {
+    return "transfer";
+  }
+  // Retirada de sócio devolvida **não é entrada** (D113). Ela fica do lado das saídas,
+  // abatendo — porque o que aconteceu foi uma distribuição menor, não um recebimento. Pôr
+  // no `in` faria a empresa parecer ter ganhado dinheiro ao ter uma retirada estornada.
+  if (kind === "owner_draw") return "out";
+  if (entry.abatesSection === true) return "out";
   return entry.direction;
+}
+
+/** True quando a linha abate a própria seção em vez de somar a ela (D113, D116). */
+function abate(entry: FlowEntry, categories: Map<string, FlowCategory>): boolean {
+  if (entry.abatesSection === true) return true;
+  const kind = entry.categoryId ? categories.get(entry.categoryId)?.kind : undefined;
+  return kind === "owner_draw" && entry.direction === "in";
 }
 
 /** Signed contribution to the account balance. */
 function signed(entry: FlowEntry): Cents {
   return entry.direction === "in" ? entry.amount : -entry.amount;
+}
+
+/** Quanto tempo depois do pagamento uma devolução ainda é daquele pagamento. */
+const REFUND_WINDOW_DAYS = 90;
+
+/**
+ * Dias entre duas datas `YYYY-MM-DD`, sem `Date` — data aqui é string (regra do projeto), e
+ * converter para `Date` é como fuso horário entra e move um lançamento de mês.
+ */
+function daysApart(from: IsoDate, to: IsoDate): number {
+  return Math.abs(Math.round((Date.UTC(
+    Number(to.slice(0, 4)), Number(to.slice(5, 7)) - 1, Number(to.slice(8, 10)),
+  ) - Date.UTC(
+    Number(from.slice(0, 4)), Number(from.slice(5, 7)) - 1, Number(from.slice(8, 10)),
+  )) / 86_400_000));
+}
+
+/**
+ * Pagamentos que voltaram, e as devoluções que os desfizeram.
+ *
+ * Decisão do Andre em 25/08/2026: **o fluxo mostra o que saiu da conta e não voltou.** Um
+ * pagamento estornado não é gasto, e a devolução dele não é entrada — juntos, os dois são
+ * dinheiro que deu meia-volta, e mostrá-los infla as duas colunas sem mudar saldo nenhum.
+ * Era o caso dos R$ 115.000 e R$ 50.000 do Ricardo, que sozinhos respondiam por quase toda
+ * a diferença entre esta tela e a planilha em janeiro e fevereiro.
+ *
+ * O par exige **identidade, valor e categoria iguais**, e essa terceira condição não é
+ * zelo: é a regra que a D83 já tinha escrito — *é devolução só se o pagamento que ela
+ * reverte estiver na mesma categoria*. Sem ela, uma contraparte que está dos dois lados do
+ * balcão anularia um recebimento contra um pagamento legítimo, que é exatamente o defeito
+ * da D82 e da D99 voltando por uma terceira porta.
+ *
+ * O casamento é **um para um** e pela devolução mais próxima, porque foi assim que o caso
+ * real se apresentou: o Ricardo recebeu **dois** pagamentos de R$ 115.000 e devolveu **um**.
+ * Anular os dois esconderia um gasto verdadeiro; anular um deixa de pé exatamente o que a
+ * empresa pagou e não recuperou.
+ *
+ * Devolver os ids em vez de somar mantém isto testável e deixa o saldo intacto: as duas
+ * pernas se cancelam, então tirar as duas do relatório não move o fechamento um centavo.
+ */
+export function refundedEntryIds(entries: readonly FlowEntry[]): Set<string> {
+  const dropped = new Set<string>();
+
+  const key = (entry: FlowEntry) =>
+    [
+      (entry.counterpartyTaxId ?? "").replace(/\D/g, ""),
+      entry.amount.toString(),
+      entry.categoryId ?? "",
+    ].join("|");
+
+  const refundsByKey = new Map<string, FlowEntry[]>();
+  for (const entry of entries) {
+    if (entry.direction !== "in") continue;
+    if (!entry.counterpartyTaxId) continue;
+    const list = refundsByKey.get(key(entry)) ?? [];
+    list.push(entry);
+    refundsByKey.set(key(entry), list);
+  }
+  for (const list of refundsByKey.values()) {
+    list.sort((a, b) => compareDates(a.occurredOn, b.occurredOn));
+  }
+
+  const payments = entries
+    .filter((entry) => entry.direction === "out" && entry.counterpartyTaxId)
+    .sort((a, b) => compareDates(a.occurredOn, b.occurredOn));
+
+  for (const payment of payments) {
+    const candidates = refundsByKey.get(key(payment));
+    if (!candidates) continue;
+
+    const refund = candidates.find(
+      (candidate) =>
+        !dropped.has(candidate.id) &&
+        compareDates(candidate.occurredOn, payment.occurredOn) >= 0 &&
+        daysApart(payment.occurredOn, candidate.occurredOn) <= REFUND_WINDOW_DAYS,
+    );
+    if (!refund) continue;
+
+    dropped.add(payment.id);
+    dropped.add(refund.id);
+  }
+
+  return dropped;
 }
 
 export type BuildCashFlowInput = {
@@ -122,6 +237,26 @@ export type BuildCashFlowInput = {
   /** Every entry of those accounts, including ones before the range — they set the opening. */
   entries: readonly FlowEntry[];
   categories: readonly FlowCategory[];
+  /**
+   * Contas de transferência cuja contrapartida **não** está neste relatório, e que por
+   * isso contam como entrada ou saída de verdade (D108). Quem decide é o carregador, que
+   * é quem sabe quais contas ficaram de fora; vazio por omissão, para que o
+   * comportamento antigo continue sendo o padrão.
+   */
+  oneLeggedTransferCategoryIds?: ReadonlySet<string>;
+  /**
+   * Contas que se apresentam como **uma linha só** neste relatório (D112).
+   *
+   * O caixa não distingue o que a DRE distingue. Pró-labore é despesa e distribuição de
+   * lucro não é, e a DRE tem de separá-las; para quem olha o caixa, as duas são a mesma
+   * coisa — dinheiro que saiu do banco e foi para os sócios. É como a planilha do Andre
+   * já faz: uma linha só dentro do bloco `Pessoas`.
+   *
+   * Agrupar **não** move dinheiro entre seções: os membros já estão na mesma seção, e o
+   * total dela não muda. Quem escolhe os membros é o carregador, que é quem conhece
+   * código de conta; vazio por omissão, então o comportamento antigo é o padrão.
+   */
+  mergedRows?: readonly { label: string; categoryIds: ReadonlySet<string> }[];
 };
 
 export function buildCashFlow({
@@ -129,6 +264,8 @@ export function buildCashFlow({
   accounts,
   entries,
   categories,
+  oneLeggedTransferCategoryIds = new Set<string>(),
+  mergedRows = [],
 }: BuildCashFlowInput): CashFlowReport {
   if (periods.length === 0) {
     return {
@@ -182,24 +319,86 @@ export function buildCashFlow({
     ["transfer", new Map()],
   ]);
 
+  // O que saiu e voltou não é gasto nem entrada. As duas pernas se cancelam, então tirar as
+  // duas daqui não move saldo nenhum — só para de inflar as duas colunas.
+  const refunded = refundedEntryIds(cashEntries);
+  if (refunded.size > 0) {
+    warnings.push(
+      `${refunded.size / 2} pagamento(s) devolvido(s) não aparecem em entradas nem em ` +
+        `saídas — o fluxo mostra o que saiu da conta e não voltou. O saldo já os considera.`,
+    );
+  }
+
+  const oneLeggedSeen = new Set<string>();
+
+  // `categoryId → chave do grupo`, e a ficha de cada grupo. A chave leva `:` de propósito:
+  // um uuid nunca tem, então ela não pode colidir com o id de uma conta de verdade nem com
+  // o `""` que marca "sem categoria".
+  const grupoDe = new Map<string, string>();
+  const grupos = new Map<string, { label: string; sortOrder: number }>();
+  mergedRows.forEach((grupo, i) => {
+    const chave = `grupo:${i}`;
+    let menorSortOrder = Number.MAX_SAFE_INTEGER;
+    for (const id of grupo.categoryIds) {
+      grupoDe.set(id, chave);
+      const sortOrder = categoryById.get(id)?.sortOrder;
+      if (sortOrder !== undefined) menorSortOrder = Math.min(menorSortOrder, sortOrder);
+    }
+    // O grupo aparece onde o **primeiro** dos seus membros apareceria, e não no fim: os
+    // sócios pertencem ao bloco de pessoal, que é onde a planilha do Andre também os põe.
+    grupos.set(chave, { label: grupo.label, sortOrder: menorSortOrder });
+  });
+
   for (const entry of cashEntries) {
+    if (refunded.has(entry.id)) continue;
+
     const index = indexOfPeriod.get(periodOf(entry.occurredOn));
     if (index === undefined) continue; // before the range (already in opening) or after it
 
-    const section = sectionOf(entry, categoryById);
-    const key = entry.categoryId ?? "";
+    const section = sectionOf(entry, categoryById, oneLeggedTransferCategoryIds);
+    if (entry.categoryId && oneLeggedTransferCategoryIds.has(entry.categoryId)) {
+      oneLeggedSeen.add(entry.categoryId);
+    }
+    const key = (entry.categoryId && grupoDe.get(entry.categoryId)) || entry.categoryId || "";
     const rows = buckets.get(section) as Map<string, Cents[]>;
     const values = rows.get(key) ?? zeros(periods.length);
     // A transfer row keeps its own sign so an inflow and an outflow can cancel out;
-    // the in/out sections are magnitudes, because their sign is the section itself.
-    values[index] =
-      (values[index] as Cents) + (section === "transfer" ? signed(entry) : entry.amount);
+    // the in/out sections are magnitudes, because their sign is the section itself. A
+    // retirada devolvida é a exceção: ela está na seção de saídas e abate (D113).
+    const contribuicao =
+      section === "transfer" ? signed(entry) : abate(entry, categoryById) ? -entry.amount : entry.amount;
+    values[index] = (values[index] as Cents) + contribuicao;
     rows.set(key, values);
+  }
+
+  if (oneLeggedSeen.size > 0) {
+    const nomes = [...oneLeggedSeen]
+      .map((id) => categoryById.get(id)?.name ?? id)
+      .sort()
+      .join(", ");
+    warnings.push(
+      `${nomes} aparece como saída, e não como transferência: a conta de destino está ` +
+        `fora deste relatório, então daqui o dinheiro sai e não volta. Na DRE o custo ` +
+        `continua sendo a compra, não a fatura — o gasto não é contado duas vezes.`,
+    );
   }
 
   const sections: CashFlowSection[] = (["in", "out", "transfer"] as const).map((key) => {
     const rows = [...(buckets.get(key) as Map<string, Cents[]>)]
       .map(([categoryId, values]) => {
+        const grupo = grupos.get(categoryId);
+        if (grupo) {
+          // Uma linha de grupo não tem conta: clicar nela para ver "os lançamentos desta
+          // conta" não faria sentido, porque são de duas.
+          return {
+            categoryId: null,
+            code: null,
+            label: grupo.label,
+            sortOrder: grupo.sortOrder,
+            values,
+            total: sum(values),
+          };
+        }
         const category = categoryId ? categoryById.get(categoryId) : undefined;
         return {
           categoryId: categoryId === "" ? null : categoryId,

@@ -22,6 +22,11 @@ import { parseCsv } from "@/lib/import/csv";
 import { parseItauStatement, reconcileStatement } from "@/lib/import/itau-statement";
 import { readPdfPages } from "@/lib/import/pdf";
 import { parseItauCardInvoice, reconcileCardInvoice } from "@/lib/import/itau-card";
+import {
+  looksLikeContabilizei,
+  parseContabilizeiStatement,
+  reconcileContabilizei,
+} from "@/lib/import/contabilizei-statement";
 import { formatMoney } from "@/lib/money";
 import { formatPtBRDate } from "@/lib/dates";
 import { isCashAccount } from "@/lib/ledger-types";
@@ -85,7 +90,35 @@ export async function uploadImportAction(
     let closingBalance = null;
 
     if (format === "pdf") {
-      const invoice = parseItauCardInvoice(await readPdfPages(bytes));
+      const pages = await readPdfPages(bytes);
+
+      // Two very different documents arrive as `.pdf`: the Itaú card invoice and the
+      // Contabilizei current-account statement. Which one it is comes from what the file
+      // says about itself.
+      if (looksLikeContabilizei(pages)) {
+        const statement = parseContabilizeiStatement(pages);
+        const reconciliation = reconcileContabilizei(statement);
+
+        // This statement prints a running balance on every row, so a reading that does not
+        // close is a reading that is wrong — refused, like a card invoice (D-B).
+        if (!reconciliation.ok) throw new FormError(reconciliation.message);
+        notices.push(reconciliation.message);
+        for (const warning of statement.warnings) notices.push(warning.message);
+        if (statement.discarded.length > 0) {
+          notices.push(
+            `${statement.discarded.length} linha${statement.discarded.length === 1 ? "" : "s"} ` +
+              `descartada${statement.discarded.length === 1 ? "" : "s"}: ` +
+              `${statement.discarded[0]?.reason ?? ""}.`,
+          );
+        }
+
+        const closing = statement.declaredBalances.reduce<
+          (typeof statement.declaredBalances)[number] | null
+        >((latest, candidate) => (latest === null || candidate.date > latest.date ? candidate : latest), null);
+        closingBalance = closing?.balance ?? null;
+        parse = statement;
+      } else {
+      const invoice = parseItauCardInvoice(pages);
       const reconciliation = reconcileCardInvoice(invoice);
 
       // DECISIONS D-B: a card invoice that does not add up to its own printed total is a
@@ -116,6 +149,7 @@ export async function uploadImportAction(
       }
 
       parse = invoice;
+      }
     } else {
       const rows =
         format === "csv"

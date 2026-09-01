@@ -20,7 +20,31 @@
     "db:migrate": "drizzle-kit migrate",
     "db:seed": "node --env-file-if-exists=.env.local scripts/seed.ts",
     "verify:import": "vite-node --config vitest.config.ts scripts/verify-import.ts",
-    "verify:rls": "vite-node --config vitest.config.ts scripts/verify-rls.ts"
+    "verify:rls": "vite-node --config vitest.config.ts scripts/verify-rls.ts",
+    "propose:rules": "vite-node --config vitest.config.ts scripts/propose-rules.ts",
+    "inspect:staged": "vite-node --config vitest.config.ts scripts/inspect-staged.ts",
+    "propose:parties": "vite-node --config vitest.config.ts scripts/propose-parties.ts",
+    "propose:suppliers": "vite-node --config vitest.config.ts scripts/propose-supplier-rules.ts",
+    "preview:categorize": "vite-node --config vitest.config.ts scripts/preview-categorize.ts",
+    "import:invoices": "vite-node --config vitest.config.ts scripts/import-invoices.ts",
+    "propose:contracts": "vite-node --config vitest.config.ts scripts/propose-contracts.ts",
+    "recognize:manual": "vite-node --config vitest.config.ts scripts/recognize-manual.ts",
+    "pendencias": "vite-node --config vitest.config.ts scripts/pendencias.ts",
+    "fix:credits": "vite-node --config vitest.config.ts scripts/fix-cost-credits.ts",
+    "propose:cdb": "vite-node --config vitest.config.ts scripts/propose-cdb-legs.ts",
+    "verify:reconcile": "vite-node --config vitest.config.ts scripts/verify-reconcile.ts",
+    "propose:receipts": "vite-node --config vitest.config.ts scripts/propose-receipts.ts",
+    "decisoes": "vite-node --config vitest.config.ts scripts/decisoes.ts",
+    "vincular": "vite-node --config vitest.config.ts scripts/vincular-clientes.ts",
+    "import:sispag": "vite-node --config vitest.config.ts scripts/import-sispag.ts",
+    "recategorize": "vite-node --config vitest.config.ts scripts/recategorize.ts",
+    "boletos": "vite-node --config vitest.config.ts scripts/partir-boletos.ts",
+    "socios": "vite-node --config vitest.config.ts scripts/distribuicao-socios.ts",
+    "comparar": "vite-node --config vitest.config.ts scripts/comparar-dre.ts",
+    "comparar:fluxo": "vite-node --config vitest.config.ts scripts/comparar-fluxo.ts",
+    "lotes": "vite-node --config vitest.config.ts scripts/lotes-sispag.ts",
+    "corrigir": "vite-node --config vitest.config.ts scripts/corrigir-conta.ts",
+    "folha": "vite-node --config vitest.config.ts scripts/folha-competencia.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.4",
@@ -47,7 +71,7 @@
     "eslint-config-next": "^16.3.0",
     "tailwindcss": "^4.0.0",
     "typescript": "^5.7.0",
-    "vitest": "^3.0.0",
-    "vite-node": "^3.2.4"
+    "vite-node": "^3.2.4",
+    "vitest": "^3.0.0"
   }
 }

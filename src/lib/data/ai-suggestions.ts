@@ -16,6 +16,7 @@ import { getAiProvider, AiUnavailableError } from "@/lib/ai/provider";
 import {
   buildCategorizationPrompt,
   parseCategorization,
+  RESPONSE_SCHEMA,
   SYSTEM_PROMPT,
   type AiCatalogue,
   type AiSubject,
@@ -106,8 +107,7 @@ export async function suggestWithAi(
         system: SYSTEM_PROMPT,
         prompt: buildCategorizationPrompt(subjects, catalogue),
         maxTokens: 8000,
-        // Forcing the reply to open as an array is what keeps the prose out.
-        prefill: "[",
+        responseSchema: RESPONSE_SCHEMA,
       });
       text = response.text;
     } catch (cause) {

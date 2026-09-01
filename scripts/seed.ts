@@ -64,6 +64,19 @@ const CHART_OF_ACCOUNTS: CategorySeed[] = [
   // Pró-labore is payroll, not a draw: the `DRE Geral` sheet carries it inside Pessoal,
   // above the line. `owner_draw` is reserved for profit distribution, which is below it.
   { code: "6.11", name: "Pró-labore", kind: "expense", dreGroup: "pessoal", parent: "6.01" },
+  /**
+   * Freelancer que é **empresa**, e que o Andre lança em linha separada do time nos dois
+   * arquivos: `- Freelancers (Outras empresas)` na DRE e `Freelancer (outras empresas)` na
+   * aba `Expenses`, esta última fora do bloco `Pessoas`. Sem uma conta própria, Santa Monica
+   * e WCommerce cairiam em 6.10 e a linha dele nunca teria correspondente (D117).
+   */
+  {
+    code: "6.12",
+    name: "Freelancers (outras empresas)",
+    kind: "expense",
+    dreGroup: "pessoal",
+    parent: "6.01",
+  },
 
   // Ferramentas e assinaturas — one line per tool, as the spreadsheet keeps them.
   { code: "7.00", name: "Ferramentas e assinaturas", kind: "expense", dreGroup: "ferramentas" },
