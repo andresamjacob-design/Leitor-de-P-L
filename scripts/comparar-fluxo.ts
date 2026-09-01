@@ -21,6 +21,7 @@ import postgres from "postgres";
 import { loadEnvLocal } from "./load-env.ts";
 import { TO_CODE } from "./plano-de-contas.ts";
 import { quebrarFaturas, type Fatura, type Pagamento } from "@/lib/card-bills";
+import { GROUP_OF_CODE } from "@/lib/data/cash-flow-report";
 import { readXlsx } from "@/lib/import/xlsx";
 import { formatBRL, fromNumeric, type Cents } from "@/lib/money";
 import type { IsoDate } from "@/lib/dates";
@@ -149,13 +150,25 @@ try {
   let grupo = "";
   const juntos = new Map<string, { rotulo: string; codes: string[]; plan: Cents[] }>();
   const semConta: string[] = [];
+  /** Grupo → os sete meses, na ordem em que a aba os lista. */
+  const grupoPlan = new Map<string, Cents[]>();
 
   for (const row of aba.rows) {
     const g = (row[1] ?? "").trim();
     if (g) grupo = g;
     const bruto = (row[4] ?? "").trim();
+    // `Monthly totals:` é o subtotal que a **própria planilha** declara para o grupo, na
+    // mesma linha do nome dele. Vale mais que somar as sub-linhas outra vez: é o número
+    // dela, e se um dia ele deixar de bater com as sub-linhas o problema é da planilha.
+    if (bruto === "Monthly totals:") {
+      grupoPlan.set(
+        grupo,
+        MESES.map((_, i) => centavos(row[PRIMEIRA_COLUNA + i] ?? null)),
+      );
+      continue;
+    }
     // A linha 1 tem `Expenses` no lugar do rótulo e serial de data no lugar do valor.
-    if (bruto === "" || bruto === "Monthly totals:" || bruto === "Expenses") continue;
+    if (bruto === "" || bruto === "Expenses") continue;
 
     const rotulo = normalizar(bruto);
     // O apelido é procurado **antes** de normalizar também: `Freelancer (outras empresas)`
@@ -200,6 +213,66 @@ try {
   console.log(
     `\n${BOLD}${fechadas} linha(s) fecham os 7 meses${RESET} · distância somada ${BOLD}${formatBRL(distancia)}${RESET}`,
   );
+  // ---- O mesmo, um andar acima: grupo contra grupo --------------------------
+  //
+  // A tabela de cima compara sub-linha com sub-linha, e há duas coisas que ela é incapaz
+  // de medir. A planilha não tem linha para a Agência Ciclo, então os R$ 4.000/mês dela
+  // não entram em lado nenhum; e o app não tem, olhando só a sub-linha, como saber que a
+  // planilha conta a Ciclo dentro de `Pessoas`. No nível do grupo os dois viram
+  // comparáveis — e é neste nível que a aba de Saídas passou a mostrar (D125).
+  //
+  // O lado do app usa o **mesmo `GROUP_OF_CODE` que a tela usa**, importado, nunca uma
+  // cópia: uma cópia divergiria em silêncio e a medição passaria a confirmar a si mesma
+  // em vez de conferir a tela.
+  const codesDoGrupo = (grupo: string) =>
+    Object.entries(GROUP_OF_CODE)
+      .filter(([, g]) => g === grupo)
+      .map(([code]) => code);
+
+  console.log(`\n${BOLD}O mesmo, um andar acima: grupo contra grupo${RESET}`);
+  console.log(
+    `${DIM}${"grupo".padEnd(32)}${"sua planilha".padStart(15)}${"o app".padStart(15)}` +
+      `${"meses iguais".padStart(14)}${RESET}`,
+  );
+
+  let distanciaGrupo = 0n;
+  let fechadosGrupo = 0;
+  for (const [grupo, plan] of grupoPlan) {
+    const codes = codesDoGrupo(grupo);
+    const nossos = MESES.map((mes) => valorApp(codes, mes));
+    const tp = plan.reduce((a, b) => a + b, 0n);
+    const ta = nossos.reduce((a, b) => a + b, 0n);
+    if (tp === 0n && ta === 0n) continue;
+
+    const bate = plan.filter((v, i) => v === nossos[i]).length;
+    if (bate === 7) fechadosGrupo += 1;
+    const d = tp - ta;
+    distanciaGrupo += d < 0n ? -d : d;
+
+    const cor = bate === 7 ? GREEN : bate >= 4 ? "" : YELLOW;
+    console.log(
+      `${grupo.padEnd(32).slice(0, 32)}${formatBRL(tp).padStart(15)}${formatBRL(ta).padStart(15)}` +
+        `${cor}${`${bate}/7`.padStart(14)}${RESET}`,
+    );
+  }
+
+  console.log(
+    `\n${BOLD}${fechadosGrupo} grupo(s) fecham os 7 meses${RESET} · distância somada ` +
+      `${BOLD}${formatBRL(distanciaGrupo)}${RESET}`,
+  );
+
+  // Código com saída no período e grupo nenhum. Entrada acumula negativo, então receita
+  // cai fora sozinha — o que sobra aqui é gasto que a tela mostraria como "Sem grupo".
+  const semGrupo: string[] = [];
+  for (const code of new Set([...app.keys()].map((k) => k.split("|")[0] as string))) {
+    if (GROUP_OF_CODE[code]) continue;
+    const total = MESES.reduce((a, mes) => a + (app.get(`${code}|${mes}`) ?? 0n), 0n);
+    if (total > 0n) semGrupo.push(`${code} ${formatBRL(total)}`);
+  }
+  if (semGrupo.length > 0) {
+    console.log(`${DIM}sem grupo, do lado do app: ${semGrupo.join(", ")}${RESET}`);
+  }
+
   if (semConta.length > 0) {
     console.log(`${YELLOW}sem conta correspondente no app:${RESET} ${semConta.join(", ")}`);
   }

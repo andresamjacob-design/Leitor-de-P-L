@@ -67,7 +67,7 @@ export const SOCIOS_LABEL = "Sócios — pró-labore e distribuição";
  * Um código que não aparece aqui não desaparece do relatório — vira "Sem grupo", visível
  * como qualquer outra linha, nunca escondido.
  */
-const GROUP_OF_CODE: Record<string, string> = {
+export const GROUP_OF_CODE: Record<string, string> = {
   // Pessoas
   "6.02": "Pessoas",
   "6.03": "Pessoas",

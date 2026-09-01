@@ -2379,6 +2379,63 @@ para o email do Andre, e não há sessão para eu abrir o navegador. Verificado 
 para verificar sem login: os dois scripts descartáveis (apagados depois), a leitura direta
 da planilha e do banco, e os testes unitários da função pura.
 
+### D126 — A medição do fluxo estava um andar abaixo do que a tela passou a mostrar
+A D125 pôs grupo na aba de Saídas e afirmou, no comentário do próprio mapa, que `8.03`
+dentro de `Pessoas` fecha o bloco em 6 dos 7 meses ao centavo. **Nada media isso.** O
+`comparar:fluxo` continuava comparando sub-linha contra sub-linha, e nessa altura a
+afirmação não é nem verdadeira nem falsa — é inverificável.
+
+**Duas coisas a comparação por sub-linha é incapaz de medir:**
+
+- A aba `Expenses` **não tem linha para a Agência Ciclo**. Os R$ 4.000/mês dela não
+  entravam em lado nenhum: nem somavam do lado da planilha, porque lá não existem, nem do
+  lado do app, porque o app só somava os códigos que a planilha nomeava.
+- Olhando só a sub-linha, não há como saber que a planilha conta a Ciclo dentro de
+  `Pessoas`. Essa informação existe só no nível do grupo.
+
+**A planilha já declarava o subtotal, e o script o jogava fora.** A linha `Monthly totals:`
+fica na mesma linha do nome do grupo, e era descartada junto com as linhas vazias. Agora é
+lida: o total do grupo passa a ser **o número dela**, não a minha re-soma das sub-linhas
+dela. Se um dia os dois divergirem, o problema é da planilha e aparece.
+
+**O lado do app importa o `GROUP_OF_CODE` que a tela usa** — por isso ele deixou de ser
+`const` e virou `export`. Uma segunda cópia do mapa divergiria em silêncio, e a medição
+passaria a confirmar a si mesma em vez de conferir a tela.
+
+→ A distância cai de **R$ 26.082,92 para R$ 8.250,50**, e os R$ 17.832,42 que somem não
+eram erro contábil nenhum: eram artefato de granularidade. `Pessoas` fecha **6 dos 7
+meses**, e o sétimo erra **R$ 218,88** — exatamente o estorno de julho sem par que a D108
+já tinha nomeado. A previsão escrita na D125 agora tem uma medição que a sustenta.
+
+**Nenhum grupo fecha os sete meses**, e vale dizer em vez de esconder: cada um carrega ao
+menos um item pequeno ainda em aberto. A distância que sobra, por grupo:
+
+| grupo | distância | o que é |
+|---|---|---|
+| Travel | R$ 3.405,08 | as 23 descrições de cartão |
+| Cost of Goods/Cost of Services | R$ 1.934,67 | idem — somados, R$ 5.339,75 |
+| Gerais e Admnistrativos | R$ 811,90 | mês de corte de IOF e Tarefy |
+| Miscellaneous Cost of Service | R$ 585,76 | |
+| Imposto | R$ 440,00 | o INPI (D117): o app tem o fato em `Legal`… |
+| Legal | R$ 440,00 | …e a planilha o lança em outro lugar. Mesmos R$ 440 dos dois lados |
+| Other Expenses | R$ 414,15 | |
+| Pessoas | R$ 218,88 | o estorno de julho sem par (D108) |
+| Insurance | R$ 0,06 | arredondamento |
+
+**A tabela por sub-linha continua onde estava, e não foi substituída.** As duas são
+verdadeiras em alturas diferentes: a de baixo diz em que conta o dinheiro está, a de cima
+diz se o app organiza o gasto como o Andre organiza. Trocar uma pela outra perderia
+informação.
+
+O script também passou a listar o que fica **sem grupo do lado do app** — hoje o código
+nulo (R$ 3.796,72, parte das 23 descrições) e `99.02` (R$ 830,97, a fatura de maio que
+nunca foi importada). Entrada acumula negativo no somatório, então receita cai fora
+sozinha e não precisa de filtro por `kind`.
+
+`npm run check` passa: typecheck, lint e **442 testes**. **O que não deu para provar:** a
+tela, pelo mesmo motivo da D125 — a auth é magic link para o email do Andre.
+
+
 ---
 
 ## Parte 13 — Decisões da Fase 8

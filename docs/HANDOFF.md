@@ -538,7 +538,8 @@ com a evidência do lado). Para medir contra as planilhas: **`npm run comparar`*
 | | |
 |---|---|
 | **DRE × planilha de DRE** | **31 de 31 linhas fecham**; zero não fecham em nenhum alinhamento |
-| **Fluxo × aba `Expenses`** | 23 linhas fecham os 7 meses; distância somada **R$ 26.082,92** |
+| **Fluxo × aba `Expenses`, por grupo** | nenhum grupo fecha os 7 meses; distância somada **R$ 8.250,50**. `Pessoas` fecha 6/7, errando os R$ 218,88 do estorno de julho (D126) |
+| Fluxo × aba `Expenses`, por sub-linha | 23 linhas fecham os 7 meses; distância somada R$ 26.082,92. Maior que a de cima **porque a Agência Ciclo não tem linha na planilha** — é altura de medição, não erro |
 | Saídas do fluxo × aba `Summary` | 5 dos 7 meses ao centavo, distância R$ 387,88 (D108) |
 
 ### O que falta, por natureza
@@ -548,44 +549,34 @@ com a evidência do lado). Para medir contra as planilhas: **`npm run comparar`*
 | **23 descrições de cartão** | **o Andre** | R$ 8.352,10 | `SQ *DREAMFORCE SF`, `ASA*MARIA CLARA` ×3, `APPLE.COM/US`, `PIU R E P L EP`. Três faturas resolvem quase tudo: **out/2025, mai/2026 e jun/2026**. |
 | **Extrato do Itaú da Gabriel** | **o Andre** | R$ 259.845,85 | Q2. Destrava mover a receita de agosto para a segunda empresa. Sem ele, ela ficaria com receita e nenhum caixa para conferir. |
 | **`ANTHROPIC_API_KEY`** | **o Andre** | — | Q18. Não bloqueia nada, mas o caminho de IA **quebra na primeira chamada real** — ver abaixo. |
-| **Os grupos do fluxo** | **eu** | — | O fluxo precisa agrupar como a planilha dele. Não depende de nada dele. |
-| **O prefill do provider** | **eu** | — | Dez minutos, e tem de ser antes da chave. |
+| ~~Os grupos do fluxo~~ | ~~eu~~ | — | **Feito** — D125 na tela, D126 na medição. |
+| ~~O prefill do provider~~ | ~~eu~~ | — | **Feito** — D124, `output_config.format` no lugar do prefill. |
 
 ### Próximos passos, em ordem
 
-1. **Construir os grupos do fluxo** — `Pessoas`, `Gerais e Admnistrativos`, `Cost of Goods`,
-   `Travel`, `Legal`, `Insurance`, `Other Expenses`, `Imposto`. É o que falta para a aba de
-   fluxo ficar com a cara da planilha dele, e **não depende de resposta nenhuma**.
+> ~~**1. Construir os grupos do fluxo.**~~ **Feito em 31/08 (D125)** e **medido em
+> 01/09 (D126)**: a aba de Saídas tem grupo com sub-linha e subtotal, e o `comparar:fluxo`
+> ganhou uma tabela por grupo além da que já tinha por sub-linha. A Agência Ciclo dentro de
+> `Pessoas` fecha 6 dos 7 meses, como estava previsto.
+>
+> ~~**2. Consertar o prefill antes de pedir a chave.**~~ **Feito (D124):** `output_config.format`
+> no lugar do `prefill: "["`, que retornava 400 em todo modelo atual. **Modelo recomendado:
+> `claude-opus-5`** — o razão inteiro, do zero, custa ~US$ 1,75, e `ANTHROPIC_MODEL` troca sem
+> mexer em código.
 
-   > **A Agência Ciclo é a prova de que isto é agrupamento e não conta.** R$ 4.000/mês que a
-   > aba `Pessoas` do fluxo conta como pessoal e a `DRE Geral` lança em linha própria — e a
-   > aba `Colaboradores` **não tem**. Com ela dentro de `Pessoas`, o bloco fecha em **6 dos 7
-   > meses ao centavo**; o sétimo erra os R$ 218,88 do estorno de julho sem par.
-   >
-   > O mecanismo existe: `mergedRows` em `buildCashFlow` (D112) junta contas numa linha, e o
-   > construtor puro continua sem conhecer código de conta — quem escolhe é o carregador.
-   > Falta a camada de **grupo com sub-linhas**, que é o formato da planilha dele.
+**Os dois passos que eram meus acabaram. O que resta depende de arquivo que não chegou.**
 
-2. **Consertar o prefill antes de pedir a chave.** `src/lib/data/ai-suggestions.ts:110` manda
-   `prefill: "["` e o modelo padrão é `claude-sonnet-5` — prefill de última mensagem
-   `assistant` **retorna 400** no Sonnet 5, no Opus 5 e na família 4.6/4.7/4.8. O substituto é
-   *structured outputs* (`output_config.format`). Todo o caminho de IA foi testado com modelo
-   simulado, e simulado nunca recusa nada.
+1. **As 23 descrições**, quando ele abrir as três faturas (out/2025, mai/2026, jun/2026).
 
-   > **Modelo recomendado: `claude-opus-5`.** O razão inteiro, do zero, custa ~US$ 1,75; a
-   > diferença para o mais barato é um dólar e quarenta. A tarefa é ler descrição truncada de
-   > cartão e saber o que é, que é exatamente onde a capacidade aparece. `ANTHROPIC_MODEL`
-   > troca sem mexer em código.
-
-3. **As 23 descrições**, quando ele abrir as três faturas.
-
-4. **O extrato da Gabriel**, quando chegar.
+2. **O extrato da Gabriel**, quando chegar.
 
 ### O que a comparação com o fluxo ainda mostra, e por quê
 
-Dos R$ 26.082,92 de distância, quase tudo tem causa nomeada:
+Dos **R$ 8.250,50** que sobram no nível do grupo, tudo tem causa nomeada — e a leitura por
+sub-linha, que dá R$ 26.082,92, é maior só porque a Agência Ciclo não tem linha lá (D126):
 
-- **`Time`**: a planilha dele conta a Agência Ciclo dentro; o app ainda não (passo 1).
+- ~~**`Time`**: a planilha dele conta a Agência Ciclo dentro; o app ainda não.~~ **Resolvido
+  pela D125** — `8.03` entra em `Pessoas`, e o grupo fecha 6 dos 7 meses.
 - **`Passagem`, `Hotels`, `Alimentação`**: parte das 23 descrições do cartão.
 - **`Legal` e `Imposto`**: o app está **R$ 440 acima** e a planilha R$ 440 abaixo — é o
   **INPI** (D117), registro de marca pago em maio, enquanto o `- Juridico` dele é zero de
