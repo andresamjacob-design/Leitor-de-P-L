@@ -2436,6 +2436,65 @@ sozinha e não precisa de filtro por `kind`.
 tela, pelo mesmo motivo da D125 — a auth é magic link para o email do Andre.
 
 
+### D127 — A Q18 fecha, e a primeira chamada real mostra um silêncio que o simulado escondia
+`ANTHROPIC_API_KEY` preenchida em 03/09/2026. **Quatro chamadas reais**, todas bem-sucedidas,
+`claude-opus-5`, 22–33s cada. A Q18 estava aberta desde o começo do projeto.
+
+**A D124 está provada.** O `output_config.format` que substituiu o `prefill: "["` foi aceito
+pela API de verdade, e as respostas passaram inteiras pelo `parseCategorization` — zero
+malformadas em quatro tentativas. Era o único ponto do sistema testado só contra modelo
+simulado.
+
+**Duas armadilhas de chave, antes de chegar lá.** A primeira falhou com `400 — credit balance
+is too low`, que é recusa de saldo, não de autenticação; a segunda era uma **identity-linked
+API key**, que exige o header `anthropic-workspace-id` que o `provider.ts` não manda. O
+diagnóstico veio de `GET /v1/models`, que não consome crédito e separa "chave inválida" de
+"chave válida em conta sem saldo" — vale como primeira sonda sempre.
+
+**O achado.** Das 23 linhas sem conta enviadas, voltaram **18, 8, 10 e 8**. Mesmo prompt, mesmo
+modelo. E as quatro rodadas relatavam `0 descartadas`: as omitidas sumiam sem deixar rastro.
+
+Não era truncamento — `stop_reason: end_turn`, saída de ~2.100 tokens contra teto de 4.096. É
+que **`RESPONSE_SCHEMA` é um `type: "array"` de itens: ele obriga a forma de cada item, não
+obriga o array a cobrir todos os `ref` enviados.** JSON Schema restringe forma, não completude.
+
+**O defeito nunca foi a omissão.** Um teste anterior a esta decisão já dizia
+*"o modelo pode omitir o que não sabe, e isso não é erro"*, e ele está certo: o modelo se
+recusar a chutar sobre `JBC COMERCIO-CT A` é exatamente o que a regra "nunca inventar número"
+pede de nós. O defeito era a omissão **não deixar rastro** — na tela, dez cartões e nenhum
+sinal de que treze linhas jamais foram olhadas. Silêncio que parece cobertura.
+
+→ Por isso `unanswered: string[]` é **campo próprio de `AiCategorization`, não mais um
+`discarded`**. Descarte é "a IA respondeu e nós recusamos"; isto é "a IA não respondeu".
+Misturar os dois faria a tela acusar como defeito o comportamento certo — e teria revertido a
+decisão antiga em vez de completá-la. O teste original continua valendo palavra por palavra;
+ele só ganhou uma segunda asserção.
+
+Três detalhes que o desenho exigiu:
+
+- **`answered` existe separado de `seen`.** `seen` só guarda quem virou sugestão; uma linha
+  respondida e recusada (conta inexistente, confiança fora de faixa) não está lá. Sem a
+  distinção, ela apareceria nos dois lugares e mandaria o leitor procurar uma omissão que não
+  houve.
+- **Resposta ilegível marca todas como não respondidas**, mas continua devolvendo **um**
+  motivo em `discarded`, não um por linha: quando a resposta inteira falhou, a causa é uma só,
+  e repeti-la 23 vezes a esconde.
+- **Um lote cuja chamada falhou soma ao `unanswered`** em `ai-suggestions.ts`. As linhas foram
+  consideradas e ninguém olhou para elas; sem isso, um lote que estourou sumiria da conta.
+
+**Um detalhe do modelo, sem consequência:** a resposta traz um bloco `thinking` junto do
+`text`. O filtro `type === "text"` do provider já o ignora corretamente — mas `output_tokens`
+o inclui, então estimativa de custo feita só pelo texto subestima.
+
+**O que isto não muda:** em nenhuma das quatro rodadas alguma sugestão passou do
+`CONFIDENCE_THRESHOLD` de 0,80 — o teto foi 0,78, 0,78 e 0,72, sempre o Dreamforce. O app
+aceitaria zero. As 23 descrições continuam dependendo das faturas de out/2025, mai/2026 e
+jun/2026, exatamente como o handover já dizia. O limiar fez o trabalho para o qual existe:
+separou "o modelo tem opinião" de "o modelo tem fundamento".
+
+442 → **445 testes**. `npm run check` passa.
+
+
 ---
 
 ## Parte 13 — Decisões da Fase 8

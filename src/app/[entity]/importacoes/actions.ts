@@ -348,6 +348,17 @@ export async function suggestWithAiAction(
     if (result.discarded.length > dropped.length) {
       notices.push(`e mais ${result.discarded.length - dropped.length} descarte(s).`);
     }
+    // Omitir não é erro — é a IA se recusando a chutar sobre uma descrição que não diz o
+    // suficiente —, mas sem esta linha "8 de 23 ganharam sugestão" deixaria quinze linhas
+    // sem explicação nenhuma, e silêncio na tela parece cobertura (D127).
+    if (result.unanswered > 0) {
+      const uma = result.unanswered === 1;
+      notices.push(
+        `a IA não respondeu sobre ${result.unanswered} linha${uma ? "" : "s"} — ` +
+          `${uma ? "a descrição não diz" : "as descrições não dizem"} o suficiente. ` +
+          `${uma ? "Ela continua" : "Elas continuam"} sem sugestão.`,
+      );
+    }
     for (const warning of result.warnings) notices.push(warning);
 
     return { notices };

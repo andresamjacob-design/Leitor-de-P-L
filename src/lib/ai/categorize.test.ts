@@ -207,8 +207,47 @@ describe("parseCategorization — nada é aceito sem conferir", () => {
   });
 
   it("o modelo pode omitir o que não sabe, e isso não é erro", () => {
-    const { suggestions, discarded } = parseCategorization(reply([]), SUBJECTS, CATALOGUE);
+    const { suggestions, discarded, unanswered } = parseCategorization(
+      reply([]),
+      SUBJECTS,
+      CATALOGUE,
+    );
     expect(suggestions).toHaveLength(0);
+    // Continua não sendo descarte: não recusamos nada, ela é que não falou.
     expect(discarded).toHaveLength(0);
+    // Mas deixa rastro, que é o que faltava (D127).
+    expect(unanswered).toEqual(["a", "b"]);
+  });
+
+  it("omitir só uma cobra só aquela, e a respondida segue intacta", () => {
+    const { suggestions, discarded, unanswered } = parseCategorization(
+      reply([{ ref: "a", category_code: "9.04", confidence: 0.9, reasoning: "x" }]),
+      SUBJECTS,
+      CATALOGUE,
+    );
+    expect(suggestions).toHaveLength(1);
+    expect(discarded).toHaveLength(0);
+    expect(unanswered).toEqual(["b"]);
+  });
+
+  it("respondida e recusada não é o mesmo que não respondida", () => {
+    // O caso que motivou `answered` existir separado de `seen`: sem ele, uma linha que a
+    // IA respondeu com conta inexistente apareceria nos dois lugares, e o leitor iria
+    // procurar por uma omissão que não houve.
+    const { suggestions, discarded, unanswered } = parseCategorization(
+      reply([{ ref: "a", category_code: "inventada", confidence: 0.9, reasoning: "x" }]),
+      SUBJECTS,
+      CATALOGUE,
+    );
+    expect(suggestions).toHaveLength(0);
+    expect(discarded).toHaveLength(1);
+    expect(unanswered).toEqual(["b"]);
+  });
+
+  it("resposta ilegível deixa todas as linhas como não respondidas", () => {
+    const { discarded, unanswered } = parseCategorization("nada disso é JSON", SUBJECTS, CATALOGUE);
+    // Um motivo só, não um por linha: a causa é uma, e repeti-la esconderia-a.
+    expect(discarded).toHaveLength(1);
+    expect(unanswered).toEqual(["a", "b"]);
   });
 });

@@ -33,6 +33,12 @@ export type AiRunResult = {
   considered: number;
   suggested: number;
   discarded: { ref: string | null; reason: string }[];
+  /**
+   * Quantas linhas foram perguntadas e a IA não respondeu (D127). Separado de `discarded`
+   * de propósito: não houve recusa nossa, houve silêncio dela. Sem este número a tela
+   * mostraria N sugestões e nada sobre as linhas que ninguém olhou.
+   */
+  unanswered: number;
   model: string;
   warnings: string[];
 };
@@ -61,6 +67,7 @@ export async function suggestWithAi(
       considered: 0,
       suggested: 0,
       discarded: [],
+      unanswered: 0,
       model: provider.model,
       warnings: ["não sobrou nenhuma linha sem sugestão — a IA não foi chamada."],
     };
@@ -88,6 +95,7 @@ export async function suggestWithAi(
     considered: undecided.length,
     suggested: 0,
     discarded: [],
+    unanswered: 0,
     model: provider.model,
     warnings: [],
   };
@@ -114,11 +122,15 @@ export async function suggestWithAi(
       result.warnings.push(
         cause instanceof Error ? cause.message : "a chamada de IA falhou.",
       );
+      // O lote inteiro ficou sem resposta — as linhas dele foram consideradas e ninguém
+      // olhou para elas. Sem isto, um lote que falhou some da contagem.
+      result.unanswered += batch.length;
       continue;
     }
 
-    const { suggestions, discarded } = parseCategorization(text, subjects, catalogue);
+    const { suggestions, discarded, unanswered } = parseCategorization(text, subjects, catalogue);
     result.discarded.push(...discarded);
+    result.unanswered += unanswered.length;
 
     for (const suggestion of suggestions) {
       const { error } = await supabase

@@ -50,6 +50,15 @@ export type AiDiscard = {
 export type AiCategorization = {
   suggestions: AiSuggestion[];
   discarded: AiDiscard[];
+  /**
+   * Os `ref` que foram perguntados e sobre os quais a IA não disse nada (D127).
+   *
+   * Campo próprio, e não mais um `discarded`, porque **omitir não é erro** — o teste que
+   * afirma isso é anterior a este campo e continua valendo. Descarte é "a IA respondeu e
+   * nós recusamos"; isto é "a IA não respondeu". Misturar os dois faria a tela mostrar
+   * como defeito o que é o modelo se recusando a chutar, que é o comportamento certo.
+   */
+  unanswered: string[];
 };
 
 export const SYSTEM_PROMPT = `Você classifica lançamentos financeiros de uma consultoria brasileira.
@@ -168,11 +177,16 @@ export function parseCategorization(
     return {
       suggestions: [],
       discarded: [{ ref: null, reason: cause instanceof Error ? cause.message : "resposta ilegível" }],
+      unanswered: subjects.map((subject) => subject.ref),
     };
   }
 
   if (!Array.isArray(parsed)) {
-    return { suggestions: [], discarded: [{ ref: null, reason: "a resposta não é uma lista." }] };
+    return {
+      suggestions: [],
+      discarded: [{ ref: null, reason: "a resposta não é uma lista." }],
+      unanswered: subjects.map((subject) => subject.ref),
+    };
   }
 
   const askedFor = new Set(subjects.map((subject) => subject.ref));
@@ -180,6 +194,13 @@ export function parseCategorization(
   const clientIds = new Set(catalogue.clients.map((client) => client.id));
   const personIds = new Set(catalogue.people.map((person) => person.id));
   const seen = new Set<string>();
+  /**
+   * Todo `ref` que apareceu na resposta, tenha ele virado sugestão ou não. É diferente de
+   * `seen`, que só guarda os que passaram: sem essa distinção, uma linha respondida e
+   * recusada (conta inexistente, confiança fora de faixa) seria acusada no fim de "não
+   * respondida", que é falso e manda o leitor procurar no lugar errado.
+   */
+  const answered = new Set<string>();
 
   for (const item of parsed as RawItem[]) {
     const ref = asString(item?.ref);
@@ -191,6 +212,7 @@ export function parseCategorization(
       discarded.push({ ref, reason: "a IA respondeu sobre um lançamento que não foi perguntado." });
       continue;
     }
+    answered.add(ref);
     if (seen.has(ref)) {
       discarded.push({ ref, reason: "a IA respondeu duas vezes sobre o mesmo lançamento." });
       continue;
@@ -239,7 +261,23 @@ export function parseCategorization(
     });
   }
 
-  return { suggestions, discarded };
+  /**
+   * O que foi perguntado e nunca voltou (D127).
+   *
+   * `RESPONSE_SCHEMA` é um array de itens: ele obriga a **forma** de cada item, não obriga
+   * o array a **cobrir** todos os refs enviados. O modelo omite as descrições que não
+   * consegue ler em vez de chutar — e isso é o mesmo que a regra "nunca inventar número"
+   * pede de nós. O defeito nunca foi a omissão: era ela não deixar rastro, e na tela
+   * silêncio parecer cobertura.
+   *
+   * Medido em três chamadas reais com o mesmo prompt e o mesmo modelo: 18, 8 e 10 de 23
+   * respondidas, e as três diziam `0 descartadas`.
+   */
+  const unanswered = subjects
+    .map((subject) => subject.ref)
+    .filter((ref) => !answered.has(ref));
+
+  return { suggestions, discarded, unanswered };
 }
 
 /** Below this a suggestion is shown but not pre-selected (SPEC §8). */

@@ -548,7 +548,7 @@ com a evidência do lado). Para medir contra as planilhas: **`npm run comparar`*
 |---|---|---|---|
 | **23 descrições de cartão** | **o Andre** | R$ 8.352,10 | `SQ *DREAMFORCE SF`, `ASA*MARIA CLARA` ×3, `APPLE.COM/US`, `PIU R E P L EP`. Três faturas resolvem quase tudo: **out/2025, mai/2026 e jun/2026**. |
 | **Extrato do Itaú da Gabriel** | **o Andre** | R$ 259.845,85 | Q2. Destrava mover a receita de agosto para a segunda empresa. Sem ele, ela ficaria com receita e nenhum caixa para conferir. |
-| **`ANTHROPIC_API_KEY`** | **o Andre** | — | Q18. Não bloqueia nada, mas o caminho de IA **quebra na primeira chamada real** — ver abaixo. |
+| ~~`ANTHROPIC_API_KEY`~~ | ~~o Andre~~ | — | **Resolvido em 03/09 (D127).** Chave no `.env.local`, quatro chamadas reais bem-sucedidas, D124 provada. Nenhuma sugestão passou de 0,80 — as 23 descrições seguem dependendo das faturas. |
 | ~~Os grupos do fluxo~~ | ~~eu~~ | — | **Feito** — D125 na tela, D126 na medição. |
 | ~~O prefill do provider~~ | ~~eu~~ | — | **Feito** — D124, `output_config.format` no lugar do prefill. |
 
@@ -609,7 +609,7 @@ está pendente.
 | # | O que falta |
 |---|---|
 | **Q2** | **Extrato do Itaú da Gabriel Sampaio Jacob.** Só o que é de agosto em diante migra, e ela recebe no Itaú. A conta é nova e pode não ter movimento ainda. |
-| **Q18** | `ANTHROPIC_API_KEY` vazia. O Andre resolve com o chefe, por causa do pagamento. Não bloqueia nada — mas ver o passo 2. |
+| ~~Q18~~ | ~~`ANTHROPIC_API_KEY` vazia.~~ **Fechada em 03/09 (D127).** Duas armadilhas no caminho: a primeira chave esbarrou em saldo (`credit balance is too low`, que é recusa de saldo e não de autenticação) e a segunda era **identity-linked**, que exige o header `anthropic-workspace-id`. `GET /v1/models` não consome crédito e separa os dois casos — use como primeira sonda. |
 | **NFs** | Zero cadastradas. A Fase 5 concilia NF contra caixa e não tem dado nenhum. |
 | ~~Faturas 8299~~ | **set/out/nov de 2025 — sem acesso, buraco permanente.** Não procure de novo. |
 | **Fatura 8299 de maio/2026** | Nunca importada. É o único pagamento de fatura que a D116 não quebra: R$ 830,97 continua como linha única. |
