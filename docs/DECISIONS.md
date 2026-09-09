@@ -2546,6 +2546,68 @@ competência, que é a linha da ponte que a D121 acabou de zerar. Fica registrad
 do Andre, não minha: ele sabe o custo agora.
 
 
+### D129 — Um levantamento de fora corrobora uma resposta e denuncia uma regressão minha
+Em 09/09/2026 o Andre trouxe o resumo de outra conversa — levantamento feito sobre o
+histórico de sessões e os extratos brutos, **não** sobre este banco. Tratado como afirmação a
+conferir, não como fato. Quatro resultados.
+
+**O que ele confirmou, ao centavo.** O `ASA*MARIA CLARA` é registro de marca, e o razão já
+sabia mais do que eu tinha reparado: as três linhas trazem `installment_current/total` =
+**1/6, 2/6 e 3/6**. Seis parcelas de R$ 883,50 dão **R$ 5.301,00**, que é exatamente o
+"registro de marca ASA/INPI R$5.301" do levantamento — número que ele tirou de outra fonte.
+Faltam três parcelas, R$ 2.650,50, e a regra da D128 as pega sozinha quando as faturas
+chegarem. Confirma também a D117: `8.02` em maio = 2.650,50 (ASA) + 440,00 (INPI) = 3.090,50.
+
+**Cinco "em aberto" dele já estavam decididos aqui:** Prudential é `6.07` Insurance‑Estags;
+Maruri é `11.03` Penalties **e fecha 7/7 com a planilha**; BFL Nexus é `6.10`; Vai de Promo
+está em `7.08` e `9.01`. E o conflito que ele marcava como não resolvido — *FDN Telecom:
+Freelancer numa sessão, Salário em outra* — **não existe neste razão**: as duas linhas estão
+em `6.10` Freelancers.
+
+**O que ele trouxe de novo, e a assimetria que decidiu onde gravar.** `HOST SOLUCAO`
+(60.941.292/0001‑99) pagou R$ 4.100 em agosto e tinha ficado sem cliente; o levantamento diz
+que é uma das pagadoras da TKS, e existe um cliente `Host TKS` sem documento. O Andre
+confirmou: *"host solucao é a tks"*.
+
+→ Mesmo assim entra em **`PAGADORES`, não em `CONFIRMADOS`**. A TKS é paga por **três**
+entidades (Host Solução, Visão BPO e um CPF), então nenhuma delas pode ser o documento
+*dela*. E o risco é assimétrico: em `PAGADORES`, mesmo que Host Solução fosse o CNPJ da TKS,
+o dinheiro ainda vai para o cliente certo na conta certa; em `CONFIRMADOS`, se não for,
+grava-se CNPJ alheio em `clients.tax_id` — o erro exato da B2B Câmbio, documentado no próprio
+arquivo. As outras duas pagadoras não entram porque **não existem no razão**: pagaram em
+2025, e o razão bancário começa em 01/01/2026.
+
+O `vincular` responde `0 documento(s) no extrato para esse nome`, e está certo: a linha do
+Host Solução está em `staged_transactions`, não em `cash_entries`. A decisão fica gravada e
+dispara quando agosto for aprovado.
+
+## E a regressão que o levantamento denunciou
+
+A frase que pegou foi *"ASA/INPI R$5.301 **já lançado à parte** na DRE de maio"*. "À parte"
+é linha própria — e a D128 pôs o ASA em `8.02 Jurídico`, que na planilha do Andre é
+`Legal & Professional Fees`. Medido:
+
+| | antes da D128 | depois |
+|---|---|---|
+| `Máquinas e Computadores` (a Apple) | 6/7 | **7/7 ao centavo** |
+| `Legal & Professional Fees` | 6/7, R$ 440 acima | **4/7, R$ 2.207 acima** |
+| distância por grupo | R$ 8.250,50 | **R$ 9.503,69** |
+
+Líquido: a Apple melhorou R$ 513,81, o ASA piorou R$ 1.767,00 — **R$ 1.253,19 pior**, e
+chegaria a R$ 5.301 com as três parcelas que faltam.
+
+**O Andre decidiu manter em Jurídico**, e a decisão é coerente com a que já existe: a D126
+registra que tirar o INPI de `Legal` só para melhorar o número seria otimizar para a planilha
+em vez de para o razão. Registro de marca é jurídico nos dois casos. A diferença é só de
+tamanho — R$ 440 é ruído, R$ 5.301 não é —, e por isso o número fica escrito aqui: a linha
+`Legal` vai continuar acima da planilha **por decisão, não por defeito**, e ninguém precisa
+investigá-la de novo.
+
+**O que não se aplicou:** o levantamento descreve a linha `Freelancer (outras empresas)` como
+"sem lastro em nenhum extrato ou fatura". Aqui a `6.12` tem lançamento de caixa real em
+março, abril e maio — a afirmação é sobre a planilha dele, não sobre o razão.
+
+
 ---
 
 ## Parte 13 — Decisões da Fase 8

@@ -147,6 +147,24 @@ const PAGADORES: readonly {
     code: "3.02",
     porque: "o Roberto Pascoal pagou pela B2B Câmbio; o contrato dela é projeto",
   },
+  {
+    // Confirmado pelo Andre em 09/09/2026 (D129). Ele disse "Host Solução é a TKS", e
+    // mesmo assim isto entra aqui e não em `CONFIRMADOS` — a assimetria de risco decide:
+    // a TKS é paga por **três** entidades diferentes (Host Solução, Visão BPO e um CPF),
+    // então nenhuma delas pode ser o documento *dela*. Se eu estiver errado e Host Solução
+    // for mesmo o CNPJ da TKS, esta linha ainda atribui o dinheiro certo ao cliente certo;
+    // o caminho contrário grava um CNPJ alheio em `clients.tax_id`, que é exatamente o erro
+    // da B2B Câmbio logo acima.
+    //
+    // As outras duas pagadoras não estão aqui porque não existem no razão: pagaram em 2025,
+    // e o razão bancário começa em 01/01/2026.
+    cliente: "Host TKS",
+    contraparte: "HOST SOLUCAO%",
+    code: "3.02",
+    porque:
+      "a Host Solução paga pela TKS - Administração e Participações; a competência da " +
+      "Host TKS está em 3.02",
+  },
 ];
 
 /**
