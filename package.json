@@ -44,7 +44,8 @@
     "comparar:fluxo": "vite-node --config vitest.config.ts scripts/comparar-fluxo.ts",
     "lotes": "vite-node --config vitest.config.ts scripts/lotes-sispag.ts",
     "corrigir": "vite-node --config vitest.config.ts scripts/corrigir-conta.ts",
-    "folha": "vite-node --config vitest.config.ts scripts/folha-competencia.ts"
+    "folha": "vite-node --config vitest.config.ts scripts/folha-competencia.ts",
+    "import:extrato": "vite-node --config vitest.config.ts scripts/import-statement.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.4",
