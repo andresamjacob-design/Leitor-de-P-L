@@ -68,8 +68,18 @@ CNPJ de cliente e saldo.
   de DRE. Abas: `Setup`, `Income`, `Clientes`, `Expenses`, `Pessoas`, `Summary`. A aba
   `Clientes` tem **CNPJ e e-mail** de 32 clientes e duas seções — `Emissão de NF` e
   `Pagamento de NF` —, e é a segunda que responde pergunta de caixa, porque é sobre
-  dinheiro recebido. **A marcação azul nas colunas de mês é a Gabriel Sampaio Jacob**
-  (D104): 24 clientes, R$ 1.486.782,66, tudo de agosto em diante.
+  dinheiro recebido. ~~**A marcação azul nas colunas de mês é a Gabriel Sampaio Jacob**
+  (D104): 24 clientes, R$ 1.486.782,66, tudo de agosto em diante.~~
+  > ⚠️ **Isto estava errado, e foi corrigido em 09/09/2026 (D131).** O azul é o **estado da
+  > cobrança**, não a empresa: verde = pago, **azul = pendente dentro do prazo**, vermelho =
+  > emitido com atraso. O Andre confirmou — *"a receita pintada de azul na parte de agosto
+  > são emissões de NF, só serão receitas em setembro"* — e a convenção está escrita na
+  > skill de fechamento mensal dele.
+  >
+  > **A citação também não se sustentava:** a D104 não menciona cor nenhuma. A frase nasceu
+  > aqui e ganhou um número de decisão que nunca a continha, o que a fez parecer conferida.
+  > Os R$ 1.486.782,66 e os R$ 259.845,85 derivados dela **não são a receita da segunda
+  > empresa** — são nota emitida esperando vencer.
 - 6 extratos de conta corrente em xlsx, 19 faturas de cartão em PDF (34 arquivos, 9 são a
   mesma fatura sob outro nome), 1 extrato Contabilizei em PDF.
 
@@ -547,7 +557,7 @@ com a evidência do lado). Para medir contra as planilhas: **`npm run comparar`*
 | bloco | quem resolve | valor | o que é |
 |---|---|---|---|
 | **23 descrições de cartão** | **o Andre** | R$ 8.352,10 | `SQ *DREAMFORCE SF`, `ASA*MARIA CLARA` ×3, `APPLE.COM/US`, `PIU R E P L EP`. Três faturas resolvem quase tudo: **out/2025, mai/2026 e jun/2026**. |
-| **Extrato do Itaú da Gabriel** | **o Andre** | R$ 259.845,85 | Q2. Destrava mover a receita de agosto para a segunda empresa. Sem ele, ela ficaria com receita e nenhum caixa para conferir. |
+| ~~Extrato do Itaú da Gabriel~~ | o Andre | — | **Adiado até setembro (D131).** O azul de agosto é emissão de NF pendente, não receita da segunda empresa: não há o que migrar até as notas vencerem. O único cliente que de fato mudou de conta é a **Hogrefe**, R$ 19.000. |
 | ~~`ANTHROPIC_API_KEY`~~ | ~~o Andre~~ | — | **Resolvido em 03/09 (D127).** Chave no `.env.local`, quatro chamadas reais bem-sucedidas, D124 provada. Nenhuma sugestão passou de 0,80 — as 23 descrições seguem dependendo das faturas. |
 | ~~Os grupos do fluxo~~ | ~~eu~~ | — | **Feito** — D125 na tela, D126 na medição. |
 | ~~O prefill do provider~~ | ~~eu~~ | — | **Feito** — D124, `output_config.format` no lugar do prefill. |
@@ -568,7 +578,7 @@ com a evidência do lado). Para medir contra as planilhas: **`npm run comparar`*
 
 1. **As 23 descrições**, quando ele abrir as três faturas (out/2025, mai/2026, jun/2026).
 
-2. **O extrato da Gabriel**, quando chegar.
+2. **Setembro**, quando as notas de agosto vencerem — é o mês que responde sozinho de quem é cada recebimento, pelo extrato em vez de por dedução (D131).
 
 ### O que a comparação com o fluxo ainda mostra, e por quê
 
@@ -608,7 +618,7 @@ está pendente.
 
 | # | O que falta |
 |---|---|
-| **Q2** | **Extrato do Itaú da Gabriel Sampaio Jacob.** Só o que é de agosto em diante migra, e ela recebe no Itaú. A conta é nova e pode não ter movimento ainda. |
+| **Q2** | **Extrato do Itaú da Gabriel Sampaio Jacob.** A conta tem **R$ 19.000 e só isso** — o pagamento da Hogrefe de agosto, sem nenhuma despesa (dito pelo Andre em 08/09). O extrato continua valendo para **provar o saldo de abertura**, mas deixou de ser o que destrava a migração: em setembro as notas vencem, o dinheiro entra em alguma conta, e aí dá para ver pelo extrato de quem é o quê — sem deduzir. |
 | ~~Q18~~ | ~~`ANTHROPIC_API_KEY` vazia.~~ **Fechada em 03/09 (D127).** Duas armadilhas no caminho: a primeira chave esbarrou em saldo (`credit balance is too low`, que é recusa de saldo e não de autenticação) e a segunda era **identity-linked**, que exige o header `anthropic-workspace-id`. `GET /v1/models` não consome crédito e separa os dois casos — use como primeira sonda. |
 | **NFs** | Zero cadastradas. A Fase 5 concilia NF contra caixa e não tem dado nenhum. |
 | ~~Faturas 8299~~ | **set/out/nov de 2025 — sem acesso, buraco permanente.** Não procure de novo. |

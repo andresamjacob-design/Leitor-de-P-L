@@ -2664,6 +2664,49 @@ nos treze meses. 445 → **451 testes**.
 vestuário não têm precedente nenhum no livro, então nem o banco ajuda.
 
 
+### D131 — O azul nunca foi a segunda empresa, e a citação nunca existiu
+A skill de fechamento mensal do Andre, lida em 09/09/2026, traz a convenção da aba
+`Clientes` em uma linha: **verde = pago, azul = pendente dentro do prazo, vermelho = emitido
+com atraso**. O azul é o **estado da cobrança**, não a empresa dona dela.
+
+O handover afirmava o contrário desde 24/08: *"A marcação azul nas colunas de mês é a Gabriel
+Sampaio Jacob (D104): 24 clientes, R$ 1.486.782,66, tudo de agosto em diante."*
+
+**Três coisas erradas de uma vez.**
+
+A leitura estava errada — e o próprio Andre já a tinha desmentido em 08/09, antes de a skill
+aparecer: *"a receita pintada de azul na parte de agosto no fluxo de caixa são emissões de
+NF, ou seja só serão receitas em setembro quando as NFs forem vencer."* Duas fontes
+independentes, a mesma resposta.
+
+**A citação não se sustentava.** A D104 não menciona cor nenhuma — nem "azul", nem "cor", nem
+"marcação". A frase nasceu no handover e ganhou um número de decisão que nunca a continha.
+Isso é pior que estar errada: um número de decisão ao lado de uma afirmação faz o leitor
+seguinte parar de conferir, porque parece que alguém já conferiu.
+
+**E ela nunca foi verificável de onde estava.** A cor de célula não é lida pelo `xlsx.ts` do
+projeto (D34) — o leitor pega valor e estilo de data, não preenchimento. Quem escreveu aquilo
+não podia ter medido, e mesmo assim escreveu como fato, com número de decisão junto.
+
+→ Corrigido em quatro lugares do handover: a afirmação de origem, a pendência do extrato da
+Gabriel, a Q2 e o passo 2 da fila.
+
+**O que isso desfaz.** Os **R$ 1.486.782,66** e os **R$ 259.845,85** derivados deles não são
+receita da segunda empresa — são nota emitida esperando vencer. O plano que eles dirigiam
+("mover a receita de agosto para a Gabriel quando o extrato chegar") não tinha o que mover.
+
+**O que sobrevive, e por medição e não por dedução.** O único cliente que de fato mudou de
+conta é a **Hogrefe**: R$ 9.000 de retainer mais R$ 10.000 de parcela, sempre no dia 16, que
+em julho entraram na DD e em agosto entraram na Gabriel. O Andre confirmou que os R$ 19.000
+são o saldo inteiro dela, sem despesa nenhuma.
+
+**E setembro responde sozinho:** as notas vencem, o dinheiro entra em alguma conta, e o
+extrato diz de quem é o quê. É a lição que esta sessão já tinha aprendido duas vezes — em
+agosto eu li "não vi ninguém dos azuis pagando a Gabriel" como "eles pagaram a DD", quando a
+verdade era que não tinham pagado ninguém. **Ausência não é evidência**, e a cor que eu não
+conseguia ler era exatamente o dado que teria dito isso.
+
+
 ---
 
 ## Parte 13 — Decisões da Fase 8
