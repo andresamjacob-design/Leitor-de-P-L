@@ -2495,6 +2495,57 @@ separou "o modelo tem opinião" de "o modelo tem fundamento".
 442 → **445 testes**. `npm run check` passa.
 
 
+### D128 — Seis respostas do Andre, e o pedido de apagar 2025 que eu não cumpri
+Lote de 08/09/2026. Cinco viraram regra, uma virou "não sei ainda" registrado como tal, e a
+sexta é a que este verbete existe para explicar.
+
+| descrição | ele disse | conta |
+|---|---|---|
+| `SQ *DREAMFORCE SF` | "ingresso evento" | `9.05` Viagem e evento |
+| `ASA*MARIA CLARA` ×3 | "registro de marca" | `8.02` Jurídico |
+| `APPLE.COM/US` | "equipamento" | `5.01` Máquinas |
+| `Administrado-CT` | "classifique como outros" | `10.05` Outros |
+| `PIX RECEBIDO CICLO` | "pagamento normal" | `3.03` Receita — Referral, cliente Ciclo |
+| `HS ANALIA FR-CT` | "não sei ainda" | — |
+
+**Regra, não edição direta.** A regra vale para a próxima ocorrência — a Maria Clara tem três
+parcelas hoje e mais três por vir — e fica legível na tela de regras em vez de virar um
+lançamento inexplicável no razão. `ASA*MARIA CLARA` em `8.02` é a mesma natureza do INPI da
+D117: registro de marca é jurídico.
+
+**A Ciclo levou sentido `in` de propósito.** Ela é fornecedora *e* cliente, e foi exatamente
+essa regra sem sentido que criou a coluna `direction` (D122). Com `in`, ela não encosta no
+boleto de R$ 4.000 que a empresa paga à Agência Ciclo todo mês.
+
+Cobertura 97,8% → **98,5%** (1.051 de 1.067). O resultado caiu R$ 4.727,70 — custo que estava
+só no caixa passando a pesar na DRE, sem um centavo de caixa se mover. A ponte continua
+fechando nos treze meses.
+
+## O pedido de apagar 2025, e por que só metade foi feita
+
+O Andre disse: *"DESCONSIDERE 2025, não devemos fazer mais nada em relação a esse período,
+pode tirar tudo que temos desse período, focaremos apenas em 2026."*
+
+O pedido junta duas coisas, e elas se separam bem:
+
+- **Parar de trabalhar 2025** — feito. Saiu do documento de ações, sai dos relatórios, não
+  volta como pendência. Isso atende a intenção inteira e não custa nada.
+- **Apagar os dados** — **não feito, e a razão é um número.** Os 136 lançamentos de 2025 estão
+  todos em cartão de crédito, nenhum na conta corrente; os saldos de abertura são de
+  01/01/2026 e não dependem deles. Mas **compra de cartão entra no fluxo no mês em que a
+  fatura foi paga** (D116), e as faturas com compras de 2025 foram pagas em **janeiro,
+  fevereiro e março de 2026**. São **R$ 63.509,98** — a fatura 8299 de março tem 5 de 5
+  compras de 2025, R$ 1.854,77, e o pagamento de 05/01/2026 é R$ 1.854,77 ao centavo.
+
+Apagar deixaria esses pagamentos de fatura sem conteúdo e faria o fluxo dos primeiros meses de
+2026 errar. **Os R$ 63.509,98 não são "dados de 2025": são a composição de despesa de 2026.**
+
+O que é genuinamente só de 2025 são os 127 lançamentos de competência daquele ano. Esses
+poderiam sair sem quebrar 2026 — mas sair com as compras ficando criaria saída de caixa sem
+competência, que é a linha da ponte que a D121 acabou de zerar. Fica registrado como decisão
+do Andre, não minha: ele sabe o custo agora.
+
+
 ---
 
 ## Parte 13 — Decisões da Fase 8
