@@ -48,6 +48,17 @@ type Resposta = {
   disse: string;
 };
 
+/**
+ * As quatro que o **banco** respondeu, não o Andre (D130).
+ *
+ * O `detalhe` da fatura traz o ramo do lojista, e medido contra as 452 linhas de cartão já
+ * decididas ele acerta `VEÍCULOS` em 158 de 159 e `ALIMENTAÇÃO` em 24 de 25. Isso é forte o
+ * suficiente para propor e fraco demais para calar: cada linha aqui registra que a fonte é
+ * a classificação do banco, e não uma frase de alguém.
+ *
+ * A camada 6 do motor faz isto sozinha para importação nova. Estas quatro já viraram
+ * lançamento, e o razão não guarda o `raw` — por isso entram por regra, como as outras.
+ */
 const RESPOSTAS: Resposta[] = [
   { pattern: "SQ *DREAMFORCE SF", direction: "out", code: "9.05", disse: "ingresso evento" },
   // Registro de marca é a mesma natureza do INPI, que a D117 pôs em Jurídico — e é a linha
@@ -64,6 +75,33 @@ const RESPOSTAS: Resposta[] = [
     code: "3.03",
     client: "Ciclo",
     disse: "pagamento normal",
+  },
+  // Daqui para baixo quem respondeu foi o banco. `LAGO AZUL` desmente o palpite que estava
+  // no documento de ações — eu tinha escrito "restaurante?" e o ramo diz veículos, em
+  // Jundiaí.
+  {
+    pattern: "LAGO AZUL",
+    direction: "out",
+    code: "9.04",
+    disse: "o banco classificou como VEÍCULOS (.JUNDIAI)",
+  },
+  {
+    pattern: "FOCO FORNECE",
+    direction: "out",
+    code: "9.03",
+    disse: "o banco classificou como ALIMENTAÇÃO (.SAO PAULO)",
+  },
+  {
+    pattern: "ZIG*SPE VTEX",
+    direction: "out",
+    code: "9.03",
+    disse: "o banco classificou como ALIMENTAÇÃO — comida no VTEX Day, não ingresso",
+  },
+  {
+    pattern: "DASTRI CONVE",
+    direction: "out",
+    code: "9.03",
+    disse: "o banco classificou como ALIMENTAÇÃO (.SAO PAULO)",
   },
 ];
 

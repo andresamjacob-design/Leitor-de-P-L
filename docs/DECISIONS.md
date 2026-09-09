@@ -2608,6 +2608,62 @@ investigá-la de novo.
 março, abril e maio — a afirmação é sobre a planilha dele, não sobre o razão.
 
 
+### D130 — O banco já classificava cada compra, e o campo estava importado desde sempre
+Perguntado se eu precisava das faturas para resolver as sete descrições restantes, fui
+conferir — e a resposta é **não, elas já estão importadas**. Conferindo, achei que o leitor
+de fatura guarda em `raw_json.detalhe` o **ramo e a cidade que o próprio banco atribui** à
+compra (`itau-card.ts:333`), e que **nada no sistema lia esse campo**: nem o motor, nem a IA.
+
+```
+HS ANALIA FR-CT        → VESTUÁRIO .SAO PAULO
+LAGO AZUL -CT          → VEÍCULOS .JUNDIAI
+FOCO FORNECE-CT DE C   → ALIMENTAÇÃO .SAO PAULO
+MP *MARCELOM-CT S      → DIVERSOS .Osasco
+```
+
+**Medido antes de usar**, contra as 452 linhas de cartão já decididas:
+
+| ramo | virou | acerto |
+|---|---|---|
+| `VEÍCULOS` | `9.04` Uber e transporte | **158 de 159** |
+| `ALIMENTAÇÃO` | `9.03` Alimentação | **24 de 25** |
+| `DIVERSOS` | treze contas diferentes | maior fatia **35%** |
+| `VESTUÁRIO` | — | nenhum precedente |
+
+**A mesma medição desqualifica o campo como veredito:** `TURISMO E ENTRETENIMENTO` traz
+**quatorze linhas de Wix**, mais Adobe e Salesforce. Quem classifica é o credenciador, e ele
+descreve o **lojista**, não o gasto. Onde o ramo é físico e óbvio ele acerta quase sempre;
+onde é software, é ruído.
+
+→ **Camada 6 do motor**, a última, abaixo de `person`. Três escolhas de desenho:
+
+- **O mapa ramo→conta vem do carregador**, como o `payrollCategoryId` já vinha: o motor
+  continua puro e sem conhecer código de conta. Sem mapa, a camada não existe.
+- **Confiança 0,7, abaixo do limiar de pré-seleção — e não por falta de acerto.** 96–99% é
+  melhor que várias camadas acima. O teto é baixo porque a fonte é terceiro, e um humano
+  confirma sempre.
+- **Passa pela trava de sentido da D83/D99.** Um estorno tem o mesmo ramo da compra; sem a
+  trava viraria custo negativo — o defeito da D83 chegando por porta nova. Tem teste.
+
+**`DIVERSOS` fica de fora de propósito**, apesar de ser o ramo mais frequente: 114 linhas em
+treze contas. Um ramo que não concentra não é pista, é ruído com aparência de dado, e mapeá-lo
+encheria a tela de sugestões erradas com ar de fundamentadas.
+
+**O que a camada não alcança, e é desenho:** o razão não guarda `raw_json` — ele fica no
+staging. Quem chega pela importação tem a pista; quem já está no razão se resolve por regra.
+Por isso as quatro linhas de hoje entraram por regra, cada uma registrando que **quem
+respondeu foi o banco**, não o Andre.
+
+**Resultado:** 98,5% → **98,9%** (1.055 de 1.067). Sobram 12 linhas, R$ 2.269,00 — e o campo
+desmentiu dois palpites meus que estavam no documento de ações: `LAGO AZUL` não é restaurante
+(é veículos, em Jundiaí) e `HS ANALIA` não é hotel (é vestuário). A ponte continua fechando
+nos treze meses. 445 → **451 testes**.
+
+**O que continua aberto e agora é menor:** três descrições, R$ 1.485,00 — `HS ANALIA`
+(vestuário), `MP *MARCELOM` (diversos, inútil) e `RicardoNeves` (vestuário). As duas de
+vestuário não têm precedente nenhum no livro, então nem o banco ajuda.
+
+
 ---
 
 ## Parte 13 — Decisões da Fase 8

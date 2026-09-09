@@ -37,6 +37,14 @@ const CONFIDENCE: Record<SuggestionSource, number> = {
   history_tax_id: 0.9,
   history_description: 0.85,
   person: 0.7,
+  /**
+   * **Deliberadamente abaixo do limiar, e não é por falta de acerto** (D130): medido contra
+   * as linhas de cartão já decididas, `VEÍCULOS` deu 158 de 159 e `ALIMENTAÇÃO` 24 de 25.
+   * O teto é baixo porque a fonte é o credenciador classificando o lojista, não este livro
+   * classificando o gasto — e o mesmo campo põe Wix, Adobe e Salesforce em `TURISMO E
+   * ENTRETENIMENTO`. Um humano confirma, sempre.
+   */
+  merchant_category: 0.7,
 };
 
 export type EngineInput = {
@@ -72,6 +80,14 @@ export type EngineInput = {
    * Opcional para não quebrar quem chama sem ela; sem o conjunto, nada é bloqueado.
    */
   revenueCategoryIds?: ReadonlySet<string>;
+  /**
+   * Ramo do banco → conta, para a última camada (D130). Só os ramos que se provaram entram
+   * aqui, e quem escolhe é o carregador — o motor continua sem conhecer código de conta,
+   * como já acontece com o `payrollCategoryId`.
+   *
+   * Sem o mapa, a camada simplesmente não existe: nada é sugerido por ramo.
+   */
+  merchantCategories?: ReadonlyMap<string, string>;
 };
 
 // ---------------------------------------------------------------------------
@@ -246,6 +262,7 @@ export function suggestCategory(
     payrollCategoryId = null,
     costCategoryIds,
     revenueCategoryIds,
+    merchantCategories,
   }: EngineInput,
 ): Suggestion | null {
   const matches = matchRules(rules, subject);
@@ -336,6 +353,30 @@ export function suggestCategory(
       reason: `o nome de ${person.name} aparece na descrição`,
       ruleId: null,
     };
+  }
+
+  // 6. O ramo que o banco atribuiu à compra. Última porque é a única que não sai deste
+  //    livro: as cinco de cima leem decisão de gente ou histórico próprio, esta lê o
+  //    palpite do credenciador. Passa pela mesma trava de sentido do histórico (D83, D99)
+  //    e pela mesma razão — um ramo não declara intenção, então não ganha o benefício da
+  //    dúvida que uma regra explícita ganha.
+  const ramo = subject.merchantCategory;
+  if (ramo && merchantCategories) {
+    const categoryId = merchantCategories.get(ramo);
+    if (
+      categoryId &&
+      learnedSuggestionIsAllowed(subject, categoryId, costCategoryIds, revenueCategoryIds)
+    ) {
+      return {
+        categoryId,
+        clientId: null,
+        personId: null,
+        source: "merchant_category",
+        confidence: CONFIDENCE.merchant_category,
+        reason: `o banco classificou a compra como ${ramo}`,
+        ruleId: null,
+      };
+    }
   }
 
   return null;

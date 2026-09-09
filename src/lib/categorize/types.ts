@@ -47,6 +47,16 @@ export type Subject = {
   accountId: string;
   counterpartyTaxId: string | null;
   counterpartyName: string | null;
+  /**
+   * O ramo que o **banco** atribui à compra — `ALIMENTAÇÃO`, `VEÍCULOS`, `DIVERSOS` —, sem
+   * a cidade (D130). Sai do `detalhe` da fatura de cartão; o extrato de conta corrente não
+   * classifica nada e deixa isto nulo.
+   *
+   * É palpite de terceiro sobre o lojista, não fato sobre este livro: quem atribui é o
+   * credenciador, e ele põe Wix, Adobe e Salesforce em `TURISMO E ENTRETENIMENTO`. Por isso
+   * a camada que o usa é a última e nunca chega ao limiar de pré-seleção.
+   */
+  merchantCategory?: string | null;
 };
 
 /** A movement that was already categorised — the material the engine learns from. */
@@ -73,7 +83,8 @@ export type SuggestionSource =
   | "rule_text"
   | "history_tax_id"
   | "history_description"
-  | "person";
+  | "person"
+  | "merchant_category";
 
 export type Suggestion = {
   categoryId: string;

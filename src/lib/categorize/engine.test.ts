@@ -489,3 +489,67 @@ describe("o histórico também não põe saída em conta de receita (D99)", () =
     ).toBe("receita-projeto");
   });
 });
+
+describe("suggestCategory — o ramo que o banco atribui (D130)", () => {
+  const RAMOS = new Map([
+    ["VEÍCULOS", "uber-cat"],
+    ["ALIMENTAÇÃO", "alimentacao-cat"],
+  ]);
+
+  it("sugere pelo ramo quando nada mais decidiu", () => {
+    const s = suggestCategory(
+      subject({ description: "LAGO AZUL -CT", merchantCategory: "VEÍCULOS" }),
+      { ...EMPTY, merchantCategories: RAMOS },
+    );
+    expect(s?.categoryId).toBe("uber-cat");
+    expect(s?.source).toBe("merchant_category");
+    expect(s?.reason).toContain("VEÍCULOS");
+  });
+
+  it("nunca chega ao limiar de pré-seleção — um humano confirma sempre", () => {
+    const s = suggestCategory(
+      subject({ description: "FOCO FORNECE-CT", merchantCategory: "ALIMENTAÇÃO" }),
+      { ...EMPTY, merchantCategories: RAMOS },
+    );
+    expect(s?.confidence).toBeLessThan(0.8);
+  });
+
+  it("é a última: qualquer regra ganha dela", () => {
+    const s = suggestCategory(
+      subject({ description: "LAGO AZUL -CT", merchantCategory: "VEÍCULOS" }),
+      {
+        ...EMPTY,
+        rules: [rule({ pattern: "lago azul", categoryId: "outra-cat" })],
+        merchantCategories: RAMOS,
+      },
+    );
+    expect(s?.categoryId).toBe("outra-cat");
+    expect(s?.source).toBe("rule_text");
+  });
+
+  it("um ramo fora do mapa não sugere nada — DIVERSOS não é pista", () => {
+    expect(
+      suggestCategory(
+        subject({ description: "MP *MARCELOM-CT S", merchantCategory: "DIVERSOS" }),
+        { ...EMPTY, merchantCategories: RAMOS },
+      ),
+    ).toBeNull();
+  });
+
+  it("sem o mapa a camada não existe", () => {
+    expect(
+      suggestCategory(subject({ merchantCategory: "VEÍCULOS" }), { ...EMPTY }),
+    ).toBeNull();
+  });
+
+  it("não põe entrada em conta de custo, como o histórico também não (D83)", () => {
+    // Um estorno de compra tem o mesmo ramo da compra. Sem a trava, ele viraria custo
+    // negativo — o defeito que a D83 documenta, chegando por uma porta nova.
+    expect(
+      suggestCategory(
+        subject({ description: "ESTORNO LAGO AZUL", direction: "in", merchantCategory: "VEÍCULOS" }),
+        { ...EMPTY, merchantCategories: RAMOS, costCategoryIds: new Set(["uber-cat"]) },
+      ),
+    ).toBeNull();
+  });
+});
