@@ -2707,6 +2707,44 @@ verdade era que não tinham pagado ninguém. **Ausência não é evidência**, e
 conseguia ler era exatamente o dado que teria dito isso.
 
 
+### D132 — "Os pagamentos em roupas são brindes" — e o ramo inteiro ganhou destino
+Resposta do Andre em 10/09/2026, e ela é sobre o **ramo**, não sobre as duas linhas que
+existiam: `HS ANALIA FR-CT` (R$ 1.049,94) e `RicardoNeves-CT a` (R$ 115,05) vão para `10.02`
+Brindes, e `VESTUÁRIO` entra no mapa da D130.
+
+**Este é o primeiro ramo declarado em vez de medido**, e a proveniência fica escrita no
+código. `VEÍCULOS` e `ALIMENTAÇÃO` entraram por acerto contra o histórico — 158/159 e 24/25.
+`VESTUÁRIO` não tinha **um único precedente**: nunca se comprou roupa neste livro. O que o
+põe no mapa é a regra do Andre. Declarado vale mais que medido, porque quem decide é ele;
+mas se um dia errar, o lugar de olhar é a regra, não a amostra.
+
+**Medi antes de aplicar, e o custo estava visível:** a linha `Brindes` fechava **7/7** com a
+planilha, R$ 1.345,40 dos dois lados. Aplicar levaria a R$ 2.510,39 contra R$ 1.345,40.
+Apliquei mesmo assim — é decisão dele — e o resultado desmentiu metade da previsão.
+
+| | antes | depois |
+|---|---|---|
+| `Brindes` | 7/7 | 5/7, R$ 2.510,39 vs R$ 1.345,40 |
+| `Other Expenses` (grupo) | R$ 414,15 **abaixo** | R$ 750,84 **acima** |
+| distância por grupo | R$ 9.503,69 | **R$ 9.384,98** |
+
+**A distância total caiu.** As quatro linhas de ramo da D130 ganharam R$ 455,40 e estas duas
+custaram R$ 336,69 — não os R$ 1.164,99 que eu tinha previsto. A diferença é o achado: o
+grupo `Other Expenses` estava **R$ 414,15 abaixo** da planilha antes, e as roupas taparam
+esse buraco antes de passar por cima. **Parte desse dinheiro já estava na planilha do Andre**,
+em `Other Expenses`, só não na sub-linha `Brindes`.
+
+Isso é diferente do caso do ASA (D129), onde a divergência era pura e cresceria. Aqui a
+divergência é parcialmente de sub-linha, não de grupo, e vale medir de novo quando as próximas
+compras de roupa chegarem.
+
+**Cobertura 98,9% → 99,1%** (1.057 de 1.067). A ponte continua fechando nos treze meses.
+
+**O que sobra de 2026 é uma linha só:** `MP *MARCELOM-CT S`, R$ 320,00, ramo `DIVERSOS` —
+justamente o ramo que a D130 recusou mapear. As outras nove pendências são as oito de 2025
+que o Andre mandou desconsiderar e o centavo da Keepclear, sem conta de propósito.
+
+
 ---
 
 ## Parte 13 — Decisões da Fase 8

@@ -103,10 +103,29 @@ const RESPOSTAS: Resposta[] = [
     code: "9.03",
     disse: "o banco classificou como ALIMENTAÇÃO (.SAO PAULO)",
   },
+  // De volta ao Andre, e desta vez respondendo o **ramo inteiro**: "os pagamentos em roupas
+  // são brindes" (D132). As duas linhas que o banco marcou como VESTUÁRIO são estas.
+  {
+    pattern: "HS ANALIA FR",
+    direction: "out",
+    code: "10.02",
+    disse: "os pagamentos em roupas são brindes",
+  },
+  {
+    pattern: "RicardoNeves",
+    direction: "out",
+    code: "10.02",
+    disse: "os pagamentos em roupas são brindes",
+  },
 ];
 
-/** Respondida com "não sei", que é resposta e não ausência dela. */
-const SEM_RESPOSTA = [{ pattern: "HS ANALIA FR-CT", disse: "não sei ainda" }];
+/**
+ * Respondida com "não sei", que é resposta e não ausência dela.
+ *
+ * A `HS ANALIA FR-CT` esteve aqui até 10/09, quando o ramo do banco (VESTUÁRIO) e a regra
+ * do Andre sobre roupas se encontraram — ela subiu para a lista de cima.
+ */
+const SEM_RESPOSTA: { pattern: string; disse: string }[] = [];
 
 const sql = postgres(process.env.DATABASE_URL as string, { max: 1, connect_timeout: 20 });
 

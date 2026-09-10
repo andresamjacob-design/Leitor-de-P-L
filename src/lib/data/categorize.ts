@@ -49,6 +49,18 @@ const REVENUE_KINDS = ["revenue"];
 const MERCHANT_CATEGORY_CODES: Record<string, string> = {
   "VEÍCULOS": "9.04",
   "ALIMENTAÇÃO": "9.03",
+  /**
+   * **Este não é medido, é declarado** — e a diferença importa para quem ler depois.
+   *
+   * `VEÍCULOS` e `ALIMENTAÇÃO` acima ganharam lugar por acerto contra o histórico. O
+   * `VESTUÁRIO` não tinha **um único precedente** no livro: nunca se comprou roupa aqui. O
+   * que o põe no mapa é uma regra que o Andre deu em 10/09/2026, sobre o ramo inteiro e não
+   * sobre as duas linhas que existiam — *"os pagamentos em roupas são brindes"* (D132).
+   *
+   * Declarado vale mais que medido, porque quem decide é ele. Mas a proveniência fica
+   * escrita: se um dia isto errar, o lugar de olhar é a regra, não a amostra.
+   */
+  "VESTUÁRIO": "10.02",
 };
 
 export async function loadEngineInput(entityIds: string[]): Promise<EngineInput> {
