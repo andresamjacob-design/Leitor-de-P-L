@@ -12,6 +12,7 @@
  */
 
 import type { Sql } from "postgres";
+import { loadClientRevenueByTaxId } from "./client-revenue.ts";
 import { suggestCategory, type EngineInput } from "@/lib/categorize/engine";
 import type { HistoryEntry, Person, Rule, Subject, Suggestion } from "@/lib/categorize/types";
 import { parseMoney, formatMoney } from "@/lib/money";
@@ -106,6 +107,7 @@ export async function runPreview(sql: Sql, entityId: string): Promise<Preview> {
     payrollCategoryId,
     costCategoryIds,
     revenueCategoryIds,
+    clientRevenueByTaxId: await loadClientRevenueByTaxId(sql, entityId),
   };
 
   // Only what is still pending: a line already approved or rejected is a decision someone

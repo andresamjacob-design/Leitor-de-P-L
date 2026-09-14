@@ -553,3 +553,82 @@ describe("suggestCategory — o ramo que o banco atribui (D130)", () => {
     ).toBeNull();
   });
 });
+
+describe("suggestCategory — o CNPJ do cliente e a conta dos contratos (D136)", () => {
+  const CLIENTES = new Map([
+    ["50050390000182", { clientId: "cli-harpix", categoryId: "receita-projeto" }],
+  ]);
+
+  it("decide pela conta dos contratos do cliente", () => {
+    const s = suggestCategory(
+      subject({
+        description: "PIX RECEBIDO HARPIX",
+        direction: "in",
+        counterpartyTaxId: "50050390000182",
+      }),
+      { ...EMPTY, clientRevenueByTaxId: CLIENTES },
+    );
+    expect(s?.categoryId).toBe("receita-projeto");
+    expect(s?.clientId).toBe("cli-harpix");
+    expect(s?.source).toBe("client_contract");
+  });
+
+  it("não decide sobre saída — pagar a um cliente não é receita dele", () => {
+    expect(
+      suggestCategory(
+        subject({ direction: "out", counterpartyTaxId: "50050390000182" }),
+        { ...EMPTY, clientRevenueByTaxId: CLIENTES },
+      ),
+    ).toBeNull();
+  });
+
+  it("perde para uma regra, que é decisão de gente sobre este caso", () => {
+    const s = suggestCategory(
+      subject({
+        description: "PIX RECEBIDO HARPIX",
+        direction: "in",
+        counterpartyTaxId: "50050390000182",
+      }),
+      {
+        ...EMPTY,
+        rules: [rule({ pattern: "harpix", categoryId: "outra", direction: "in" })],
+        clientRevenueByTaxId: CLIENTES,
+      },
+    );
+    expect(s?.source).toBe("rule_text");
+  });
+
+  it("ganha do histórico, porque contrato é explícito e histórico é aprendido (D40)", () => {
+    const s = suggestCategory(
+      subject({
+        description: "PIX RECEBIDO HARPIX",
+        direction: "in",
+        counterpartyTaxId: "50050390000182",
+      }),
+      {
+        ...EMPTY,
+        clientRevenueByTaxId: CLIENTES,
+        history: [
+          {
+            description: "PIX RECEBIDO HARPIX",
+            counterpartyTaxId: "50050390000182",
+            categoryId: "conta-antiga",
+            clientId: null,
+            personId: null,
+            occurredOn: "2026-05-01",
+          },
+        ],
+      },
+    );
+    expect(s?.source).toBe("client_contract");
+  });
+
+  it("sem o mapa a camada não existe", () => {
+    expect(
+      suggestCategory(
+        subject({ direction: "in", counterpartyTaxId: "50050390000182" }),
+        { ...EMPTY },
+      ),
+    ).toBeNull();
+  });
+});

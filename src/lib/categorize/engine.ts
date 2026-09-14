@@ -35,6 +35,12 @@ const CONFIDENCE: Record<SuggestionSource, number> = {
   rule_tax_id: 1,
   rule_text: 0.95,
   history_tax_id: 0.9,
+  /**
+   * Alto porque as duas metades vieram de gente: **alguém confirmou** que este CNPJ é deste
+   * cliente (`vincular`), e **alguém criou** os contratos cuja conta é única. Não é
+   * inferência sobre texto — é leitura de duas decisões que já existem (D136).
+   */
+  client_contract: 0.9,
   history_description: 0.85,
   person: 0.7,
   /**
@@ -88,6 +94,14 @@ export type EngineInput = {
    * Sem o mapa, a camada simplesmente não existe: nada é sugerido por ramo.
    */
   merchantCategories?: ReadonlyMap<string, string>;
+  /**
+   * CNPJ do cliente → a conta de receita dos contratos dele, quando **todos** apontam para
+   * a mesma (D136). Sem unanimidade o cliente não entra no mapa: com duas contas possíveis
+   * a camada não saberia escolher, e escolher errado é pior que não decidir.
+   *
+   * Como sempre, quem monta é o carregador — o motor não conhece código de conta.
+   */
+  clientRevenueByTaxId?: ReadonlyMap<string, { clientId: string; categoryId: string }>;
 };
 
 // ---------------------------------------------------------------------------
@@ -263,6 +277,7 @@ export function suggestCategory(
     costCategoryIds,
     revenueCategoryIds,
     merchantCategories,
+    clientRevenueByTaxId,
   }: EngineInput,
 ): Suggestion | null {
   const matches = matchRules(rules, subject);
@@ -296,6 +311,30 @@ export function suggestCategory(
           : `regra “${textRule.pattern}”`,
       ruleId: textRule.id,
     };
+  }
+
+  // 2b. O CNPJ é de um cliente cujos contratos apontam todos para a mesma conta de receita.
+  //
+  //     Vem antes do histórico porque é **explícito, não aprendido** (D40): contrato é
+  //     registro que alguém criou, e o vínculo do CNPJ é resposta que alguém deu. O
+  //     histórico, abaixo, só sabe o que aconteceu antes.
+  //
+  //     Só entrada. Dinheiro **saindo** para um cliente não é receita dele — e a trava de
+  //     sentido abaixo pegaria isso de qualquer forma, mas dizer aqui é mais honesto que
+  //     depender de uma rede que existe para outra coisa.
+  if (subject.direction === "in" && subject.counterpartyTaxId && clientRevenueByTaxId) {
+    const achado = clientRevenueByTaxId.get(normalizeTaxId(subject.counterpartyTaxId));
+    if (achado) {
+      return {
+        categoryId: achado.categoryId,
+        clientId: achado.clientId,
+        personId: null,
+        source: "client_contract",
+        confidence: CONFIDENCE.client_contract,
+        reason: "o CNPJ é de um cliente cujos contratos apontam todos para esta conta",
+        ruleId: null,
+      };
+    }
   }
 
   const index = indexHistory(history);

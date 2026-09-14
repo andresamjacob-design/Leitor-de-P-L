@@ -36,6 +36,7 @@
 import postgres from "postgres";
 import { loadEnvLocal } from "./load-env.ts";
 import { formatBRL, fromNumeric, parseMoney, toNumeric, type Cents } from "@/lib/money";
+import { loadClientRevenueByTaxId } from "./client-revenue.ts";
 import { suggestCategory } from "@/lib/categorize/engine";
 import type { EngineInput } from "@/lib/categorize/engine";
 import type { Rule, Subject, Suggestion } from "@/lib/categorize/types";
@@ -129,6 +130,7 @@ try {
     payrollCategoryId: categories.find((c) => c.code === PAYROLL_CODE)?.id ?? null,
     costCategoryIds,
     revenueCategoryIds,
+    clientRevenueByTaxId: await loadClientRevenueByTaxId(sql, entity.id),
   };
 
   const pendentes = await sql<

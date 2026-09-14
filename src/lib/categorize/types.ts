@@ -84,7 +84,8 @@ export type SuggestionSource =
   | "history_tax_id"
   | "history_description"
   | "person"
-  | "merchant_category";
+  | "merchant_category"
+  | "client_contract";
 
 export type Suggestion = {
   categoryId: string;

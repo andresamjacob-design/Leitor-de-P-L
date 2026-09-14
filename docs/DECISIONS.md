@@ -2865,6 +2865,70 @@ a segunda. Não mexi: resolver isso é escolher qual das duas linhas dele é a v
 essa escolha é dele.
 
 
+### D136 — O Andre corrigiu a minha prioridade, e ela estava errada
+Em 14/09/2026, depois de eu listar dezesseis clientes sem CNPJ como coisa a achar:
+
+> *"Eu não preciso de um sistema que categorize absolutamente todos os gastos sem nenhum
+> erro, preciso de um que categorize a maioria e não tenha disparidades com os valores do
+> banco."*
+
+Isso reordena o projeto, e a evidência de que eu estava do lado errado era o próprio estado
+do razão: a conta corrente marcava **R$ 163.298,72 contra R$ 177.798,72 do extrato**. Eu
+tinha deixado esses **R$ 14.500** abertos de propósito na D134, escrevendo que contorná-los
+"resolveria hoje e esconderia a causa".
+
+**O raciocínio estava certo e a prioridade estava errada.** Disparidade com o banco é a única
+coisa que ele pediu para não existir, e eu a deixei de pé para proteger a elegância de um
+conserto futuro. Uma cobertura de 99,1% com o banco errado vale menos que 95% com o banco
+certo.
+
+## A camada que faltava
+
+→ **Camada 2b: o CNPJ é de um cliente cujos contratos apontam todos para a mesma conta.**
+
+Ela existe porque o motor sabia as duas metades e não sabia juntá-las: alguém tinha
+confirmado que aquele CNPJ era da Harpix (`vincular`), e alguém tinha criado os contratos
+dela — todos `project`. Nenhuma camada raciocinava *"logo, dinheiro dela é `3.02`"*.
+
+**Vem antes do histórico, e a D40 decide a ordem:** contrato é registro explícito que alguém
+criou, histórico só sabe o que aconteceu antes — *explícito ganha de aprendido*. Confiança
+**0,9**, igual ao histórico por CNPJ, porque as duas metades vieram de gente.
+
+**Só entrada.** Dinheiro saindo para um cliente não é receita dele. A trava de sentido da D99
+pegaria isso de qualquer jeito, mas depender de uma rede que existe para outra coisa é pior
+que dizer.
+
+**Unanimidade ou nada:** o cliente só entra no mapa se **todos** os contratos apontarem para
+a mesma conta. Com duas possíveis, escolher errado é pior que não decidir — mesma condição
+que o `vincular` já aplicava.
+
+A consulta vive em `scripts/client-revenue.ts`, compartilhada pelo `recategorize` e pelo
+`engine-preview`. Duplicá-la seria criar duas verdades sobre a mesma pergunta.
+
+## O resultado
+
+As duas linhas foram decididas — **2 de 2, ambas por `client_contract`** — e entraram no
+razão. E aí está o número que importa:
+
+| | |
+|---|---|
+| conta corrente, o app | **R$ 177.798,72** |
+| conta corrente, o banco | **R$ 177.798,72** |
+| linhas em staging | **0** |
+
+**Bate ao centavo**, até 31/08/2026. A ponte continua fechando nos treze meses, e a cobertura
+é **99,2%** — as nove que faltam são as oito de 2025 que ele mandou desconsiderar e o centavo
+da Keepclear.
+
+## O que isso muda daqui para frente
+
+**Os dezesseis CNPJs saem da lista de cobrança.** O Andre disse que a NF da Salesforce nunca
+vai ter CNPJ — e faz sentido estrutural: quem paga de fora não carrega documento brasileiro.
+Perseguir aquela lista era otimizar para um número que ele não pediu.
+
+445 → **456 testes**.
+
+
 ---
 
 ## Parte 13 — Decisões da Fase 8
