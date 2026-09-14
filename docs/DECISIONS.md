@@ -2814,6 +2814,57 @@ declara R$ 177.798,72 — faltam **exatamente R$ 14.500,00**, que é o que está
 Cobertura **99,1%** (1.137 de 1.147). Clientes **68**, sem CNPJ **21** (eram 31).
 
 
+### D135 — `Outros` vira a casa da dúvida, com a trava que a impede de virar esconderijo
+Pedido do Andre em 14/09/2026: *"crie uma linha chamada outros que o que gerar dúvida
+futuramente pode ser incluído nela, como essa Marcelo aí."* A conta `10.05 Outros` já
+existia — foi para lá o `Administrado-CT` quando ele respondeu "classifique como outros". O
+que muda é o **estatuto**: deixa de ser uma resposta pontual e vira política.
+
+`MP *MARCELOM-CT S`, R$ 320,00, é a primeira a entrar por ela — e com isso **as vinte e três
+descrições de cartão acabaram**. Cobertura **99,2%**.
+
+## A objeção que eu levantei, e por que ela não se aplica aqui
+
+Cinco dias atrás escrevi, corrigindo a skill de fechamento do Andre, que a regra *"favorecido
+não reconhecido → default Freelancers + REVISAR"* devia sair — e que ela era a provável
+origem do item crônico `Freelancer (outras empresas)`, R$ 20.134,72 idêntico todo mês, sem
+lastro em extrato nenhum.
+
+Um catch-all é a mesma mecânica. A diferença é o que cada um **afirma**:
+
+- `Freelancers` diz *"isto é pagamento a freelancer"* — e está errado na maioria das vezes.
+- `Outros` diz *"não sabemos o que isto é"* — e está certo sempre que for usado.
+
+A primeira é conhecimento falso; a segunda é ignorância declarada. Só a segunda é compatível
+com a regra da casa de mostrar travessão e o motivo em vez de inventar.
+
+## O risco que sobra, e a trava
+
+**Dúvida com endereço para de ser contada.** O quadro do `pendencias` mede o que **não tem
+conta**; mandar tudo para `Outros` levaria a cobertura a 100% e esconderia exatamente o que
+ele existe para mostrar. É assim que uma linha de R$ 20 mil idêntica todo mês sobrevive anos
+sem ninguém perguntar.
+
+→ **O `pendencias` passou a listar `Outros` mesmo estando decidida**, logo abaixo do número
+principal: *"2 em Outros, R$ 680,00 — decididas, mas ninguém sabe o que são. Não somem daqui
+só por terem conta."* A conta some do numerador de pendência e **não some do quadro**.
+
+→ E **`10.05` ganhou grupo**. Ela caía em "Sem grupo" no fluxo, que é precisamente onde some
+o que ninguém olha — o contrário do que a política pede. Vai para `Other Expenses`, que é
+onde a planilha do Andre põe `Other (cartão de credito)`, e as duas compras que estão lá são
+de cartão.
+
+**O custo medido:** o grupo `Other Expenses` vai de 3/7 para 2/7, R$ 50.341,39 contra
+R$ 48.910,55 da planilha. Parte disso é a `Outros` chegando ao grupo, parte é a `Brindes` da
+D132. Fica escrito para ninguém tratar como defeito.
+
+**Uma ambiguidade herdada, não criada hoje:** a planilha tem duas linhas que apontam para
+`10.05` — `Outros (pix)` dentro de `Travel` e `Other (cartão de credito)` dentro de
+`Other Expenses`. A comparação por sub-linha casa com a primeira, a por grupo agora casa com
+a segunda. Não mexi: resolver isso é escolher qual das duas linhas dele é a verdadeira, e
+essa escolha é dele.
+
+
 ---
 
 ## Parte 13 — Decisões da Fase 8

@@ -117,6 +117,14 @@ const RESPOSTAS: Resposta[] = [
     code: "10.02",
     disse: "os pagamentos em roupas são brindes",
   },
+  // A última das vinte e três, e a primeira a entrar pela política da D135: o Andre pediu
+  // que `Outros` seja onde a dúvida mora, em vez de a linha ficar sem conta para sempre.
+  {
+    pattern: "MP *MARCELOM",
+    direction: "out",
+    code: "10.05",
+    disse: "o que gerar dúvida pode ir para Outros",
+  },
 ];
 
 /**

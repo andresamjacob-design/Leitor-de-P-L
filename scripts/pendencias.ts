@@ -62,6 +62,34 @@ try {
   );
 
   /**
+   * A conta `Outros` aparece aqui de propósito, mesmo estando decidida (D135).
+   *
+   * Ela é a casa da dúvida: o Andre pediu que o que não se reconhece vá para lá em vez de
+   * ficar sem conta para sempre. A política é honesta — `Outros` não afirma saber o que a
+   * linha é —, mas tem um risco que já se realizou noutro lugar: **dúvida com endereço para
+   * de ser contada.** A linha `Freelancer (outras empresas)` da planilha dele vale
+   * R$ 20.134,72 idêntico todo mês, sem lastro em extrato nenhum, e nasceu de um default
+   * parecido.
+   *
+   * O número de cima conta o que **não** tem conta. Sem esta linha, mandar tudo para
+   * `Outros` levaria a cobertura a 100% e esconderia exatamente o que este quadro existe
+   * para mostrar. Então ela fica: decidida, e ainda assim visível.
+   */
+  const [outros] = await sql<{ n: number; valor: string }[]>`
+    select count(*)::int as n, coalesce(sum(ce.amount), 0)::text as valor
+      from cash_entries ce
+      join categories c on c.id = ce.category_id
+     where ce.entity_id = ${entity.id} and c.code = '10.05'`;
+
+  if ((outros?.n ?? 0) > 0) {
+    console.log(
+      `${YELLOW}${outros!.n} em ${BOLD}Outros${RESET}${YELLOW}, ` +
+        `${formatMoney(parseMoney(outros!.valor, { decimalSeparator: "." }))}${RESET} ` +
+        `${DIM}— decididas, mas ninguém sabe o que são. Não somem daqui só por terem conta.${RESET}\n`,
+    );
+  }
+
+  /**
    * Agrupa por documento quando existe, e pela descrição quando não.
    *
    * A distinção não é cosmética: um grupo com documento se resolve com uma regra por

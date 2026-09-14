@@ -120,6 +120,13 @@ export const GROUP_OF_CODE: Record<string, string> = {
   "6.07": "Insurance",
   // Other Expenses
   "10.02": "Other Expenses",
+  /**
+   * `Outros` é a casa da dúvida desde a D135, e precisava de grupo: sem isto ela caía em
+   * "Sem grupo", que é onde some o que ninguém olha — exatamente o contrário do que a
+   * política pede. Vai para `Other Expenses` porque é lá que a planilha do Andre põe
+   * `Other (cartão de credito)`, e as compras que chegam aqui são de cartão.
+   */
+  "10.05": "Other Expenses",
   "11.02": "Other Expenses",
   "11.03": "Other Expenses",
   // Imposto
