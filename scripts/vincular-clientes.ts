@@ -108,6 +108,30 @@ const CONFIRMADOS: readonly { cliente: string; contraparte: string; porque: stri
       "ISM Serviços de Imagem é a MS Tecnologia; o contrato dela é mensal de R$ 5.000, " +
       "que é exatamente o valor dos três recebimentos",
   },
+  // Agosto de 2026 trouxe o documento de quatro que estavam sem (D134). Nenhum é cliente
+  // novo — os quatro já existiam no cadastro sem CNPJ, que é o motivo de o script não
+  // adivinhar (D87). O nome da contraparte é o que o extrato escreve, conferido antes.
+  { cliente: "Harpix", contraparte: "HARPIX SISTEMAS%", porque: "razão social da Harpix" },
+  {
+    cliente: "Inovamed",
+    contraparte: "INOVAMED HOSPITALAR%",
+    porque: "razão social da Inovamed",
+  },
+  { cliente: "Pink Cheeks", contraparte: "PINK CHEEKS%", porque: "razão social da Pink Cheeks" },
+  {
+    // A B2B Câmbio já tinha uma entrada em `PAGADORES` — o Roberto Pascoal pagou por ela em
+    // julho. Agora **a própria empresa pagou, com o CNPJ dela**, e o documento verdadeiro
+    // aparece no extrato pela primeira vez. As duas linhas convivem: uma diz quem ela é, a
+    // outra diz quem já pagou por ela.
+    cliente: "B2B Cambio",
+    contraparte: "B2B CAMBIO%",
+    porque: "a própria B2B Câmbio pagou em agosto, com o CNPJ dela",
+  },
+  {
+    cliente: "ITA Educacional",
+    contraparte: "ITA - CURSOS%",
+    porque: "ITA - Cursos, Treinamentos e Desenvolvimento Humano é a ITA Educacional",
+  },
 ];
 
 /**
@@ -258,11 +282,22 @@ try {
 
     // O documento vem do extrato. Se a contraparte aparece com mais de um CNPJ, isso é
     // ambiguidade e não se resolve escolhendo um — é exatamente o caso de parar.
+    //
+    // **Olha o razão e o staging** (D134). O CNPJ de um mês novo chega primeiro em
+    // `staged_transactions`, e é justamente ali que ele é mais útil: com o cliente ligado, o
+    // motor categoriza a linha **antes** de ela ser aprovada, em vez de ela entrar sem conta
+    // e virar garimpo depois. Sem isso o laço não fecha — a linha precisa de conta para
+    // entrar e precisa do vínculo para ganhar conta.
     const documentos = await sql<{ doc: string }[]>`
-      select distinct regexp_replace(counterparty_tax_id, '\D', '', 'g') as doc
-      from cash_entries
-      where upper(coalesce(counterparty_name, '')) like ${link.contraparte}
-        and counterparty_tax_id is not null`;
+      select distinct doc from (
+        select regexp_replace(counterparty_tax_id, '\D', '', 'g') as doc, counterparty_name
+          from cash_entries where entity_id = ${cliente.entity_id} and counterparty_tax_id is not null
+        union all
+        select regexp_replace(counterparty_tax_id, '\D', '', 'g'), counterparty_name
+          from staged_transactions
+         where entity_id = ${cliente.entity_id} and counterparty_tax_id is not null
+           and status = 'pending'
+      ) x where upper(coalesce(counterparty_name, '')) like ${link.contraparte}`;
 
     console.log(`  ${BOLD}${cliente.name}${RESET} ${DIM}← ${link.contraparte}${RESET}`);
     console.log(`     ${DIM}${link.porque}${RESET}`);
@@ -391,11 +426,17 @@ try {
       continue;
     }
 
+    // Razão e staging, pela mesma razão da busca acima (D134).
     const documentos = await sql<{ doc: string }[]>`
-      select distinct regexp_replace(counterparty_tax_id, '\D', '', 'g') as doc
-      from cash_entries
-      where upper(coalesce(counterparty_name, '')) like ${pag.contraparte}
-        and counterparty_tax_id is not null`;
+      select distinct doc from (
+        select regexp_replace(counterparty_tax_id, '\D', '', 'g') as doc, counterparty_name
+          from cash_entries where entity_id = ${cliente.entity_id} and counterparty_tax_id is not null
+        union all
+        select regexp_replace(counterparty_tax_id, '\D', '', 'g'), counterparty_name
+          from staged_transactions
+         where entity_id = ${cliente.entity_id} and counterparty_tax_id is not null
+           and status = 'pending'
+      ) x where upper(coalesce(counterparty_name, '')) like ${pag.contraparte}`;
     if (documentos.length !== 1) {
       console.log(
         `     ${YELLOW}${documentos.length} documento(s) no extrato para esse nome${RESET}\n`,

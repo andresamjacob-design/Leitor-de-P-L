@@ -2745,6 +2745,75 @@ justamente o ramo que a D130 recusou mapear. As outras nove pendências são as 
 que o Andre mandou desconsiderar e o centavo da Keepclear, sem conta de propósito.
 
 
+### D133 — Cinco clientes tinham metade da história cada
+Confirmado pelo Andre em 14/09/2026. Cinco clientes existiam **duas vezes**, e o retrato da
+Santa Lucia serve para os cinco:
+
+```
+"Santa Lucia"  CNPJ: —              "Santa Lucia"  CNPJ: 06278750000106
+  receita R$ 20.000 × 3               receita: nenhuma
+  contratos: 1                        contratos: 0
+  caixa: nenhum                       caixa: R$ 35.000 em 27/07
+```
+
+Não é digitação duplicada — são **duas portas de entrada que não se reconheceram**. Uma cópia
+nasceu da planilha de DRE, que traz contrato e receita e não tem CNPJ de ninguém; a outra
+nasceu do extrato, que traz o CNPJ de quem pagou e não sabe o que foi contratado.
+
+**Isso já fez um número mentir.** Ao medir quem pagou o quê em agosto, casei por CNPJ — e o
+CNPJ mora no gêmeo sem receita. Ia reportar "R$ 443 mil de receita de agosto sem caixa", que
+era falso: os clientes tinham pago, e o pagamento não achava o cadastro.
+
+→ **Fica o cadastro com histórico e ele recebe o CNPJ do outro.** Mover contrato e competência
+é mexer no que já foi decidido; copiar um documento é acrescentar o que faltava. As sete
+tabelas que apontam para cliente são repontadas antes de o perdedor ser apagado — e se alguma
+escapar, o `delete` falha na chave estrangeira, que é o comportamento certo.
+
+O script recusa qualquer par que não seja exatamente "um com documento, um sem", e recusa se
+o documento não for o que o Andre confirmou: dois CNPJs distintos sob o mesmo nome são duas
+empresas até prova em contrário.
+
+**73 → 68 clientes, 13 referências repontadas.** A ponte continua fechando nos treze meses.
+
+### D134 — Agosto entra no razão, e o laço que faltava fechar
+Aprovadas **80 das 82 linhas** de agosto. Três coisas foram aprendidas no caminho, e as três
+viraram código.
+
+**O `import:extrato` tinha um buraco.** A tela roda o motor logo depois de preparar as linhas;
+meu script não rodava. Aprovar naquele estado poria **82 linhas sem conta no razão** e
+derrubaria a cobertura de 99,1% para 91%. O `preview:categorize` já existia para isso e
+decidiu **79 de 82**.
+
+**O `aprovar` recusa linha sem conta**, e a diferença para a tela é deliberada: lá um humano vê
+a linha e pode aprová-la em branco sabendo o que faz. Um script não vê nada, então não recebe
+esse direito. O que sobra fica em staging, visível.
+
+**O `vincular` passou a olhar o staging também.** Sem isso o laço não fechava: a linha precisa
+de conta para entrar no razão, e precisa do vínculo de cliente para ganhar conta — e o CNPJ de
+um mês novo chega primeiro em `staged_transactions`. Cinco clientes ganharam documento
+(Harpix, Inovamed, Pink Cheeks, B2B Câmbio e ITA Educacional), todos com o CNPJ **lido do
+extrato**, nunca digitado.
+
+> A B2B Câmbio agora tem as duas linhas, e elas não se contradizem: `PAGADORES` diz que o
+> Roberto Pascoal pagou por ela em julho, `CONFIRMADOS` diz que **ela mesma** pagou em agosto,
+> com o CNPJ dela. Uma diz quem já pagou, a outra diz quem ela é.
+
+**O que ficou, e é um buraco com nome.** Duas linhas seguem paradas — Harpix R$ 9.500 e
+Inovamed R$ 5.000, **R$ 14.500,00**. As duas têm cliente ligado e conta inequívoca: toda a
+competência dos dois está em `3.02` e todos os contratos são `project`. O motor mesmo assim
+não decide, porque nenhuma camada dele sabe *"este CNPJ é do cliente X, cujos contratos todos
+apontam para a conta Y"* — quem sabe isso é o `propose:receipts`, **e ele só olha o razão**.
+
+É o mesmo buraco que o `vincular` acabou de tapar, um passo adiante. Fica anotado em vez de
+contornado: contorná-lo com uma regra escrita à mão para dois clientes resolveria hoje e
+esconderia a causa.
+
+**O saldo prova que está tudo coerente:** a conta corrente marca R$ 163.298,72 e o extrato
+declara R$ 177.798,72 — faltam **exatamente R$ 14.500,00**, que é o que está em staging.
+
+Cobertura **99,1%** (1.137 de 1.147). Clientes **68**, sem CNPJ **21** (eram 31).
+
+
 ---
 
 ## Parte 13 — Decisões da Fase 8
