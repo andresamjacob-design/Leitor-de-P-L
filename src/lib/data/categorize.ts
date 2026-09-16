@@ -17,6 +17,52 @@ import { listStaged, type StagedTransaction } from "@/lib/data/imports";
 /** Where a recognised person's salary lands, by chart-of-accounts code. */
 const PAYROLL_CODE = "6.02";
 
+/**
+ * As contas que o espelho de competência assina pelo sentido — as mesmas de
+ * `planCashMirror`. O motor usa isso para não deixar o histórico pôr uma entrada em conta
+ * de custo (D83).
+ */
+const COST_KINDS = ["cost", "expense", "tax"];
+
+/** O outro lado da mesma trava: o histórico não põe saída em conta de receita (D99). */
+const REVENUE_KINDS = ["revenue"];
+
+/**
+ * Ramo que o banco atribui à compra de cartão → conta, por código (D130).
+ *
+ * **Só entra ramo que se provou**, medido contra as 452 linhas de cartão já decididas:
+ *
+ * | ramo | virou | acerto |
+ * |---|---|---|
+ * | `VEÍCULOS` | `9.04` Uber e transporte | 158 de 159 |
+ * | `ALIMENTAÇÃO` | `9.03` Alimentação | 24 de 25 |
+ *
+ * **E `DIVERSOS` fica de fora de propósito**, apesar de ser o ramo mais frequente: as 114
+ * linhas dele estão espalhadas por treze contas, e a maior fatia é 35%. Um ramo que não
+ * concentra não é pista, é ruído com aparência de dado — e mapeá-lo encheria a tela de
+ * sugestões erradas com ar de fundamentadas.
+ *
+ * A mesma medição desqualifica o campo como veredito: `TURISMO E ENTRETENIMENTO` traz
+ * quatorze linhas de **Wix**, mais Adobe e Salesforce. Quem classifica é o credenciador, e
+ * ele descreve o lojista, não o gasto.
+ */
+const MERCHANT_CATEGORY_CODES: Record<string, string> = {
+  "VEÍCULOS": "9.04",
+  "ALIMENTAÇÃO": "9.03",
+  /**
+   * **Este não é medido, é declarado** — e a diferença importa para quem ler depois.
+   *
+   * `VEÍCULOS` e `ALIMENTAÇÃO` acima ganharam lugar por acerto contra o histórico. O
+   * `VESTUÁRIO` não tinha **um único precedente** no livro: nunca se comprou roupa aqui. O
+   * que o põe no mapa é uma regra que o Andre deu em 10/09/2026, sobre o ramo inteiro e não
+   * sobre as duas linhas que existiam — *"os pagamentos em roupas são brindes"* (D132).
+   *
+   * Declarado vale mais que medido, porque quem decide é ele. Mas a proveniência fica
+   * escrita: se um dia isto errar, o lugar de olhar é a regra, não a amostra.
+   */
+  "VESTUÁRIO": "10.02",
+};
+
 export async function loadEngineInput(entityIds: string[]): Promise<EngineInput> {
   const [rules, history, people, categories] = await Promise.all([
     listRules(entityIds),
@@ -26,7 +72,35 @@ export async function loadEngineInput(entityIds: string[]): Promise<EngineInput>
   ]);
 
   const payroll = categories.find((category) => category.code === PAYROLL_CODE);
-  return { rules, history, people, payrollCategoryId: payroll?.id ?? null };
+  const costCategoryIds = new Set(
+    categories
+      .filter((category) => COST_KINDS.includes(category.kind))
+      .map((category) => category.id),
+  );
+
+  const revenueCategoryIds = new Set(
+    categories
+      .filter((category) => REVENUE_KINDS.includes(category.kind))
+      .map((category) => category.id),
+  );
+
+  // Um código que não existe no plano desta entidade simplesmente não entra no mapa: a
+  // camada some para esse ramo em vez de apontar para nada.
+  const merchantCategories = new Map<string, string>();
+  for (const [ramo, code] of Object.entries(MERCHANT_CATEGORY_CODES)) {
+    const category = categories.find((c) => c.code === code);
+    if (category) merchantCategories.set(ramo, category.id);
+  }
+
+  return {
+    rules,
+    history,
+    people,
+    payrollCategoryId: payroll?.id ?? null,
+    costCategoryIds,
+    revenueCategoryIds,
+    merchantCategories,
+  };
 }
 
 export type SuggestionResult = {
@@ -70,6 +144,22 @@ export async function suggestForImport(
   return { suggestions, undecided: staged.length - suggestions.size };
 }
 
+/**
+ * O ramo, sem a cidade, de dentro do `detalhe` da fatura (D130).
+ *
+ * O campo vem como `ALIMENTAÇÃO .SAO PAULO`, e a cidade tem de sair: `ALIMENTAÇÃO .SAO
+ * PAULO` e `ALIMENTAÇÃO .GASPAR` são o mesmo ramo em lugares diferentes, e mapear com a
+ * cidade dentro daria um mapa que nunca casa duas vezes.
+ *
+ * Extrato de conta corrente não tem `detalhe` nenhum e devolve nulo — a camada some.
+ */
+function merchantCategoryOf(raw: Record<string, unknown> | null): string | null {
+  const detalhe = raw?.["detalhe"];
+  if (typeof detalhe !== "string") return null;
+  const ramo = detalhe.split(" .")[0]?.trim();
+  return ramo && ramo !== "" ? ramo : null;
+}
+
 function subjectOfStaged(row: StagedTransaction, accountId: string) {
   return {
     description: row.description,
@@ -78,9 +168,17 @@ function subjectOfStaged(row: StagedTransaction, accountId: string) {
     accountId,
     counterpartyTaxId: row.counterpartyTaxId,
     counterpartyName: row.counterpartyName,
+    merchantCategory: merchantCategoryOf(row.rawJson),
   };
 }
 
+/**
+ * O razão não guarda o `raw_json` — ele fica no staging —, então esta camada não alcança
+ * linha que já virou lançamento. É consequência do desenho, não esquecimento: o `raw` é
+ * matéria-prima da importação, e o razão guarda o que foi decidido, não o que o arquivo
+ * dizia. Quem chega pela importação tem a pista; quem já está no razão se resolve por
+ * regra, como sempre.
+ */
 function subjectOfEntry(entry: CashEntry) {
   return {
     description: entry.description,
