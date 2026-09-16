@@ -125,6 +125,33 @@ const RESPOSTAS: Resposta[] = [
     code: "10.05",
     disse: "o que gerar dúvida pode ir para Outros",
   },
+  // O centavo da Keepclear. Esteve sem conta de propósito por semanas — "um centavo de teste
+  // não é receita nem custo" —, e o Andre trocou a decisão quando `Outros` passou a existir
+  // como política: dúvida com endereço vale mais que dúvida sem (D137). É a única regra de
+  // **entrada** apontando para conta de despesa, e é legítima porque uma regra explícita
+  // pode declarar sentido (D122) — o que o histórico e o ramo do banco não podem.
+  {
+    pattern: "PIX RECEBIDO KEEPCLE",
+    direction: "in",
+    code: "10.05",
+    disse: "o 1 centavo coloca em outros",
+  },
+  // As cinco que sobraram de 2025 por serem despesa de 2026 — estão na fatura paga em
+  // 05/01/2026 (D137). Não foram para `Outros` porque não precisam: o banco classifica as
+  // cinco como ALIMENTAÇÃO, o ramo que acerta 24 de 25 (D130). Entram por regra e não pela
+  // camada 6 porque a camada não alcança quem já está no razão.
+  {
+    pattern: "MARKET PLACE-CT",
+    direction: "out",
+    code: "9.03",
+    disse: "o banco classificou como ALIMENTAÇÃO (.Sao Paulo)",
+  },
+  {
+    pattern: "JBC COMERCIO",
+    direction: "out",
+    code: "9.03",
+    disse: "o banco classificou como ALIMENTAÇÃO (.SAO PAULO)",
+  },
 ];
 
 /**

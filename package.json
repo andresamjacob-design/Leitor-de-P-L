@@ -48,7 +48,8 @@
     "import:extrato": "vite-node --config vitest.config.ts scripts/import-statement.ts",
     "respostas": "vite-node --config vitest.config.ts scripts/respostas-cartao.ts",
     "fundir": "vite-node --config vitest.config.ts scripts/fundir-clientes.ts",
-    "aprovar": "vite-node --config vitest.config.ts scripts/aprovar-import.ts"
+    "aprovar": "vite-node --config vitest.config.ts scripts/aprovar-import.ts",
+    "apagar:2025": "vite-node --config vitest.config.ts scripts/apagar-2025.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.4",

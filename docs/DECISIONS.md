@@ -2929,6 +2929,68 @@ Perseguir aquela lista era otimizar para um número que ele não pediu.
 445 → **456 testes**.
 
 
+### D137 — 2025 sai, menos o que sustenta 2026 — e a cobertura chega a 100%
+O Andre, em 16/09/2026, vendo o app acusar nove lançamentos sem conta: *"o 1 centavo coloca
+em outros e o ano de 2025 não é para ter relação com o app, a não ser que seja um dado
+fundamental para marcar 2026, apague."*
+
+**A exceção dele existe de verdade**, e separá-la foi o trabalho.
+
+## O teste não é a data, e não é o nome do arquivo
+
+Compra de cartão entra no fluxo **no mês em que a fatura foi paga** (D116). Uma compra de
+novembro de 2025 numa fatura paga em janeiro de 2026 é despesa de 2026 com data antiga —
+apagá-la deixaria aquele pagamento oco. E nome de fatura não diz vencimento: a armadilha já
+está registrada, `Itaucard_4460_fatura_072026.pdf` vence em 05/04.
+
+→ O critério é **a fatura casa com um pagamento que existe no razão?** Mesmo casamento do
+`quebrarFaturas` — valor líquido exato, um para um — e todo pagamento no razão é de 2026,
+porque o extrato bancário começa em 01/01/2026.
+
+| | |
+|---|---|
+| **Saem** | 4 faturas (ciclos set–dez/2025), **85 compras, R$ 45.489,81** — não casam com pagamento nenhum |
+| **Ficam** | 51 compras, R$ 18.020,17 — em faturas pagas em 05/01, 05/02, 05/03, 06/04 e 05/05 de 2026 |
+
+As quatro que saíram são dívida de cartão que o razão **nunca viu ser paga**: o extrato
+daquele período nunca entrou. Nada em 2026 dependia delas.
+
+**Uma trava que não foi exercida, e existe para o dia em que for:** fatura com compra de 2026
+dentro nunca sai, mesmo sem pagamento casado. Apagá-la levaria 2026 junto, que é o oposto da
+exceção.
+
+**Apagado junto:** o espelho de competência de cada compra, a linha de staging que a originou
+e o registro da importação. Deixar só o lançamento sumir criaria staging dizendo "aprovado"
+apontando para nada. Remover o import também **devolve a possibilidade de reimportar**, já
+que o `file_hash` que recusa arquivo repetido vai junto.
+
+## As duas decisões sobre dúvida, e como elas se combinaram
+
+**O centavo da Keepclear** ficou sem conta por semanas — *"um centavo de teste não é receita
+nem custo"*. O Andre trocou a decisão agora que `Outros` existe como política (D135): dúvida
+com endereço vale mais que dúvida sem. É a **única regra de entrada apontando para conta de
+despesa**, e é legítima porque regra explícita pode declarar sentido (D122), o que o
+histórico e o ramo do banco não podem.
+
+**As cinco que sobraram** — `MARKET PLACE-CT` e quatro `JBC COMERCIO-CT` — são 2025 que ficou
+por ser despesa de 2026. Elas **não** foram para `Outros`: o banco classifica as cinco como
+`ALIMENTAÇÃO`, o ramo que acerta 24 de 25 (D130). Perguntar antes de arquivar como dúvida é a
+ordem certa — `Outros` é para o que ninguém sabe, não para o que ninguém perguntou.
+
+## O resultado
+
+| | |
+|---|---|
+| Cobertura | **1.064 de 1.064 — 100,0%** |
+| Conta corrente | **R$ 177.798,72**, igual ao banco |
+| Ponte | fecha nos **11 meses** (eram 13; os dois de 2025 saíram com as faturas) |
+| Em `Outros` | 3 lançamentos, R$ 680,01 — e o quadro continua mostrando |
+
+**Cem por cento não quer dizer que tudo se sabe.** Três linhas estão em `Outros`, que é
+ignorância declarada, e o `pendencias` as mostra logo abaixo do número justamente para o
+número não virar autoelogio. Foi para isso que a trava da D135 foi escrita.
+
+
 ---
 
 ## Parte 13 — Decisões da Fase 8
