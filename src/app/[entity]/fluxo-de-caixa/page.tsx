@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { EmptyState } from "@/components/empty-state";
@@ -6,7 +7,7 @@ import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
 import { Amount, Table, TableScroll, Td, Th } from "@/components/ui/table";
-import { loadCashFlow } from "@/lib/data/cash-flow-report";
+import { groupCashFlowRows, loadCashFlow } from "@/lib/data/cash-flow-report";
 import { resolveScope } from "@/lib/entities";
 import { daysInMonth, formatPeriodShort, todayInSaoPaulo } from "@/lib/dates";
 import { formatMoney } from "@/lib/money";
@@ -86,6 +87,33 @@ export default async function CashFlowPage({
     return `/${slug}/lancamentos?${query.toString()}`;
   }
 
+  function rowTr(sectionKey: string, row: CashFlowRow) {
+    return (
+      <tr key={`${sectionKey}-${row.categoryId ?? "none"}`}>
+        <Td className="whitespace-nowrap">
+          <span className="text-xs text-muted tabular">{row.code ?? "—"}</span> {row.label}
+        </Td>
+        {row.values.map((value, index) => (
+          <Td key={periods[index]} numeric>
+            {value === 0n ? (
+              <span className="text-muted">—</span>
+            ) : (
+              <Link
+                href={drillDown(periods[index] as string, row)}
+                className="hover:text-accent hover:underline"
+              >
+                <Amount value={value} format={formatMoney} />
+              </Link>
+            )}
+          </Td>
+        ))}
+        <Td numeric className="font-medium">
+          <Amount value={row.total} format={formatMoney} />
+        </Td>
+      </tr>
+    );
+  }
+
   function sectionRows(section: CashFlowSection, label: string) {
     if (section.rows.length === 0) return null;
 
@@ -100,31 +128,65 @@ export default async function CashFlowPage({
             {label}
           </Th>
         </tr>
-        {section.rows.map((row) => (
-          <tr key={`${section.key}-${row.categoryId ?? "none"}`}>
-            <Td className="whitespace-nowrap">
-              <span className="text-xs text-muted tabular">{row.code ?? "—"}</span>{" "}
-              {row.label}
+        {section.rows.map((row) => rowTr(section.key, row))}
+        <tr className="font-medium">
+          <Td>Total de {label.toLowerCase()}</Td>
+          {section.totals.map((value, index) => (
+            <Td key={periods[index]} numeric>
+              <Amount value={value} format={formatMoney} />
             </Td>
-            {row.values.map((value, index) => (
-              <Td key={periods[index]} numeric>
-                {value === 0n ? (
-                  <span className="text-muted">—</span>
-                ) : (
-                  <Link
-                    href={drillDown(periods[index] as string, row)}
-                    className="hover:text-accent hover:underline"
-                  >
-                    <Amount value={value} format={formatMoney} />
-                  </Link>
-                )}
+          ))}
+          <Td numeric>
+            <Amount value={section.total} format={formatMoney} />
+          </Td>
+        </tr>
+      </>
+    );
+  }
+
+  /**
+   * As saídas ganham a mesma cara da aba `Expenses` da planilha do Andre: grupo, as linhas
+   * de dentro, subtotal — em vez da lista achatada que `sectionRows` mostra para entrada e
+   * transferência. `groupCashFlowRows` só reúne visualmente; o total do grupo é a soma das
+   * mesmas linhas, e o que não pertence a grupo nenhum continua aparecendo, sem grupo.
+   */
+  function outflowRows(section: CashFlowSection, label: string) {
+    if (section.rows.length === 0) return null;
+    const { groups, ungrouped } = groupCashFlowRows(section.rows, periods.length);
+
+    return (
+      <>
+        <tr>
+          <Th
+            scope="colgroup"
+            colSpan={periods.length + 2}
+            className="bg-surface text-xs uppercase tracking-wide"
+          >
+            {label}
+          </Th>
+        </tr>
+        {groups.map((group) => (
+          <Fragment key={`${section.key}-grupo-${group.label}`}>
+            <tr>
+              <Th scope="rowgroup" colSpan={periods.length + 2} className="text-xs font-medium">
+                {group.label}
+              </Th>
+            </tr>
+            {group.rows.map((row) => rowTr(section.key, row))}
+            <tr className="text-sm text-muted">
+              <Td className="pl-4">Subtotal — {group.label}</Td>
+              {group.totals.map((value, index) => (
+                <Td key={periods[index]} numeric>
+                  <Amount value={value} format={formatMoney} />
+                </Td>
+              ))}
+              <Td numeric>
+                <Amount value={group.total} format={formatMoney} />
               </Td>
-            ))}
-            <Td numeric className="font-medium">
-              <Amount value={row.total} format={formatMoney} />
-            </Td>
-          </tr>
+            </tr>
+          </Fragment>
         ))}
+        {ungrouped.map((row) => rowTr(section.key, row))}
         <tr className="font-medium">
           <Td>Total de {label.toLowerCase()}</Td>
           {section.totals.map((value, index) => (
@@ -205,7 +267,7 @@ export default async function CashFlowPage({
               </tr>
 
               {sectionRows(inflow, "Entradas")}
-              {sectionRows(outflow, "Saídas")}
+              {outflowRows(outflow, "Saídas")}
 
               <tr className="font-medium">
                 <Td>Resultado de caixa</Td>

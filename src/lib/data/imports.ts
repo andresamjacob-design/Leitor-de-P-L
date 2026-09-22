@@ -60,6 +60,11 @@ export type StagedTransaction = {
   confidence: number | null;
   dedupHash: string;
   status: StagedStatus;
+  /**
+   * O que o arquivo dizia, como o parser leu — já era gravado e selecionado, mas não
+   * chegava a subir até aqui. O motor lê dele o ramo que o banco atribuiu à compra (D130).
+   */
+  rawJson: Record<string, unknown> | null;
 };
 
 const IMPORT_COLUMNS =
@@ -144,6 +149,7 @@ function toStaged(row: StagedRow): StagedTransaction {
     confidence: row.confidence === null ? null : Number(row.confidence),
     dedupHash: row.dedup_hash,
     status: row.status,
+    rawJson: row.raw_json,
   };
 }
 

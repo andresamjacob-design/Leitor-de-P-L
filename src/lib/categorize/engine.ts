@@ -35,8 +35,22 @@ const CONFIDENCE: Record<SuggestionSource, number> = {
   rule_tax_id: 1,
   rule_text: 0.95,
   history_tax_id: 0.9,
+  /**
+   * Alto porque as duas metades vieram de gente: **alguém confirmou** que este CNPJ é deste
+   * cliente (`vincular`), e **alguém criou** os contratos cuja conta é única. Não é
+   * inferência sobre texto — é leitura de duas decisões que já existem (D136).
+   */
+  client_contract: 0.9,
   history_description: 0.85,
   person: 0.7,
+  /**
+   * **Deliberadamente abaixo do limiar, e não é por falta de acerto** (D130): medido contra
+   * as linhas de cartão já decididas, `VEÍCULOS` deu 158 de 159 e `ALIMENTAÇÃO` 24 de 25.
+   * O teto é baixo porque a fonte é o credenciador classificando o lojista, não este livro
+   * classificando o gasto — e o mesmo campo põe Wix, Adobe e Salesforce em `TURISMO E
+   * ENTRETENIMENTO`. Um humano confirma, sempre.
+   */
+  merchant_category: 0.7,
 };
 
 export type EngineInput = {
@@ -45,6 +59,49 @@ export type EngineInput = {
   people: readonly Person[];
   /** Where a salary lands when a person's name is recognised but nothing else is known. */
   payrollCategoryId?: string | null;
+  /**
+   * As contas de custo, despesa e imposto — as que o espelho de competência assina pelo
+   * sentido (`planCashMirror`).
+   *
+   * Serve a uma única regra, a D83: **o histórico não pode pôr uma entrada numa conta de
+   * custo.** O histórico aprende com o que já aconteceu e não sabe nada sobre sentido; foi
+   * ele que arquivou os recebimentos de Hold Beauty e Ciclo na 8.03 Agência — a despesa que
+   * a empresa paga *a eles* — e as devoluções do Ricardo na 6.10, criando R$ 218.800 de
+   * custo negativo fantasma.
+   *
+   * Uma regra explícita continua podendo fazer isso, e deve: ela tem `direction` para dizer
+   * que quis (migration `0004`), e um estorno de cartão em 7.02 é exatamente esse caso. O
+   * histórico não tem como declarar intenção, então não recebe o benefício da dúvida.
+   *
+   * Opcional para não quebrar quem chama sem ela; sem o conjunto, nada é bloqueado.
+   */
+  costCategoryIds?: ReadonlySet<string>;
+  /**
+   * As contas de receita, para a trava simétrica (D99): o histórico não pode mandar uma
+   * **saída** para uma conta de **receita**.
+   *
+   * Mesma forma da `costCategoryIds`, e pela mesma razão — a Ciclo é cliente e fornecedora
+   * sob um CNPJ só, e sem isto três pagamentos dela viravam R$ 12.000 de receita.
+   *
+   * Opcional para não quebrar quem chama sem ela; sem o conjunto, nada é bloqueado.
+   */
+  revenueCategoryIds?: ReadonlySet<string>;
+  /**
+   * Ramo do banco → conta, para a última camada (D130). Só os ramos que se provaram entram
+   * aqui, e quem escolhe é o carregador — o motor continua sem conhecer código de conta,
+   * como já acontece com o `payrollCategoryId`.
+   *
+   * Sem o mapa, a camada simplesmente não existe: nada é sugerido por ramo.
+   */
+  merchantCategories?: ReadonlyMap<string, string>;
+  /**
+   * CNPJ do cliente → a conta de receita dos contratos dele, quando **todos** apontam para
+   * a mesma (D136). Sem unanimidade o cliente não entra no mapa: com duas contas possíveis
+   * a camada não saberia escolher, e escolher errado é pior que não decidir.
+   *
+   * Como sempre, quem monta é o carregador — o motor não conhece código de conta.
+   */
+  clientRevenueByTaxId?: ReadonlyMap<string, { clientId: string; categoryId: string }>;
 };
 
 // ---------------------------------------------------------------------------
@@ -87,6 +144,7 @@ function matchesPattern(rule: Rule, subject: Subject): boolean {
 
 function applies(rule: Rule, subject: Subject): boolean {
   if (!rule.active) return false;
+  if (rule.direction !== null && rule.direction !== subject.direction) return false;
   if (rule.accountId !== null && rule.accountId !== subject.accountId) return false;
   if (!withinAmount(rule, subject.amount)) return false;
 
@@ -178,9 +236,49 @@ export function indexHistory(history: readonly HistoryEntry[]): HistoryIndex {
 // The engine
 // ---------------------------------------------------------------------------
 
+/**
+ * O histórico pode mandar este lançamento para esta conta?
+ *
+ * O histórico aprende com o passado e **não sabe nada sobre sentido**: ele só sabe que
+ * aquele documento já caiu naquela conta. Quando a contraparte está dos dois lados do
+ * balcão, isso quebra nas duas direções, e cada uma inventa dinheiro que não existe:
+ *
+ * - **entrada em conta de custo** vira custo negativo (D83). Era a devolução do Ricardo,
+ *   R$ 115.000 voltando para a folha.
+ * - **saída em conta de receita** vira receita do nada (D99). É a Ciclo, que paga referral
+ *   todo mês *e* é a agência que a empresa contrata — um CNPJ só. Três pagamentos de
+ *   R$ 4.000 viravam R$ 12.000 de receita.
+ *
+ * A simetria não é elegância: é que a D86 travou uma ponta e deixou a outra aberta, e a
+ * ponta aberta só apareceu quando o `--incluir-historico` foi medido num ensaio.
+ *
+ * As duas travas são **opt-in**. Sem o conjunto correspondente, nada é bloqueado — e uma
+ * **regra explícita** nunca passa por aqui, porque ela tem `direction` para dizer que quis.
+ */
+function learnedSuggestionIsAllowed(
+  subject: Subject,
+  categoryId: string,
+  costCategoryIds: ReadonlySet<string> | undefined,
+  revenueCategoryIds: ReadonlySet<string> | undefined,
+): boolean {
+  if (subject.direction === "in") {
+    return !costCategoryIds || !costCategoryIds.has(categoryId);
+  }
+  return !revenueCategoryIds || !revenueCategoryIds.has(categoryId);
+}
+
 export function suggestCategory(
   subject: Subject,
-  { rules, history, people, payrollCategoryId = null }: EngineInput,
+  {
+    rules,
+    history,
+    people,
+    payrollCategoryId = null,
+    costCategoryIds,
+    revenueCategoryIds,
+    merchantCategories,
+    clientRevenueByTaxId,
+  }: EngineInput,
 ): Suggestion | null {
   const matches = matchRules(rules, subject);
 
@@ -215,12 +313,44 @@ export function suggestCategory(
     };
   }
 
+  // 2b. O CNPJ é de um cliente cujos contratos apontam todos para a mesma conta de receita.
+  //
+  //     Vem antes do histórico porque é **explícito, não aprendido** (D40): contrato é
+  //     registro que alguém criou, e o vínculo do CNPJ é resposta que alguém deu. O
+  //     histórico, abaixo, só sabe o que aconteceu antes.
+  //
+  //     Só entrada. Dinheiro **saindo** para um cliente não é receita dele — e a trava de
+  //     sentido abaixo pegaria isso de qualquer forma, mas dizer aqui é mais honesto que
+  //     depender de uma rede que existe para outra coisa.
+  if (subject.direction === "in" && subject.counterpartyTaxId && clientRevenueByTaxId) {
+    const achado = clientRevenueByTaxId.get(normalizeTaxId(subject.counterpartyTaxId));
+    if (achado) {
+      return {
+        categoryId: achado.categoryId,
+        clientId: achado.clientId,
+        personId: null,
+        source: "client_contract",
+        confidence: CONFIDENCE.client_contract,
+        reason: "o CNPJ é de um cliente cujos contratos apontam todos para esta conta",
+        ruleId: null,
+      };
+    }
+  }
+
   const index = indexHistory(history);
 
   // 3. The same counterparty, categorised before.
   if (subject.counterpartyTaxId) {
     const previous = index.byTaxId.get(normalizeTaxId(subject.counterpartyTaxId));
-    if (previous) {
+    if (
+      previous &&
+      learnedSuggestionIsAllowed(
+        subject,
+        previous.categoryId,
+        costCategoryIds,
+        revenueCategoryIds,
+      )
+    ) {
       return {
         categoryId: previous.categoryId,
         clientId: previous.clientId,
@@ -235,7 +365,10 @@ export function suggestCategory(
 
   // 4. The same description, categorised before.
   const seen = index.byDescription.get(normalizeDescription(subject.description));
-  if (seen) {
+  if (
+    seen &&
+    learnedSuggestionIsAllowed(subject, seen.categoryId, costCategoryIds, revenueCategoryIds)
+  ) {
     return {
       categoryId: seen.categoryId,
       clientId: seen.clientId,
@@ -259,6 +392,30 @@ export function suggestCategory(
       reason: `o nome de ${person.name} aparece na descrição`,
       ruleId: null,
     };
+  }
+
+  // 6. O ramo que o banco atribuiu à compra. Última porque é a única que não sai deste
+  //    livro: as cinco de cima leem decisão de gente ou histórico próprio, esta lê o
+  //    palpite do credenciador. Passa pela mesma trava de sentido do histórico (D83, D99)
+  //    e pela mesma razão — um ramo não declara intenção, então não ganha o benefício da
+  //    dúvida que uma regra explícita ganha.
+  const ramo = subject.merchantCategory;
+  if (ramo && merchantCategories) {
+    const categoryId = merchantCategories.get(ramo);
+    if (
+      categoryId &&
+      learnedSuggestionIsAllowed(subject, categoryId, costCategoryIds, revenueCategoryIds)
+    ) {
+      return {
+        categoryId,
+        clientId: null,
+        personId: null,
+        source: "merchant_category",
+        confidence: CONFIDENCE.merchant_category,
+        reason: `o banco classificou a compra como ${ramo}`,
+        ruleId: null,
+      };
+    }
   }
 
   return null;

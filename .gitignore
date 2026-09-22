@@ -20,4 +20,8 @@ next-env.d.ts
 
 # Real statements, spreadsheets and contracts. These carry client names, CNPJs and
 # balances — they stay on disk for parsing and never enter git history.
-/docs/reference/
+#
+# No trailing slash on purpose: in a git worktree this path is a *symlink* to the real
+# folder in the main checkout, and `/docs/reference/` only matches a directory, so the
+# link showed up as untracked and one `git add -A` away from being committed.
+/docs/reference
