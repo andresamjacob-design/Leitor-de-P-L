@@ -49,7 +49,23 @@ const DIM = "\u001b[2m";
 const RESET = "\u001b[0m";
 
 const CORRECOES: readonly {
-  taxId: string;
+  /** Casa por CNPJ da contraparte, ou por descrição quando não há documento. */
+  taxId?: string;
+  /**
+   * Trecho da descrição, para compra de cartão — que não traz CNPJ nenhum (D138). Casa com
+   * `ilike %trecho%`, e a trava de quantidade e soma vale igual: se achar linha demais ou de
+   * menos, nada se move.
+   */
+  descricao?: string;
+  /**
+   * O valor exato, quando a descrição sozinha não distingue.
+   *
+   * `PAGAMENTOS PIX QR-CODE` é o caso que obrigou a existir: casa com a Vai de Promo de
+   * R$ 999,91 **e** com uma Tarefy de R$ 800 — as duas pagas por PIX QR-Code, as duas na
+   * mesma conta errada pelo mesmo motivo. A trava de quantidade pegou isso antes de
+   * qualquer escrita, que é para o que ela existe.
+   */
+  valor?: Cents;
   de: string;
   para: string;
   quantas: number;
@@ -85,6 +101,40 @@ const CORRECOES: readonly {
     total: parseMoney("26.507,93"),
     porque: "B.HUB é fornecedor de eventos; o app contava como folha de terceiros",
   },
+  {
+    // A sua planilha denunciou, e é prova melhor que o banco. A linha `Hotels` dela vale
+    // R$ 14.332,08 e a do app valia R$ 13.282,14 — diferença de **R$ 1.049,94 ao centavo**,
+    // que é esta compra.
+    //
+    // Ela tinha ido para Brindes por duas razões que se somaram e erraram juntas: o banco
+    // classificou o ramo como `VESTUÁRIO` (D130) e o Andre respondeu que roupa é brinde
+    // (D132). O credenciador descreve o lojista, não o gasto — e `HS` antes de `ANALIA FR`
+    // é prefixo de hotel, não de loja. Quando ele disse "roupas são brindes", esta linha
+    // não era roupa.
+    descricao: "HS ANALIA FR",
+    de: "10.02",
+    para: "9.02",
+    quantas: 1,
+    total: parseMoney("1.049,94"),
+    porque: "a linha Hotels da planilha bate ao centavo com esta compra; VESTUÁRIO era o ramo errado",
+  },
+  {
+    // `PAGAMENTOS PIX QR-CODE` é descrição genérica, e o histórico casou com a Tarefy —
+    // que também é paga por PIX QR-Code todo mês. As outras duas compras da Vai de Promo,
+    // em 01/06, o banco nomeou (`VAI DE PROMO*PROMO`) e foram para 9.01 sozinhas.
+    //
+    // Vai para 9.01 junto delas. A planilha lança em `Travel · Outros (pix)`, que é
+    // sub-linha diferente dentro do mesmo grupo — a distância do grupo fecha igual, e
+    // escolher a conta que o próprio razão já usa para esse fornecedor vale mais que
+    // espelhar a sub-linha dela.
+    descricao: "PAGAMENTOS PIX QR-CODE",
+    valor: parseMoney("999,91"),
+    de: "7.08",
+    para: "9.01",
+    quantas: 1,
+    total: parseMoney("999,91"),
+    porque: "é a Vai de Promo; a Tarefy veio do histórico porque as duas pagam por PIX QR-Code",
+  },
 ];
 
 const url = process.env.DATABASE_URL;
@@ -104,6 +154,10 @@ type Linha = {
   direction: "in" | "out";
 };
 type Conta = { id: string; code: string; kind: CategoryKind };
+
+/** Como a linha aparece no relatório: o documento mascarado, ou o trecho da descrição. */
+const rotulo = (c: { taxId?: string; descricao?: string }) =>
+  c.taxId ? mask(c.taxId) : `“${c.descricao}”`;
 
 try {
   const [entity] = await sql<{ id: string }[]>`select id from entities where slug = 'dd-group'`;
@@ -131,18 +185,23 @@ try {
              amount::text as amount, direction
         from cash_entries
        where entity_id = ${entity.id}
-         and counterparty_tax_id = ${c.taxId}
          and category_id = ${de.id}
+         and ${
+           c.taxId
+             ? sql`counterparty_tax_id = ${c.taxId}`
+             : sql`description ilike ${"%" + (c.descricao ?? "") + "%"}`
+         }
+         ${c.valor === undefined ? sql`` : sql`and amount = ${toNumeric(c.valor)}`}
        order by occurred_on::text`;
 
     const soma = achadas.reduce((a, x) => a + fromNumeric(x.amount as string), 0n);
     if (achadas.length !== c.quantas || soma !== c.total) {
       recusas.push(
-        `${mask(c.taxId)} ${c.de}→${c.para}: achei ${achadas.length} linha(s) somando ` +
+        `${rotulo(c)} ${c.de}→${c.para}: achei ${achadas.length} linha(s) somando ` +
           `${formatBRL(soma)}, esperava ${c.quantas} somando ${formatBRL(c.total)}. Nada movido.`,
       );
       console.log(
-        `  ${YELLOW}${mask(c.taxId)}  ${c.de} → ${c.para}  ${achadas.length} linha(s), ${formatBRL(soma)} — recusado${RESET}`,
+        `  ${YELLOW}${rotulo(c)}  ${c.de} → ${c.para}  ${achadas.length} linha(s), ${formatBRL(soma)} — recusado${RESET}`,
       );
       continue;
     }
@@ -160,7 +219,7 @@ try {
       });
     }
     console.log(
-      `  ${GREEN}${mask(c.taxId)}  ${c.de} → ${c.para}  ${c.quantas} linha(s), ${formatBRL(c.total)}${RESET}`,
+      `  ${GREEN}${rotulo(c)}  ${c.de} → ${c.para}  ${c.quantas} linha(s), ${formatBRL(c.total)}${RESET}`,
     );
     console.log(`    ${DIM}${c.porque}${RESET}`);
   }

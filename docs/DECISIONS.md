@@ -2991,6 +2991,51 @@ ignorância declarada, e o `pendencias` as mostra logo abaixo do número justame
 número não virar autoelogio. Foi para isso que a trava da D135 foi escrita.
 
 
+### D138 — A planilha do Andre denuncia duas contas erradas, e o fluxo fecha quase ao centavo
+Duas linhas estavam categorizadas — e na conta errada. As duas foram denunciadas pela
+planilha dele, não por mim.
+
+**`HS ANALIA FR-CT`, R$ 1.049,94.** A linha `Hotels` da planilha vale R$ 14.332,08 e a do app
+valia R$ 13.282,14: diferença **exata**. Ela tinha ido para `Brindes` por dois motivos que se
+somaram e erraram juntos — o banco classificou o ramo como `VESTUÁRIO` (D130) e o Andre
+respondeu que roupa é brinde (D132). `HS` antes de `ANALIA FR` é prefixo de hotel. **Quando
+ele disse "roupas são brindes", esta linha não era roupa** — e o credenciador descrevia o
+lojista, não o gasto, que é a ressalva que a própria D130 registra.
+
+**`PAGAMENTOS PIX QR-CODE`, R$ 999,91.** É a Vai de Promo, e estava em `7.08 Tarefy` — porque
+a Tarefy também é paga por PIX QR-Code todo mês, e o histórico casou pela descrição genérica.
+As outras duas compras da Vai de Promo o banco nomeou, e foram para `9.01` sozinhas.
+
+→ O `corrigir` passou a casar **por descrição e valor**, não só por CNPJ: compra de cartão não
+traz documento. A trava de quantidade pegou o perigo antes de qualquer escrita — `PAGAMENTOS
+PIX QR-CODE` casa com duas linhas, a Vai de Promo de R$ 999,91 **e** uma Tarefy de R$ 800,00,
+as duas na mesma conta errada pelo mesmo motivo. Sem o filtro de valor, a correção teria
+movido a Tarefy verdadeira junto.
+
+## E o fluxo fecha, depois de três convenções aplicadas
+
+O Andre passou oito meses de saídas e entradas da planilha dele. A primeira medição deu
+**R$ 1.020.204,48** de distância nas saídas. Não era erro de categorização: eram três
+convenções do fluxo que a consulta não aplicava.
+
+| convenção | efeito |
+|---|---|
+| Transferência tem as duas pernas e se cancela (`99.01`, `99.03`) | tirou ~R$ 690 mil |
+| **`99.02` não é transferência no fluxo** — o cartão está fora do relatório, então o dinheiro sai e não volta (D108) | julho fechou: R$ 96.730,88 ao centavo |
+| A linha dos sócios é **líquida** — saída menos devolução (D113) | janeiro fechou: a devolução do Ricardo era R$ 115.000 |
+
+**Saídas: R$ 1.020.204,48 → R$ 2.468,99.** Cinco dos oito meses ao centavo.
+**Entradas: R$ 105.169,01**, e os dois maiores têm nome — R$ 85.000 de resgate de CDB em
+julho e os R$ 19.000 da Hogrefe em agosto, que foram para a conta da Gabriel e não estão
+neste razão.
+
+**Uma hipótese testada e descartada:** a defasagem de um mês, que explica cinco linhas da DRE
+(boleto reconhecido antes do pagamento), **piora** o fluxo — R$ 692.770 contra R$ 333.084.
+Medida antes de aplicada, e por isso não virou conserto errado.
+
+**O que sobra sem nome:** R$ 1.000,00 em maio e R$ 1.299,99 em agosto.
+
+
 ---
 
 ## Parte 13 — Decisões da Fase 8
