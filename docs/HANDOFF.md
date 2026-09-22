@@ -1,10 +1,16 @@
-# Handover — 28/08/2026
+# Handover — 22/09/2026
 
 Onde tudo está, o que foi feito, e o que falta. Escrito para quem chega sem contexto
 nenhum, inclusive eu mesmo numa conversa nova.
 
 Leia junto quando precisar do detalhe: `docs/PLAN.md` (o roteiro original),
-`docs/DECISIONS.md` (decisões numeradas D1–D122 e pendências Q2–Q18) e `README.md`.
+`docs/DECISIONS.md` (decisões numeradas D1–D138 e pendências Q2–Q18) e `README.md`.
+
+> **A prioridade, dita pelo Andre em 14/09 (D136), e ela reordena o resto:**
+> *"Não preciso de um sistema que categorize absolutamente todos os gastos sem nenhum erro,
+> preciso de um que categorize a maioria e não tenha disparidades com os valores do banco."*
+>
+> Cobertura é meio; **bater com o banco é o fim**. Quando os dois competirem, o banco ganha.
 
 ---
 
@@ -139,61 +145,81 @@ npm run import:invoices     # faturas de cartão em massa
 
 | | |
 |---|---|
-| Razão de caixa | **1.067 lançamentos**, 06/08/2025 a 31/07/2026 |
-| Categorizados | **1.044 (97,8%)** — 23 sem conta |
-| Competência | 284 de receita (206 do motor + 78 manuais) · 823 de custo, sendo **593 espelho de caixa e 230 de folha lida da planilha** (D120) |
-| Receita reconhecida | **R$ 3.556.736,91** (jan–ago/2026) |
-| Contratos | 80 (65 ativos, 15 concluídos), 95 parcelas mensais |
-| Clientes / pessoas | 73 / 40 |
-| Regras | 223 |
-| Importações | 23 |
+| Razão de caixa | **1.064 lançamentos**, 06/08/2025 a **31/08/2026** |
+| Categorizados | **1.064 — 100,0%** |
+| Competência | 1.097 lançamentos |
+| Receita reconhecida | **R$ 3.556.736,91** (2026) |
+| Contratos | 80 · Clientes 68 (**21 sem CNPJ**) · Pessoas 40 |
+| Regras | 239 · Importações 20 |
 | Notas fiscais | **0** |
 
 ### Contas
 
-| Conta | Tipo | Abertura | Lançamentos | Situação |
-|---|---|---|---|---|
-| Itaú — conta corrente | banco | 142.469,28 em 01/01/2026 | 546 | ✅ bate com o extrato |
-| Itaú — CDB DI | aplicação | 367.735,49 em 01/01/2026 | 5 | ✅ as duas pernas existem (§5.1) |
-| Contabilizei | banco | 0,00 | 0 | inativa |
-| Itaucard 5780 | cartão | 0,00 | 468 | |
-| Itaucard 8299 | cartão | 0,00 | 48 | |
+| Conta | Tipo | Lançamentos | Situação |
+|---|---|---|---|
+| Itaú — conta corrente | banco | 628 | ✅ **R$ 177.798,72 = o extrato, ao centavo, em 31/08** |
+| Itaucard Empresas — 5780 | cartão | 383 | |
+| Itaucard — 8299 | cartão | 48 | falta a fatura de maio/2026 (R$ 830,97) |
+| Itaú — CDB DI | aplicação | 5 | |
+| Contabilizei | banco | 0 | inativa |
 
-**Sete conferências que fecham hoje.** As três primeiras são o sistema conferindo contra si
-mesmo e contra o banco; as quatro últimas são o sistema conferindo contra **as planilhas do
-Andre**, que têm critério próprio — e é por isso que nenhuma delas é um `verify:`. Transformar
-a escolha dele em regra de código seria tirá-la dele.
+### As conferências que fecham
 
-- A conta corrente marca **226.916,33**, que é o `SALDO TOTAL DISPONÍVEL` declarado pelo
-  banco em 31/07/2026. Ao centavo.
-- A receita reconhecida bate com a planilha **mês a mês** — R$ 0,03 de diferença acumulada
-  em oito meses, puro arredondamento dela mesma.
-- **A DRE e o fluxo de caixa fecham nos 13 meses, com resíduo zero** (`verify:reconcile`,
-  D85). Os dois razões não batem — não é para baterem —, mas toda diferença entre eles tem
-  nome.
-- **Nenhuma saída de caixa fica sem competência** (D120, D121). Essa linha da ponte valia
-  **R$ 1.281.607,12** em 20/08 — era a lista de tarefas do projeto em forma de número — e hoje
-  tem **zero linhas**.
-- **As saídas do fluxo batem com a aba `Summary` da planilha de caixa** em cinco dos sete
-  meses, **ao centavo** (D108). Nos outros dois sobram R$ 169,00 e R$ 218,88, dois estornos
-  pequenos sem documento para parear. A distância somada é **R$ 387,88**, e ela **não se moveu
-  quando a D116 quebrou a fatura nas compras** — o que prova que a quebra só mudou composição.
-- **As 31 linhas de custo da `DRE Geral` fecham com as do app** (D114, D120), e nenhuma delas
-  fica de fora em qualquer alinhamento. `- Salários` marca **R$ 1.368.044,69 dos dois lados,
-  nos sete meses**.
-- **A linha de sócios do fluxo bate com a linha `Distribuição de Lucro` da planilha de
-  caixa, mês a mês, nos sete meses, com distância somada R$ 0,00** (D110 e D112). `6.11`
-  marca **R$ 313.014,93** e `99.04` marca **R$ 442.500,00**; somados, **R$ 755.514,93**. A
-  D110 provou a soma; a D112 provou **cada mês**, que é mais forte — uma soma pode fechar com
-  dois erros que se cancelam.
+- **A conta corrente bate com o extrato ao centavo**, R$ 177.798,72 em 31/08/2026.
+- **A DRE e o fluxo fecham nos 11 meses**, resíduo zero (`verify:reconcile`). Eram 13 antes
+  de 2025 sair (D137); os dois meses que sumiram só existiam por causa das faturas apagadas.
+- **O fluxo bate com a planilha do Andre**: saídas a **R$ 2.468,99** de distância em oito
+  meses de R$ 2,9 milhões, **cinco meses ao centavo** (D138).
+- Receita reconhecida bate com a planilha mês a mês.
+- `verify:import` — 32 arquivos reais reconciliam contra si mesmos.
+- `verify:rls` — isolamento entre entidades, 7/7.
 
-> **A que ainda não fecha é o fluxo por sub-linha** — 23 das linhas da aba `Expenses` fecham
-> os sete meses, e a distância somada é R$ 26.082,92. A causa é agrupamento, não conta, e o
-> conserto é o passo 1 da §6.
+> **100% não quer dizer que tudo se sabe.** Três lançamentos estão em `Outros`, que é
+> ignorância declarada, e o `pendencias` os mostra logo abaixo do número de propósito — para
+> o número não virar autoelogio (D135).
 
----
+### As três convenções do fluxo, que não são óbvias (D138)
+
+Quem for comparar o fluxo com a planilha do Andre precisa das três, ou erra por um milhão:
+
+1. **Transferência se cancela** — `99.01` e `99.03` têm as duas pernas dentro do relatório.
+2. **`99.02` NÃO é transferência no fluxo**, apesar de `kind=transfer` no banco: o cartão
+   está fora do relatório, então o dinheiro sai e não volta (D108). Excluí-lo tirava
+   R$ 96.730,88 de julho — a diferença de julho ao centavo.
+3. **A linha dos sócios é líquida** — saída menos devolução (D113). A devolução do Ricardo
+   era R$ 115.000 e fechava janeiro sozinha.
 
 ## 4. O que foi feito
+
+### A sessão de 01–22/09 (D126–D138)
+
+Treze decisões. O fio que liga: **a planilha do Andre e o próprio banco corrigiram o app
+mais vezes do que eu corrigi o app sozinho.**
+
+- **A Q18 fechou** — chave da Anthropic, quatro chamadas reais, D124 provada. E a primeira
+  chamada real achou o que o modelo simulado escondia: a IA **omite** linhas e o app dizia
+  "0 descartadas". `unanswered` virou campo próprio (D127).
+- **O banco já classificava cada compra** — `raw_json.detalhe` traz o ramo e a cidade, estava
+  importado desde sempre e nada lia. Medido: `VEÍCULOS` acerta 158/159, `ALIMENTAÇÃO` 24/25,
+  `DIVERSOS` não concentra e ficou de fora. Virou camada 6 do motor (D130).
+- **O motor aprendeu a juntar duas metades que já sabia** — CNPJ do cliente + conta única dos
+  contratos dele. É a camada 2b, e foi ela que fechou o banco (D136).
+- **Agosto entrou no razão**: 82 linhas, e a conta corrente passou a bater ao centavo.
+- **2025 saiu**, menos as 51 compras que sustentam faturas pagas em 2026 (D137).
+- **Cinco clientes estavam cadastrados em duplicata**, cada cópia com metade da história — um
+  lado da planilha de DRE, outro do extrato (D133).
+- **Um erro antigo do handover foi desfeito**: a marcação azul da planilha **nunca foi a
+  segunda empresa**; é cobrança pendente. A citação `(D104)` apontava para uma decisão que
+  nunca disse isso (D131).
+
+### Três ferramentas novas
+
+| | |
+|---|---|
+| `npm run import:extrato` | extrato pelo terminal, com `--ensaio`. Exige `--arquivo`: extrato se sobrepõe, e identidade por hash é do arquivo, não do conteúdo |
+| `npm run aprovar` | leva o staging ao razão. **Recusa linha sem conta** — a tela pode aprovar em branco porque tem um humano olhando; um script não tem |
+| `npm run fundir` / `apagar:2025` | fusão de cadastro duplicado e remoção de 2025, ambos com ensaio |
+
 
 **58 commits** na branch, de `aa9250d` (onde o `main` está). Por tema, não por
 ordem — e o fio que liga quase tudo é o mesmo: **o dado real chegou e mostrou onde o
@@ -531,114 +557,78 @@ categorizadas, o custo cresce e o resultado cai, **sem o caixa mudar um centavo*
 
 ## 6. O que falta, e em que ordem
 
-**23 lançamentos, R$ 8.352,10** — R$ 6.552,08 líquidos. É só descrição de cartão que ninguém
-reconhece. **Nenhum outro bloco de categorização resta.**
+### Primeiro: onde o app vai morar
 
-Rode **`npm run pendencias`** (o quadro por dinheiro) e **`npm run decisoes`** (as perguntas
-com a evidência do lado). Para medir contra as planilhas: **`npm run comparar`** e
-**`npm run comparar:fluxo`**.
+**É o item que destrava todos os outros, e a sessão de 22/09 provou por que.** O app roda só
+em `localhost` e o Supabase é free tier: ele **hiberna depois de ~7 dias sem uso**, e o Andre
+abre isso uma vez por mês. Naquele dia o banco estava dormindo e ele precisou restaurar à mão
+antes de qualquer coisa.
 
-> ℹ️ Depois de responder qualquer coisa: **`npm run vincular`** grava identidade,
-> **`npm run propose:suppliers`** promove a regra por documento e **`npm run recategorize`**
-> leva ao razão. Para linha **já categorizada** e errada, é **`npm run corrigir`** (D119) —
-> nenhum dos outros alcança.
+Enquanto for assim, *"anexar o extrato do mês"* começa com abrir terminal, achar a pasta e
+rodar `npm run dev`. Nenhuma melhoria de upload conserta isso.
 
-### Onde as duas abas estão hoje
+> **Uma armadilha de diagnóstico, paga em 22/09:** depois de restaurar, o PostgREST leva
+> alguns minutos para reconstruir o cache do esquema. Durante essa janela `/rest/v1/` lista
+> **zero tabelas** enquanto o Postgres direto já responde com tudo. Eu li isso como "o banco
+> voltou vazio" e dei um susto no Andre. **A ordem certa é: auth responde → testa o Postgres
+> direto → só desconfia de perda se os dois concordarem.** O REST é o último a voltar.
+
+### Depois, na ordem
+
+1. **Ensinar as três convenções do fluxo ao `comparar:fluxo`** (§3). Hoje a medição certa
+   existe só como consulta descartável; na ferramenta, vira repetível.
+2. **Caçar o que sobrou:** R$ 1.000,00 em maio e R$ 1.299,99 em agosto, sem nome. Mais
+   R$ 85.000 de resgate de CDB em julho e os R$ 19.000 da Hogrefe em agosto — esses dois têm
+   nome e são de filtro, não de dado.
+3. **A tela da importação**, três coisas pequenas que só valem depois do deploy: vários
+   arquivos de uma vez, a conta detectada do arquivo (o parser já lê), e **a conferência com
+   o banco aparecendo na tela** — o app tem os dois números e nunca os subtrai.
+4. **Os avisos amarelos.** Hoje tudo é amarelo, inclusive *"saldo confere em 16 dias"*. O
+   Andre pediu para manter só o que exige ação dele. São quatro: conta de cartão errada,
+   extrato de conta errada, cartão importado em conta de caixa, e saldo que não fecha. O
+   resto vira cinza ou some. **Ainda não feito.**
+
+### O que depende de decisão do Andre
 
 | | |
 |---|---|
-| **DRE × planilha de DRE** | **31 de 31 linhas fecham**; zero não fecham em nenhum alinhamento |
-| **Fluxo × aba `Expenses`, por grupo** | nenhum grupo fecha os 7 meses; distância somada **R$ 8.250,50**. `Pessoas` fecha 6/7, errando os R$ 218,88 do estorno de julho (D126) |
-| Fluxo × aba `Expenses`, por sub-linha | 23 linhas fecham os 7 meses; distância somada R$ 26.082,92. Maior que a de cima **porque a Agência Ciclo não tem linha na planilha** — é altura de medição, não erro |
-| Saídas do fluxo × aba `Summary` | 5 dos 7 meses ao centavo, distância R$ 387,88 (D108) |
+| **A folha de agosto em diante** | A competência está lida da `Colaboradores` só até julho. Ele disse *"ajustamos os próximos meses juntos"* — é a única coisa do desenho que segue aberta. |
+| **As notas fiscais** | Zero cadastradas, e existe uma fase inteira que concilia NF contra caixa. Ou elas entram, ou aquela parte é peso morto. |
+| **A segunda empresa** | Setembro fechou: as NFs de agosto venceram e o dinheiro entrou em alguma conta. É o mês que responde de quem é o quê **por extrato, não por dedução**. |
+| **As metas** | Receita de R$ 7 milhões e OPBB de 36% entram na tela? (Q4) |
+| **`Vendas e Perdas`** | É um CRM e nenhuma fase cobre. (Q8) |
 
-### O que falta, por natureza
+### O que saiu da lista, e por quê
 
-| bloco | quem resolve | valor | o que é |
-|---|---|---|---|
-| **23 descrições de cartão** | **o Andre** | R$ 8.352,10 | `SQ *DREAMFORCE SF`, `ASA*MARIA CLARA` ×3, `APPLE.COM/US`, `PIU R E P L EP`. Três faturas resolvem quase tudo: **out/2025, mai/2026 e jun/2026**. |
-| ~~Extrato do Itaú da Gabriel~~ | o Andre | — | **Adiado até setembro (D131).** O azul de agosto é emissão de NF pendente, não receita da segunda empresa: não há o que migrar até as notas vencerem. O único cliente que de fato mudou de conta é a **Hogrefe**, R$ 19.000. |
-| ~~`ANTHROPIC_API_KEY`~~ | ~~o Andre~~ | — | **Resolvido em 03/09 (D127).** Chave no `.env.local`, quatro chamadas reais bem-sucedidas, D124 provada. Nenhuma sugestão passou de 0,80 — as 23 descrições seguem dependendo das faturas. |
-| ~~Os grupos do fluxo~~ | ~~eu~~ | — | **Feito** — D125 na tela, D126 na medição. |
-| ~~O prefill do provider~~ | ~~eu~~ | — | **Feito** — D124, `output_config.format` no lugar do prefill. |
-
-### Próximos passos, em ordem
-
-> ~~**1. Construir os grupos do fluxo.**~~ **Feito em 31/08 (D125)** e **medido em
-> 01/09 (D126)**: a aba de Saídas tem grupo com sub-linha e subtotal, e o `comparar:fluxo`
-> ganhou uma tabela por grupo além da que já tinha por sub-linha. A Agência Ciclo dentro de
-> `Pessoas` fecha 6 dos 7 meses, como estava previsto.
->
-> ~~**2. Consertar o prefill antes de pedir a chave.**~~ **Feito (D124):** `output_config.format`
-> no lugar do `prefill: "["`, que retornava 400 em todo modelo atual. **Modelo recomendado:
-> `claude-opus-5`** — o razão inteiro, do zero, custa ~US$ 1,75, e `ANTHROPIC_MODEL` troca sem
-> mexer em código.
-
-**Os dois passos que eram meus acabaram. O que resta depende de arquivo que não chegou.**
-
-1. **As 23 descrições**, quando ele abrir as três faturas (out/2025, mai/2026, jun/2026).
-
-2. **Setembro**, quando as notas de agosto vencerem — é o mês que responde sozinho de quem é cada recebimento, pelo extrato em vez de por dedução (D131).
-
-### O que a comparação com o fluxo ainda mostra, e por quê
-
-Dos **R$ 8.250,50** que sobram no nível do grupo, tudo tem causa nomeada — e a leitura por
-sub-linha, que dá R$ 26.082,92, é maior só porque a Agência Ciclo não tem linha lá (D126):
-
-- ~~**`Time`**: a planilha dele conta a Agência Ciclo dentro; o app ainda não.~~ **Resolvido
-  pela D125** — `8.03` entra em `Pessoas`, e o grupo fecha 6 dos 7 meses.
-- **`Passagem`, `Hotels`, `Alimentação`**: parte das 23 descrições do cartão.
-- **`Legal` e `Imposto`**: o app está **R$ 440 acima** e a planilha R$ 440 abaixo — é o
-  **INPI** (D117), registro de marca pago em maio, enquanto o `- Juridico` dele é zero de
-  março em diante. **O app tem um fato que a planilha lança em outro lugar**, e tirar de lá
-  para melhorar o número seria otimizar para a planilha em vez de para o razão.
-- **`IOF` e `Tarefy`**: mês de corte diferente.
-
-### Julho não fecha com a planilha, e vale olhar
-
-Conferido na D107: a planilha diz ter recebido em julho **R$ 18.800 que o banco não mostra**
-— CSO R$ 3.000, Medcom R$ 5.000 e **GM Promo R$ 10.800 (o Andre já confirmou o pagamento)**.
-Em compensação, a **RiHappy pagou R$ 12.000 duas vezes** em 29/07 e a planilha conta uma só
-(o Andre já corrigiu do lado dele).
-
-`18.800 − 12.000 = 6.800`, mais o rendimento de R$ 36,54, fecha a diferença exata.
-
-> **A convenção para pagamento dobrado**, dada pelo Andre: na **DRE**, R$ 12.000 em cada mês;
-> no **fluxo**, R$ 24.000 no mês em que foi pago. É exatamente como os dois razões já se
-> separam (D2).
-
-### A folha dos próximos meses, combinada e ainda aberta
-
-A D120 cobre **jan–jul/2026 e só**. O Andre disse *"ajustamos os próximos meses juntos"*, e o
-`npm run folha` **recusa rodar de novo no mesmo período** em vez de duplicar. Como a folha
-entra de agosto em diante é decisão que continua aberta — e é a única coisa do desenho que
-está pendente.
-
-### Depende de arquivo ou chave que não chegou
-
-| # | O que falta |
-|---|---|
-| **Q2** | **Extrato do Itaú da Gabriel Sampaio Jacob.** A conta tem **R$ 19.000 e só isso** — o pagamento da Hogrefe de agosto, sem nenhuma despesa (dito pelo Andre em 08/09). O extrato continua valendo para **provar o saldo de abertura**, mas deixou de ser o que destrava a migração: em setembro as notas vencem, o dinheiro entra em alguma conta, e aí dá para ver pelo extrato de quem é o quê — sem deduzir. |
-| ~~Q18~~ | ~~`ANTHROPIC_API_KEY` vazia.~~ **Fechada em 03/09 (D127).** Duas armadilhas no caminho: a primeira chave esbarrou em saldo (`credit balance is too low`, que é recusa de saldo e não de autenticação) e a segunda era **identity-linked**, que exige o header `anthropic-workspace-id`. `GET /v1/models` não consome crédito e separa os dois casos — use como primeira sonda. |
-| **NFs** | Zero cadastradas. A Fase 5 concilia NF contra caixa e não tem dado nenhum. |
-| ~~Faturas 8299~~ | **set/out/nov de 2025 — sem acesso, buraco permanente.** Não procure de novo. |
-| **Fatura 8299 de maio/2026** | Nunca importada. É o único pagamento de fatura que a D116 não quebra: R$ 830,97 continua como linha única. |
-
-> **Sobre o rendimento do CDB:** R$ 485.000 aplicados desde junho renderam R$ 28,43 (jun) e
-> R$ 38,59 (jul) **visíveis** — isso é a varredura automática, não o CDB. O rendimento dele
-> provavelmente só credita no resgate, então o saldo é **só principal**. Não é urgente.
-
-### Decisões antigas ainda abertas
-
-`Q4` (metas na tela), `Q8` (a aba `Vendas e Perdas` é um CRM — nenhuma fase cobre),
-`Q9` (documento escolar alheio na pasta — apagar?), `Q16` (contratos), `Q17` (arquivo do
-contrato no Storage).
-
-> ~~**3.05 Receita financeira**~~ — **o Andre decidiu em 25/08 não criar.** Os rendimentos
-> ficam em `99.03`, que é transferência, e seguem **fora da DRE**. É decisão, não esquecimento.
-
+- ~~**Os 16 CNPJs de cliente**~~ — o Andre em 14/09: *"todas que são NF para Salesforce não
+  vão ter CNPJ."* Faz sentido estrutural: **quem paga de fora não carrega documento
+  brasileiro**. O sistema já funciona sem — a camada 2b decide pelo contrato do cliente
+  (D136) e o ramo do banco decide cartão (D130). CNPJ virou conveniência, não requisito.
+- ~~**As 23 descrições de cartão**~~ — acabaram. Seis respostas do Andre, quatro pelo ramo do
+  banco, duas por "roupa é brinde", o resto saiu com 2025, e a última foi para `Outros`.
+- ~~**Os cinco clientes duplicados**~~ — fundidos (D133).
+- ~~**A chave da Anthropic**~~ — Q18 fechada (D127). Quatro chamadas reais; **nenhuma sugestão
+  passou do limiar de 0,80**, então ela não resolve o que sobra.
 
 ## 7. Armadilhas já pagas — não repetir
+
+### Desta sessão
+
+- **Ausência não é evidência.** Errei três vezes com a mesma forma: li "não vi cliente azul
+  pagando a Gabriel" como "pagaram a DD" (não tinham pago ninguém); li "o REST lista zero
+  tabelas" como "o banco voltou vazio" (era o cache subindo); e construí o fluxo com o
+  intervalo errado e apresentei quatro avisos que a tela não mostra. **Quando o sinal é
+  indireto e o direto está disponível, use o direto.**
+- **Nome de fatura não diz vencimento.** `Itaucard_4460_fatura_072026.pdf` vence em 05/04. O
+  critério para saber se uma compra antiga sustenta um mês novo é **a fatura casar com um
+  pagamento que existe no razão**, não a data nem o nome.
+- **`99.02` tem `kind=transfer` e não é transferência no fluxo.** Vale um milhão de reais de
+  engano — veja §3.
+- **Descrição genérica casa demais.** `PAGAMENTOS PIX QR-CODE` pega a Vai de Promo **e** uma
+  Tarefy verdadeira; `HS ANALIA` parecia vestuário para o banco e é hotel para a planilha.
+  Toda correção em massa precisa de trava por quantidade **e** valor (D138).
+- **Supabase free tier hiberna em ~7 dias**, e o PostgREST volta depois do Postgres.
+
 
 Regras que valem em todo o código:
 
