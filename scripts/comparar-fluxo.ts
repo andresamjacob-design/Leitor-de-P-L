@@ -159,7 +159,6 @@ try {
     kind: c.kind as CategoryKind,
     sortOrder: Number(c.sortOrder),
   }));
-  const codeOf = new Map(categories.map((c) => [c.id, c.code]));
 
   // Tudo até o fim do intervalo: o que veio antes é o saldo de abertura.
   const lancamentos = await sql<Record<string, string | null>[]>`

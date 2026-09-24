@@ -42,11 +42,20 @@ const REVENUE_KINDS = ["revenue"];
  * concentra não é pista, é ruído com aparência de dado — e mapeá-lo encheria a tela de
  * sugestões erradas com ar de fundamentadas.
  *
- * A mesma medição desqualifica o campo como veredito: `TURISMO E ENTRETENIMENTO` traz
- * quatorze linhas de **Wix**, mais Adobe e Salesforce. Quem classifica é o credenciador, e
- * ele descreve o lojista, não o gasto.
+ * A mesma medição desqualifica o campo como veredito: `TURISMO E ENTRETENIM` traz quatorze
+ * linhas de **Wix**, mais Adobe e Salesforce. Quem classifica é o credenciador, e ele
+ * descreve o lojista, não o gasto.
+ *
+ * ## Esta tabela é de setembro, e tabela não se remede sozinha
+ *
+ * **`npm run ramos` refaz a medição contra o razão de hoje** e avisa quando um ramo do mapa
+ * deixa de concentrar. Ele existe porque o número acima envelheceu sem ninguém ver: o
+ * `VESTUÁRIO` abaixo entrou por decisão do Andre e hoje está **1 de 2** — a D138 descobriu
+ * que uma das duas linhas era um hotel que o credenciador cadastrou como loja de roupa.
+ *
+ * Antes de mexer neste mapa, rode o comando. Ele mede; quem decide é o Andre.
  */
-const MERCHANT_CATEGORY_CODES: Record<string, string> = {
+export const MERCHANT_CATEGORY_CODES: Record<string, string> = {
   "VEÍCULOS": "9.04",
   "ALIMENTAÇÃO": "9.03",
   /**
@@ -59,6 +68,12 @@ const MERCHANT_CATEGORY_CODES: Record<string, string> = {
    *
    * Declarado vale mais que medido, porque quem decide é ele. Mas a proveniência fica
    * escrita: se um dia isto errar, o lugar de olhar é a regra, não a amostra.
+   *
+   * → **E errou.** Medido em 24/09 por `npm run ramos`: das duas linhas de `VESTUÁRIO`, uma
+   * está em `10.02` e a outra em `9.02` — 50%. A que saiu foi o `HS ANALIA FR-CT`, hotel
+   * que o credenciador cadastrou como loja de roupa (D138). A regra do Andre não está
+   * errada; o campo é que não distingue roupa comprada de hotel com nome de loja. O mapa
+   * fica até ele decidir, e o comando passa a gritar toda vez que rodar.
    */
   "VESTUÁRIO": "10.02",
 };
@@ -147,17 +162,50 @@ export async function suggestForImport(
 /**
  * O ramo, sem a cidade, de dentro do `detalhe` da fatura (D130).
  *
- * O campo vem como `ALIMENTAÇÃO .SAO PAULO`, e a cidade tem de sair: `ALIMENTAÇÃO .SAO
- * PAULO` e `ALIMENTAÇÃO .GASPAR` são o mesmo ramo em lugares diferentes, e mapear com a
- * cidade dentro daria um mapa que nunca casa duas vezes.
+ * `ALIMENTAÇÃO .SAO PAULO` e `ALIMENTAÇÃO .GASPAR` são o mesmo ramo em lugares diferentes,
+ * e mapear com a cidade dentro daria um mapa que nunca casa duas vezes. Então o que vale é
+ * o que vem **antes do primeiro ponto**.
+ *
+ * O ponto é o separador, e ele **nem sempre tem espaço antes** — medido nos 101 valores
+ * distintos que a fatura já produziu:
+ *
+ * ```
+ * ALIMENTAÇÃO .SAO PAULO            espaço antes do ponto
+ * TURISMO E ENTRETENIM.SAO PAULO    colado, e é sempre este ramo
+ * DIVERSOS .                        cidade vazia, ramo mesmo assim
+ * ```
+ *
+ * Cortar em `" ."` — como se fazia — partia o primeiro e **não partia o segundo**: cada
+ * cidade virava um ramo próprio, e `TURISMO E ENTRETENIM` nunca existia como chave. Eram
+ * catorze pseudo-ramos de uma linha cada, num campo que tem 46 linhas desse ramo só.
+ *
+ * ## E metade do campo não é ramo nenhum
+ *
+ * Compra internacional usa o mesmo `detalhe` para a conversão, e sobra do outro lado:
+ *
+ * ```
+ * SAN FRANCISCO 1.848,24 BRL 366,21 · Dólar de Conversão R$ 5,36
+ * Total de outros lançamentos - 39.089,44
+ * BARUERI                           cidade sozinha, sem ramo
+ * ```
+ *
+ * Nenhuma delas é ramo, e antes todas voltavam como se fossem — inclusive `SAO PAULO`, que
+ * tinha 7 linhas fingindo ser uma categoria de lojista. O que as separa é barato e não
+ * depende de lista: **ramo não tem dígito dentro**, e onde não há ponto não há o separador
+ * que faz um ramo existir. As duas condições juntas classificam os 101 valores sem exceção.
  *
  * Extrato de conta corrente não tem `detalhe` nenhum e devolve nulo — a camada some.
  */
-function merchantCategoryOf(raw: Record<string, unknown> | null): string | null {
+export function merchantCategoryOf(raw: Record<string, unknown> | null): string | null {
   const detalhe = raw?.["detalhe"];
   if (typeof detalhe !== "string") return null;
-  const ramo = detalhe.split(" .")[0]?.trim();
-  return ramo && ramo !== "" ? ramo : null;
+  // Sem ponto não há separador, e o que está ali é cidade ou conversão de câmbio.
+  const corte = detalhe.indexOf(".");
+  if (corte < 0) return null;
+  const ramo = detalhe.slice(0, corte).trim().toUpperCase();
+  // Dígito denuncia valor, telefone ou câmbio — `SAN FRANCISCO 1` antes de `.848,24`.
+  if (ramo === "" || /\d/.test(ramo)) return null;
+  return ramo;
 }
 
 function subjectOfStaged(row: StagedTransaction, accountId: string) {

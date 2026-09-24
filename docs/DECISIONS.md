@@ -3036,6 +3036,99 @@ Medida antes de aplicada, e por isso não virou conserto errado.
 **O que sobra sem nome:** R$ 1.000,00 em maio e R$ 1.299,99 em agosto.
 
 
+### D139 — O comparador do fluxo para de ter opinião própria, e agosto sai da conta
+As três convenções da D138 já existiam escritas uma vez, dentro do `buildCashFlow` que a
+tela usa: `sectionOf` cancela `99.01`/`99.03` e deixa a `99.02` passar como saída (D108),
+`abate` e `refundedEntryIds` fazem a linha dos sócios ser líquida (D107/D113).
+
+O `comparar:fluxo` reimplementava o lado do app num laço próprio, que aplicava duas delas
+por acidente e a terceira não. **Uma cópia que diverge em silêncio faz a medição confirmar
+a si mesma em vez de conferir a tela** — é a mesma razão pela qual o `GROUP_OF_CODE` já era
+importado e nunca copiado. Agora o lado do app **é** o relatório da tela.
+
+→ Entrou o total de cada mês contra a aba `Summary`, que é o número que a D138 mediu e que
+só existia como consulta descartável: **R$ 387,88** de distância nas saídas, cinco dos sete
+meses ao centavo.
+
+**Agosto nunca foi medível, e o número da D138 incluía agosto.** A coluna de agosto da
+planilha do Andre ainda é projeção: `Receita Projetos` é média (`269216.2633…`), `Ongoing` e
+`Salesforce` são julho repetido, **todas as linhas de cartão estão em zero** porque a fatura
+não tinha sido paga quando ele preencheu, e o `Valor Itaú` dele para em junho. A distância
+de R$ 21.911,96 em agosto era entre o que ele previu e o que aconteceu.
+
+O critério de "mês fechado" vem do arquivo, não do código: **valor com mais de duas casas
+decimais denuncia fórmula de média**, e janeiro a julho não têm um só caso em 46 linhas.
+Quando ele fechar agosto com números de verdade, o mês entra sozinho.
+
+**Custo medido:** a distância das sub-linhas caiu de R$ 23.150,48 para R$ 22.981,47 e a dos
+grupos de R$ 6.225,76 para R$ 6.056,77 — as duas pelos mesmos R$ 169,00, o único valor que
+se moveu. E ele **piorou** uma linha de propósito: `Bank Charges` foi de R$ 675,00 (4/7)
+para R$ 844,00 (3/7), porque o estorno de tarifa da D121 agora aparece em Entradas, como a
+tela o mostra, em vez de ser abatido dentro da despesa, como a planilha faz. A diferença de
+março no total — R$ 169,00 — é exatamente ela. Prefiro R$ 169 visível a R$ 169 escondido
+por um abatimento que só o script fazia.
+
+### D140 — O ramo do banco fica na última camada, e agora alguém re-mede
+O Andre perguntou em 24/09 se valia deixar o app seguir a classificação que o próprio banco
+põe na fatura, em vez das categorias de cartão como estão — o medo sendo travar quando
+aparecer lojista novo. Medido contra o razão de hoje, **não vale**, e o motivo é específico:
+
+| ramo | linhas | valor | contas | maior fatia |
+|---|---|---|---|---|
+| `VEÍCULOS` | 134 | R$ 11.179,85 | 2 | **99%** |
+| `ALIMENTAÇÃO` | 31 | R$ 6.541,18 | 2 | **97%** |
+| `DIVERSOS` | 96 | **R$ 137.916,25** | **14** | **38%** |
+| `TURISMO E ENTRETENIM` | 51 | R$ 25.056,97 | 7 | 43% |
+| `VESTUÁRIO` | 2 | R$ 1.164,99 | 2 | 50% |
+
+**O banco se cala onde está o dinheiro.** Os dois ramos que funcionam somam R$ 17.721,03;
+o `DIVERSOS`, sozinho, vale R$ 137.916,25 e espalha por catorze contas. Promovê-lo poria
+oito vezes mais dinheiro sob um palpite de 38%.
+
+E há a razão estrutural, que a própria planilha do Andre já denunciou: **o credenciador
+descreve o lojista, não o gasto** — o `HS ANALIA` era hotel e o banco disse `VESTUÁRIO`
+(D138).
+
+**O medo de travar tem tamanho, e é menor do que parece:** 122 lojistas distintos em 431
+compras; 12,8 novos por mês na média dos últimos seis, mas maio e junho são altos porque foi
+quando o cartão de 2026 entrou em lote — julho, já em regime, deu **3**.
+
+#### O defeito que a medição achou de passagem
+
+O leitor do ramo cortava em `" ."`, espaço-ponto. Medido nos 101 valores distintos que a
+fatura produz, isso estava errado de três formas:
+
+- **`TURISMO E ENTRETENIM.SAO PAULO` não tem espaço antes do ponto.** Cada cidade virava um
+  ramo próprio — catorze pseudo-ramos de uma linha cada, e `TURISMO E ENTRETENIM` **nunca
+  existia como chave**, num ramo que tem 51 linhas.
+- **Compra internacional usa o mesmo campo para a conversão de câmbio**, e voltava inteira
+  como se fosse ramo: `SAN FRANCISCO 1.848,24 BRL 366,21 · Dólar de Conversão R$ 5,36`.
+- **Cidade sozinha virava ramo.** `SAO PAULO` tinha 7 linhas fingindo ser categoria.
+
+Hoje nada disso mudava conta nenhuma — nenhum deles está no mapa, então a camada só não
+disparava. Mas é a armadilha exata do handover: quem promovesse a camada achando que ela
+cobre `TURISMO E ENTRETENIMENTO` cobriria nada, em silêncio.
+
+→ A regra nova não tem lista de cidades nem de moedas, porque lista envelhece: **ramo não
+tem dígito dentro, e sem ponto não há o separador que faz um ramo existir.** As duas
+condições classificam os 101 valores sem exceção. Os três ramos do mapa saem idênticos —
+`VEÍCULOS` 134, `ALIMENTAÇÃO` 31, `VESTUÁRIO` 2, os mesmos de antes —, então **nenhum
+lançamento mudou de conta**, e o `preview:categorize` confirma 0 linhas a decidir.
+
+#### `npm run ramos`, porque comentário não re-mede
+
+A tabela da D130 vivia no comentário do `MERCHANT_CATEGORY_CODES`, e envelheceu sem ninguém
+ver. O comando refaz a medição contra o razão e grita quando um ramo do mapa deixa de
+concentrar. **Na primeira execução ele já gritou:** o `VESTUÁRIO` está mapeado para `10.02` e
+hoje concentra 50%, com a conta que mais recebe linhas sendo a `9.02`.
+
+A regra do Andre não está errada — o campo é que não distingue roupa comprada de hotel com
+nome de loja. O mapa fica até ele decidir; o alarme fica ligado.
+
+> O comando **mede e não escreve**. Ramo entra no mapa por decisão dele, como o `VESTUÁRIO`
+> entrou (D132) — o script existe para que a decisão não apodreça calada.
+
+
 ---
 
 ## Parte 13 — Decisões da Fase 8
