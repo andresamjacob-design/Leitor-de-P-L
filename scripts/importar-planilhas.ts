@@ -1,8 +1,8 @@
 /**
  * Copia as duas planilhas do Andre para dentro do app, linha a linha e na mesma ordem (D141).
  *
- *   - `Claude de DRE - Dynamics Data 2026.xlsx`, aba `DRE Geral` → aba DRE do app
- *   - `Fluxo de Caixa - 2026.xlsx`, abas `Income`, `Expenses` e `Summary` → aba Fluxo
+ *   - a planilha de DRE, aba `DRE Geral` → aba DRE do app
+ *   - a planilha de fluxo, abas `Income`, `Expenses` e `Summary` → aba Fluxo
  *
  * **Não toca em razão nenhum.** Grava só na `planilha_linhas`, que é uma cópia do que ele
  * digitou. A conta corrente continua batendo com o extrato, e as telas calculadas pelo razão
@@ -12,8 +12,14 @@
  * numa transação. Uma cópia parcial seria pior que nenhuma — a tela misturaria duas versões
  * da planilha sem dizer.
  *
- *   npm run importar:planilhas              # mostra o que copiaria, não grava
- *   npm run importar:planilhas -- --aplicar # grava
+ * **Os meses depois de `--ate` ficam vazios** (padrão: agosto de 2026). Pedido do Andre em
+ * 24/09 — *"deixe os valores dos meses seguintes zerados que a intenção é testar o app com
+ * eles"*: setembro em diante, na planilha, é projeção, e são os meses que o app vai gerar.
+ *
+ *   npm run importar:planilhas                            # mostra o que copiaria, não grava
+ *   npm run importar:planilhas -- --aplicar               # grava
+ *   npm run importar:planilhas -- --ate 2026-09 --aplicar # quando setembro fechar na planilha
+ *   npm run importar:planilhas -- --dre <arquivo> --fluxo <arquivo>  # outra versão
  */
 
 import { readFileSync } from "node:fs";
@@ -21,7 +27,7 @@ import { basename } from "node:path";
 import postgres from "postgres";
 import { loadEnvLocal } from "./load-env.ts";
 import { readXlsx, type Sheet } from "@/lib/import/xlsx";
-import { lerDre, lerFluxo, type Leitura } from "@/lib/planilha";
+import { cortarDepoisDe, lerDre, lerFluxo, type Leitura } from "@/lib/planilha";
 
 loadEnvLocal();
 
@@ -31,8 +37,20 @@ const BOLD = "\u001b[1m";
 const DIM = "\u001b[2m";
 const RESET = "\u001b[0m";
 
-const DRE = "docs/reference/Claude de DRE - Dynamics Data 2026.xlsx";
-const FLUXO = "docs/reference/Fluxo de Caixa - 2026.xlsx";
+/**
+ * As versões de 01/09, as mais novas que existem — as de 12/08 e 24/08 são de antes de julho e
+ * agosto fecharem, e continuam na pasta porque `comparar`, `comparar:fluxo` e `folha` ainda
+ * as leem pelo nome antigo.
+ */
+const argumento = (nome: string): string | undefined => {
+  const i = process.argv.indexOf(nome);
+  return i >= 0 ? process.argv[i + 1] : undefined;
+};
+const DRE = argumento("--dre") ?? "docs/reference/DRE - Dynamics Data 2026 (01-09).xlsx";
+const FLUXO = argumento("--fluxo") ?? "docs/reference/Fluxo de Caixa - 2026 (01-09).xlsx";
+const ATE = argumento("--ate") ?? "2026-08";
+if (!/^2026-(0[1-9]|1[0-2])$/.test(ATE)) throw new Error(`--ate precisa ser AAAA-MM de 2026, veio ${ATE}`);
+const ULTIMO_MES = Number(ATE.slice(5, 7));
 const aplicar = process.argv.includes("--aplicar");
 
 function aba(abas: Sheet[], nome: string, arquivo: string): Sheet {
@@ -44,7 +62,7 @@ function aba(abas: Sheet[], nome: string, arquivo: string): Sheet {
 const dreAbas = readXlsx(readFileSync(DRE));
 const fluxoAbas = readXlsx(readFileSync(FLUXO));
 
-const relatorios: { relatorio: "dre" | "fluxo"; arquivo: string; leitura: Leitura }[] = [
+const lidos: { relatorio: "dre" | "fluxo"; arquivo: string; leitura: Leitura }[] = [
   { relatorio: "dre", arquivo: basename(DRE), leitura: lerDre(aba(dreAbas, "DRE Geral", DRE)) },
   {
     relatorio: "fluxo",
@@ -57,7 +75,16 @@ const relatorios: { relatorio: "dre" | "fluxo"; arquivo: string; leitura: Leitur
   },
 ];
 
-console.log(`\n${BOLD}As suas planilhas, copiadas para o app${RESET}\n`);
+const relatorios = lidos.map((r) => ({
+  ...r,
+  leitura: { ...r.leitura, linhas: cortarDepoisDe(r.leitura.linhas, ULTIMO_MES) },
+}));
+
+console.log(`\n${BOLD}As suas planilhas, copiadas para o app${RESET}`);
+console.log(
+  `${DIM}janeiro a ${ATE.slice(5, 7)}/2026 como estão na planilha; os meses seguintes vazios, ` +
+    `para o app gerar${RESET}\n`,
+);
 for (const { relatorio, arquivo, leitura } of relatorios) {
   const porTipo = new Map<string, number>();
   for (const l of leitura.linhas) porTipo.set(l.tipo, (porTipo.get(l.tipo) ?? 0) + 1);

@@ -15,6 +15,7 @@
  */
 
 import type { Cell, Sheet } from "@/lib/import/xlsx";
+import { fromNumeric, toNumeric } from "@/lib/money";
 
 export type TipoLinha = "secao" | "grupo" | "linha" | "total" | "percentual";
 
@@ -121,9 +122,16 @@ const TOTAIS_DRE = new Set([
   "Custos Operacionais",
 ]);
 
+/** `Receita (dd+gsj)` é o total `Receita` das duas empresas somadas: tira o sufixo e confere. */
+function ehTotalDre(rotulo: string): boolean {
+  const semSufixo = rotulo.replace(/\s*\(dd\s*\+\s*gsj\)\s*$/i, "");
+  return TOTAIS_DRE.has(semSufixo) || rotulo.startsWith("OPBB (");
+}
+
 export function lerDre(aba: Sheet): Leitura {
   const ignoradas: string[] = [];
   const linhas: LinhaPlanilha[] = [];
+  const vazio = (): (string | null)[] => Array.from({ length: MESES }, () => null);
 
   const cabecalho = aba.rows.findIndex((r) => texto(r[4]) === "Janeiro");
   if (cabecalho < 0) throw new Error("a aba `DRE Geral` não tem a linha de cabeçalho com `Janeiro`");
@@ -131,8 +139,26 @@ export function lerDre(aba: Sheet): Leitura {
     throw new Error("a aba `DRE Geral` mudou de forma: `Dezembro` não está na coluna P");
   }
 
-  for (let i = cabecalho + 1; i < aba.rows.length; i += 1) {
+  for (let i = cabecalho; i < aba.rows.length; i += 1) {
     const r = aba.rows[i] ?? [];
+
+    // Cada empresa tem o próprio cabeçalho de meses, com o nome dela na coluna A —
+    // `DDGROUP` em cima, `GSJACOB` no segundo bloco (versão de 01/09). Vira título de seção.
+    if (texto(r[4]) === "Janeiro") {
+      const nome = texto(r[0]);
+      if (nome !== "") {
+        linhas.push({
+          ordem: linhas.length + 1,
+          tipo: "secao",
+          rotulo: nome,
+          detalhe: null,
+          valores: vazio(),
+          total: null,
+        });
+      }
+      continue;
+    }
+
     const bruto = texto(r[2]);
     if (bruto === "") continue;
 
@@ -140,7 +166,7 @@ export function lerDre(aba: Sheet): Leitura {
     const rotulo = bruto.replace(/^-\s*/, "");
     const tipo: TipoLinha = rotulo.startsWith("OPBB %")
       ? "percentual"
-      : TOTAIS_DRE.has(rotulo) || rotulo.startsWith("OPBB (")
+      : ehTotalDre(rotulo)
         ? "total"
         : "linha";
 
@@ -254,4 +280,30 @@ export function lerFluxo({ income, expenses, summary }: AbasFluxo): Leitura {
   }
 
   return { linhas: saida.map((l, i) => ({ ordem: i + 1, ...l })), ignoradas };
+}
+
+// ---------------------------------------------------------------------------
+// Corte: os meses que o app vai gerar sozinho
+// ---------------------------------------------------------------------------
+
+/**
+ * Esvazia os meses depois de `ultimoMes` (1 = janeiro), para o app preenchê-los a partir do
+ * extrato. Pedido do Andre em 24/09: *"deixe os valores dos meses seguintes zerados que a
+ * intenção é testar o app com eles"* — setembro a dezembro na planilha são projeção.
+ *
+ * O total da linha deixa de ser o da planilha, que somava a projeção junto, e passa a ser a
+ * soma dos meses que ficaram. É a única conta feita sobre a cópia, e só existe porque o
+ * número dele deixou de valer para o que está na tela. Linha em que a planilha não declara
+ * total continua sem total — `Ending balance` não se soma — e percentual também não.
+ */
+export function cortarDepoisDe(linhas: readonly LinhaPlanilha[], ultimoMes: number): LinhaPlanilha[] {
+  if (ultimoMes < 1 || ultimoMes > MESES) throw new Error(`mês de corte inválido: ${ultimoMes}`);
+  return linhas.map((l) => {
+    const valores = l.valores.map((v, i) => (i < ultimoMes ? v : null));
+    const total =
+      l.tipo === "percentual" || l.total === null
+        ? null
+        : toNumeric(valores.reduce((soma, v) => soma + (v === null ? 0n : fromNumeric(v)), 0n));
+    return { ...l, valores, total };
+  });
 }

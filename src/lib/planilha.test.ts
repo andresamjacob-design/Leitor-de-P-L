@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { Cell, Sheet } from "@/lib/import/xlsx";
 import {
   celulaNumerica,
+  cortarDepoisDe,
   deslocarDecimal,
   lerDre,
   lerFluxo,
@@ -79,6 +80,7 @@ describe("lerDre", () => {
 
   it("copia na ordem da planilha, pulando linha vazia", () => {
     expect(linhas.map((l) => l.rotulo)).toEqual([
+      "DRE 2026",
       "Receita",
       "Gringo",
       "Medpej",
@@ -88,7 +90,7 @@ describe("lerDre", () => {
       "OPBB (Oper Profit Before Bonus)",
       "OPBB %",
     ]);
-    expect(linhas.map((l) => l.ordem)).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+    expect(linhas.map((l) => l.ordem)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
   });
 
   it("para no OPBB % — abaixo dele são premissas, não relatório", () => {
@@ -98,9 +100,11 @@ describe("lerDre", () => {
   it("guarda o valor da célula sem arredondar, e o total que a planilha declara", () => {
     const medpej = linhas.find((l) => l.rotulo === "Medpej");
     expect(medpej?.valores[0]).toBe("5833.333333");
-    expect(linhas[0]?.total).toBe("5033061.867");
-    expect(linhas[1]?.valores[6]).toBe("40000.0");
-    expect(linhas[1]?.valores[1]).toBeNull();
+    const receita = linhas.find((l) => l.rotulo === "Receita");
+    const gringo = linhas.find((l) => l.rotulo === "Gringo");
+    expect(receita?.total).toBe("5033061.867");
+    expect(gringo?.valores[6]).toBe("40000.0");
+    expect(gringo?.valores[1]).toBeNull();
   });
 
   it("marca total e percentual pelo peso visual, sem mudar valor", () => {
@@ -117,7 +121,7 @@ describe("lerDre", () => {
     expect(linhas.find((l) => l.rotulo === "Medpej")?.detalhe).toBe("Projeto · Kickoff · Aberto");
     expect(linhas.find((l) => l.rotulo.startsWith("Gsuite"))?.detalhe).toBe("cartão");
     // Total não tem detalhe, mesmo quando a planilha escreve algo ao lado.
-    expect(linhas[0]?.detalhe).toBeNull();
+    expect(linhas.find((l) => l.rotulo === "Receita")?.detalhe).toBeNull();
   });
 
   it("não perde célula nenhuma calado", () => {
@@ -135,6 +139,82 @@ describe("lerDre", () => {
   it("recusa uma planilha que mudou de forma, em vez de copiar colunas trocadas", () => {
     const torta: Sheet = { name: "DRE Geral", rows: [linha({ 4: "Janeiro", 15: "Novembro" })] };
     expect(() => lerDre(torta)).toThrow(/Dezembro/);
+  });
+});
+
+describe("lerDre, versão de 01/09 com as duas empresas", () => {
+  const cab = (empresa: string) =>
+    linha({ 0: empresa, 2: "P&L 2026 Squads - PBI", ...meses(4, MESES_DRE), 16: "Receita" });
+  const aba: Sheet = {
+    name: "DRE Geral",
+    rows: [
+      cab("DDGROUP"),
+      linha({ 1: "Escopo", 2: "Receita (dd+gsj)", 3: "DRE", 10: "508749.9787" }),
+      linha({ 1: "Escopo", 2: "Receita", 3: "DRE", 10: "485621.4072" }),
+      linha({ 1: "Ongoing", 2: "Gringo", 3: "Mensal", 10: "40000.0" }),
+      linha({ 2: "Receita Liquida", 10: "403849.5772" }),
+      linha({}),
+      cab("GSJACOB"),
+      linha({ 1: "Escopo", 2: "Receita", 3: "DRE", 10: "23128.57143" }),
+      linha({ 1: "Ongoing", 2: "PDG IT", 3: "Kickoff", 11: "4000.0" }),
+      linha({ 2: "Receita Liquida (dd+gsj)", 10: "425127.8629" }),
+      linha({ 2: "Lucro Bruto (dd + gsj)", 10: "425127.8629" }),
+      linha({ 2: "OPBB %", 10: "0.3548188748" }),
+    ],
+  };
+  const { linhas, ignoradas } = lerDre(aba);
+
+  it("cada cabeçalho de empresa vira título de seção, na posição dele", () => {
+    expect(linhas.filter((l) => l.tipo === "secao").map((l) => [l.ordem, l.rotulo])).toEqual([
+      [1, "DDGROUP"],
+      [6, "GSJACOB"],
+    ]);
+  });
+
+  it("o segundo cabeçalho não vira linha nem perde célula", () => {
+    // Os nomes dos meses no cabeçalho seriam 12 células de texto ignoradas.
+    expect(ignoradas).toEqual([]);
+    expect(linhas.some((l) => l.rotulo === "P&L 2026 Squads - PBI")).toBe(false);
+  });
+
+  it("reconhece os totais com sufixo (dd+gsj)", () => {
+    const tipo = (r: string) => linhas.find((l) => l.rotulo === r)?.tipo;
+    expect(tipo("Receita (dd+gsj)")).toBe("total");
+    expect(tipo("Receita Liquida (dd+gsj)")).toBe("total");
+    expect(tipo("Lucro Bruto (dd + gsj)")).toBe("total");
+    expect(tipo("Gringo")).toBe("linha");
+  });
+});
+
+describe("cortarDepoisDe", () => {
+  const base = (tipo: "linha" | "percentual", total: string | null) => ({
+    ordem: 1,
+    tipo,
+    rotulo: "x",
+    detalhe: null,
+    valores: ["100", "200.555", null, "50", "1", "1", "1", "1", "999", "999", "999", "999"],
+    total,
+  });
+
+  it("esvazia os meses depois do corte", () => {
+    const [l] = cortarDepoisDe([base("linha", "5000")], 8);
+    expect(l?.valores.slice(8)).toEqual([null, null, null, null]);
+    expect(l?.valores.slice(0, 8)).toEqual(["100", "200.555", null, "50", "1", "1", "1", "1"]);
+  });
+
+  it("o total passa a ser a soma do que ficou, não o da planilha", () => {
+    // 100 + 200,56 (arredondado uma vez) + 50 + 4 × 1 = 354,56
+    expect(cortarDepoisDe([base("linha", "5000")], 8)[0]?.total).toBe("354.56");
+  });
+
+  it("linha sem total na planilha continua sem total, e percentual não se soma", () => {
+    expect(cortarDepoisDe([base("linha", null)], 8)[0]?.total).toBeNull();
+    expect(cortarDepoisDe([base("percentual", "0.2")], 8)[0]?.total).toBeNull();
+  });
+
+  it("recusa mês de corte fora do ano", () => {
+    expect(() => cortarDepoisDe([], 0)).toThrow();
+    expect(() => cortarDepoisDe([], 13)).toThrow();
   });
 });
 

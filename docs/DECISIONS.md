@@ -3167,6 +3167,34 @@ era da conferência: o driver direto devolve o `NULL` de dentro de um `text[]` c
 **Ricardo:** os R$ 10.000 de 24/08 são **reembolso** que a empresa devolveu a ele, não
 pró-labore nem distribuição — resposta do Andre em 24/09.
 
+#### A primeira cópia foi feita de arquivos velhos
+
+O Andre abriu as abas e disse: *"os valores de julho e agosto ainda estão diferentes"*. A cópia
+batia com os arquivos, campo por campo — **os arquivos é que eram de 12/08 e 24/08**, antes de
+julho e agosto fecharem. Existiam versões de **01/09** nos Downloads dele, e eu não procurei
+antes de copiar: tratei "o arquivo que está na pasta de referência" como "a planilha dele".
+
+A DRE de 01/09 também **mudou de forma**: 168 linhas em vez de 136, com dois blocos de receita
+— `DDGROUP` e `GSJACOB`, cada um com o próprio cabeçalho — e custos e OPBB somados das duas
+(`dd+gsj`). O leitor passou a transformar cada cabeçalho de empresa em título de seção e a
+reconhecer os totais com o sufixo `(dd+gsj)`. O fluxo manteve as mesmas 80 linhas.
+
+→ As versões de 01/09 entraram na pasta de referência com o nome datado, **sem apagar as
+antigas**: `comparar`, `comparar:fluxo` e `folha` ainda leem as antigas pelo nome, e trocar
+o arquivo por baixo deles mudaria os números deles sem ninguém pedir.
+
+→ **Setembro a dezembro ficam vazios** (`--ate 2026-08`), a pedido dele: *"deixe os valores
+dos meses seguintes zerados que a intenção é testar o app com eles"*. O total de cada linha
+deixa de ser o da planilha — que somava a projeção — e passa a ser a soma de janeiro a
+agosto. É a única conta feita sobre a cópia.
+
+Conferido de volta: 4.216 campos, zero diferentes; janeiro a agosto idênticos à célula crua
+da planilha (1.984 de 1.984); nenhuma célula de setembro a dezembro preenchida.
+
+**O que continua aberto:** o agosto do fluxo, mesmo na versão de 01/09, ainda tem projeção —
+`Receita Projetos` e `Time - Interno` são médias, e várias linhas repetem julho. Julho está
+fechado de verdade.
+
 
 ---
 
