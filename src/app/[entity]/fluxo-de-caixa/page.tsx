@@ -3,17 +3,20 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { EmptyState } from "@/components/empty-state";
 import { ExportLinks } from "@/components/export-links";
+import { FonteToggle } from "@/components/fonte-toggle";
+import { PlanilhaTable } from "@/components/planilha-table";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
 import { Amount, Table, TableScroll, Td, Th } from "@/components/ui/table";
 import { groupCashFlowRows, loadCashFlow } from "@/lib/data/cash-flow-report";
+import { loadPlanilha } from "@/lib/data/planilha";
 import { resolveScope } from "@/lib/entities";
 import { daysInMonth, formatPeriodShort, todayInSaoPaulo } from "@/lib/dates";
 import { formatMoney } from "@/lib/money";
 import type { CashFlowRow, CashFlowSection } from "@/lib/cash-flow";
 
-type Search = { de?: string; ate?: string };
+type Search = { de?: string; ate?: string; fonte?: string };
 
 function monthEnd(period: string): string {
   return `${period.slice(0, 8)}${String(daysInMonth(period)).padStart(2, "0")}`;
@@ -33,6 +36,33 @@ export default async function CashFlowPage({
 
   const entities = scope.kind === "consolidated" ? scope.entities : [scope.entity];
   const year = todayInSaoPaulo().slice(0, 4);
+
+  // A aba mostra a planilha de fluxo do Andre por padrão (D141) — Income, Expenses e o
+  // fechamento da Summary, na ordem dele. O cálculo pelo extrato continua a um clique: é ele
+  // que bate com o banco ao centavo, e a cópia não o substitui.
+  const planilha =
+    scope.kind === "consolidated" ? null : await loadPlanilha(scope.entity.id, "fluxo");
+  const temPlanilha = planilha !== null && planilha.linhas.length > 0;
+
+  if (planilha && temPlanilha && search.fonte !== "razao") {
+    return (
+      <>
+        <PageHeader
+          title="Fluxo de caixa"
+          description="A sua planilha de fluxo, copiada linha a linha e na mesma ordem."
+        />
+        <FonteToggle slug={slug} pagina="fluxo-de-caixa" atual="planilha" />
+        <p className="mb-4 text-xs text-muted">
+          Cópia de <span className="font-medium">{planilha.arquivo}</span> — abas Income,
+          Expenses e Summary —, feita em{" "}
+          {planilha.copiadaEm?.slice(0, 10).split("-").reverse().join("/")}. Os números são os
+          seus, sem recálculo; os totais são os que a própria planilha declara. Quando a planilha
+          mudar, rode <code>npm run importar:planilhas -- --aplicar</code> de novo.
+        </p>
+        <PlanilhaTable linhas={planilha.linhas} ano={year} />
+      </>
+    );
+  }
 
   const from = /^\d{4}-\d{2}$/.test(search.de ?? "") ? `${search.de}-01` : `${year}-01-01`;
   const toMonth = /^\d{4}-\d{2}$/.test(search.ate ?? "") ? `${search.ate}-01` : `${year}-12-01`;
@@ -217,6 +247,8 @@ export default async function CashFlowPage({
           to={toMonth.slice(0, 7)}
         />
       </div>
+
+      {temPlanilha ? <FonteToggle slug={slug} pagina="fluxo-de-caixa" atual="razao" /> : null}
 
       {rangeForm}
 

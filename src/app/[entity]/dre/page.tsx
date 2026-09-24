@@ -2,10 +2,13 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { EmptyState } from "@/components/empty-state";
 import { ExportLinks } from "@/components/export-links";
+import { FonteToggle } from "@/components/fonte-toggle";
+import { PlanilhaTable } from "@/components/planilha-table";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
 import { Amount, Table, TableScroll, Td, Th } from "@/components/ui/table";
+import { loadPlanilha } from "@/lib/data/planilha";
 import { compareLedgers, loadPl } from "@/lib/data/pl-report";
 import { ELIMINATION_KEY, TOTAL_KEY, type PlLine } from "@/lib/pl";
 import { resolveScope } from "@/lib/entities";
@@ -13,7 +16,7 @@ import { formatPeriodShort, todayInSaoPaulo } from "@/lib/dates";
 import { formatMoney } from "@/lib/money";
 import { cn } from "@/lib/utils";
 
-type Search = { de?: string; ate?: string };
+type Search = { de?: string; ate?: string; fonte?: string };
 
 export default async function PlPage({
   params,
@@ -30,6 +33,32 @@ export default async function PlPage({
   const entities = scope.kind === "consolidated" ? scope.entities : [scope.entity];
   const consolidated = scope.kind === "consolidated";
   const year = todayInSaoPaulo().slice(0, 4);
+
+  // A aba mostra a planilha do Andre por padrão (D141): ele pediu a DRE dele, copiada, na
+  // ordem dele. O cálculo pelo razão continua a um clique, porque é ele que prova o banco.
+  // Consolidado não tem planilha — ela é da DD Group —, então lá só existe o cálculo.
+  const planilha =
+    scope.kind === "consolidated" ? null : await loadPlanilha(scope.entity.id, "dre");
+  const temPlanilha = planilha !== null && planilha.linhas.length > 0;
+
+  if (planilha && temPlanilha && search.fonte !== "razao") {
+    return (
+      <>
+        <PageHeader
+          title="DRE gerencial"
+          description="A sua planilha de DRE, copiada linha a linha e na mesma ordem."
+        />
+        <FonteToggle slug={slug} pagina="dre" atual="planilha" />
+        <p className="mb-4 text-xs text-muted">
+          Cópia de <span className="font-medium">{planilha.arquivo}</span>, aba DRE Geral, feita
+          em {planilha.copiadaEm?.slice(0, 10).split("-").reverse().join("/")}. Os números são os
+          seus, sem recálculo; o total é a coluna de total da própria planilha. Quando a
+          planilha mudar, rode <code>npm run importar:planilhas -- --aplicar</code> de novo.
+        </p>
+        <PlanilhaTable linhas={planilha.linhas} ano={year} />
+      </>
+    );
+  }
 
   const from = /^\d{4}-\d{2}$/.test(search.de ?? "") ? `${search.de}-01` : `${year}-01-01`;
   const to = /^\d{4}-\d{2}$/.test(search.ate ?? "") ? `${search.ate}-01` : `${year}-12-01`;
@@ -97,6 +126,8 @@ export default async function PlPage({
             : "Regime de competência: quando foi ganho ou devido, não quando o dinheiro se moveu."
         }
       />
+
+      {temPlanilha ? <FonteToggle slug={slug} pagina="dre" atual="razao" /> : null}
 
       {rangeForm}
 

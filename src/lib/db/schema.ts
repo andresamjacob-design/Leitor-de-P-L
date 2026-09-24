@@ -682,6 +682,55 @@ export const recognitionEntriesRelations = relations(recognitionEntries, ({ one 
   }),
 }));
 
+// ---------------------------------------------------------------------------
+// A cópia das planilhas do Andre (D141)
+// ---------------------------------------------------------------------------
+
+/**
+ * As duas planilhas do Andre — `DRE Geral` e o fluxo de caixa —, copiadas linha a linha,
+ * na mesma ordem em que estão nelas, para as abas DRE e Fluxo mostrarem exatamente os
+ * números dele.
+ *
+ * **Isto não é razão.** Os dois razões (`cash_entries` e `recognition_entries`) continuam
+ * sendo o que o banco diz, e a conta corrente continua batendo com o extrato ao centavo.
+ * Esta tabela é uma cópia do que ele digitou, e é por isso que os valores ficam como
+ * **texto cru da célula** (`30714.28571`): copiar é não interpretar. A conversão para
+ * centavos acontece uma vez, na hora de mostrar, pelo `fromNumeric` — o único lugar do
+ * projeto onde dinheiro vira centavo.
+ *
+ * Reimportar apaga e regrava o relatório inteiro daquela entidade: a planilha é a fonte, e
+ * uma cópia parcial seria pior que nenhuma.
+ */
+export const planilhaLinhas = pgTable(
+  "planilha_linhas",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    entityId: uuid("entity_id")
+      .notNull()
+      .references(() => entities.id, { onDelete: "cascade" }),
+    /** `dre` ou `fluxo`. */
+    relatorio: text("relatorio").notNull(),
+    /** A posição na planilha. A tela ordena por ela e por nada mais. */
+    ordem: integer("ordem").notNull(),
+    /** `secao`, `grupo`, `linha`, `total` ou `percentual` — só muda o peso visual. */
+    tipo: text("tipo").notNull(),
+    rotulo: text("rotulo").notNull(),
+    /** O que a planilha diz ao lado do rótulo: `Projeto · Kickoff · Aberto`, `cartão`. */
+    detalhe: text("detalhe"),
+    /** Doze meses, janeiro a dezembro, como texto da célula. Célula vazia é `null`. */
+    valores: text("valores").array().notNull(),
+    /** A coluna de total que a própria planilha declara, quando declara. */
+    total: text("total"),
+    /** O arquivo de onde veio, para a tela dizer de qual versão está falando. */
+    arquivo: text("arquivo").notNull(),
+    createdAt: createdAt(),
+  },
+  (table) => [
+    unique("planilha_linhas_ordem_key").on(table.entityId, table.relatorio, table.ordem),
+    index("planilha_linhas_entity_idx").on(table.entityId, table.relatorio),
+  ],
+).enableRLS();
+
 /** Used by the RLS policy migration so the predicate is written in exactly one place. */
 export const ENTITY_ACCESS_PREDICATE = sql`
   entity_id in (select entity_id from public.user_entities where user_id = auth.uid())

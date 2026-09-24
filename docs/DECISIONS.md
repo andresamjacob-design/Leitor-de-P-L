@@ -3128,6 +3128,45 @@ nome de loja. O mapa fica até ele decidir; o alarme fica ligado.
 > O comando **mede e não escreve**. Ramo entra no mapa por decisão dele, como o `VESTUÁRIO`
 > entrou (D132) — o script existe para que a decisão não apodreça calada.
 
+### D141 — As abas DRE e Fluxo mostram as planilhas do Andre, copiadas
+Em 24/09 o Andre mudou o pedido, com todas as letras: *"preciso que tudo bata com a
+planilha, então dá uma esquecida agora em bater com as faturas e basicamente copie os
+valores das planilhas no app"* — e, quando eu perguntei como, *"copia elas em suas
+respectivas abas do app seguindo a mesma ordem que tá lá"*.
+
+→ **As duas planilhas viraram uma tabela, `planilha_linhas`**, e as abas DRE e Fluxo passam a
+mostrá-las por padrão, linha a linha e na ordem dele. A DRE vem da aba `DRE Geral` (136
+linhas, de `Receita` até `OPBB %`); o fluxo vem de `Income`, `Expenses` e do fechamento da
+`Summary` (80 linhas). `npm run importar:planilhas -- --aplicar` refaz a cópia quando a
+planilha mudar.
+
+**Não toca em razão nenhum.** Esse era o risco do pedido: o fluxo do app é feito das
+linhas do extrato, e é por isso que a conta corrente bate com o banco ao centavo, que foi a
+prioridade que ele mesmo deu em 14/09 (D136). Escrever os valores da planilha *por cima*
+do razão quebraria isso. Copiar para uma tabela à parte satisfaz as duas frases dele ao
+mesmo tempo: a tela mostra a planilha, e o razão continua provando o banco. O cálculo pelo
+razão ficou a um botão, `Calculado pelo razão`.
+
+**Copiar é não interpretar.** Os valores ficam como o texto da célula (`30714.28571`), e a
+única conversão é a de sempre, o `fromNumeric`, na hora de mostrar. Nada soma: o total de
+cada linha é a coluna de total da própria planilha, e o total de cada seção do fluxo é a
+linha da `Summary`. Os meses que a planilha ainda projeta — setembro a dezembro, e agosto
+no fluxo — aparecem como ele os tem, porque ele pediu cópia, não medição.
+
+**O único julgamento é visual**: quais linhas da DRE são total (`Receita`, `Receita
+Liquida`, `Custos Operacionais Diretos`, `Lucro Bruto`, `Custos Operacionais`, `OPBB`). O
+xlsx não carrega negrito, então a lista está escrita — e mudá-la muda o peso de uma linha,
+nunca um número.
+
+**Conferido de volta, campo a campo:** 3.672 campos (136 + 80 linhas, rótulo, tipo,
+detalhe, doze meses e total) lidos do banco no mesmo formato JSON que a tela recebe, contra
+a planilha. **Zero diferentes.** A primeira conferência acusou 849 diferenças, e o defeito
+era da conferência: o driver direto devolve o `NULL` de dentro de um `text[]` como o texto
+`"NULL"`. Lido como o app lê, é vazio de verdade.
+
+**Ricardo:** os R$ 10.000 de 24/08 são **reembolso** que a empresa devolveu a ele, não
+pró-labore nem distribuição — resposta do Andre em 24/09.
+
 
 ---
 

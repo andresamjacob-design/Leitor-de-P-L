@@ -41,6 +41,7 @@
     "boletos": "vite-node --config vitest.config.ts scripts/partir-boletos.ts",
     "socios": "vite-node --config vitest.config.ts scripts/distribuicao-socios.ts",
     "comparar": "vite-node --config vitest.config.ts scripts/comparar-dre.ts",
+    "importar:planilhas": "vite-node --config vitest.config.ts scripts/importar-planilhas.ts",
     "ramos": "vite-node --config vitest.config.ts scripts/ramos.ts",
     "comparar:fluxo": "vite-node --config vitest.config.ts scripts/comparar-fluxo.ts",
     "lotes": "vite-node --config vitest.config.ts scripts/lotes-sispag.ts",

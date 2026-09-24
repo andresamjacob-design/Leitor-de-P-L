@@ -43,6 +43,13 @@
       "when": 1786915918635,
       "tag": "0005_contract_revenue_account",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1790290823768,
+      "tag": "0006_planilha_linhas",
+      "breakpoints": true
     }
   ]
 }
