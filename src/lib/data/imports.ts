@@ -12,7 +12,7 @@ import { createClient } from "@/lib/supabase/server";
 import { fromNumeric, toNumeric, type Cents } from "@/lib/money";
 import type { IsoDate } from "@/lib/dates";
 import type { EntryDirection } from "@/lib/ledger-types";
-import { dedupHash } from "@/lib/dedup";
+import { dedupHash, duplicatasPorDocumento, type MovimentoPorDocumento } from "@/lib/dedup";
 import {
   createCashEntry,
   DuplicateEntryError,
@@ -302,11 +302,36 @@ async function stageRows(
 
   // Only what is already in the ledger counts as a duplicate.
   const existing = await existingHashes(input.entityId, hashes);
+
+  // Segunda camada (D142): o mesmo movimento com a descrição escrita de outro jeito — o Itaú
+  // muda o texto entre um export e outro, e o hash acima depende dele. Compara data, valor,
+  // sentido e documento da contraparte, um para um, só na conta e no intervalo do arquivo.
+  const datas = input.transactions.map((transaction) => transaction.occurredOn).sort();
+  const razao =
+    datas.length === 0
+      ? []
+      : await razaoNoIntervalo(
+          input.entityId,
+          input.accountId,
+          datas[0] as IsoDate,
+          datas[datas.length - 1] as IsoDate,
+        );
+  const duplicata = duplicatasPorDocumento(
+    input.transactions.map((transaction) => ({
+      occurredOn: transaction.occurredOn,
+      amount: transaction.amount,
+      direction: transaction.direction,
+      counterpartyTaxId: transaction.counterpartyTaxId,
+    })),
+    hashes.map((hash) => existing.has(hash)),
+    razao,
+    existing,
+  );
   let duplicates = 0;
 
   const rows = input.transactions.map((transaction, index) => {
     const hash = hashes[index] as string;
-    const isDuplicate = existing.has(hash);
+    const isDuplicate = duplicata[index] === true;
     if (isDuplicate) duplicates += 1;
 
     return {
@@ -338,6 +363,56 @@ async function stageRows(
   }
 
   return { id: importId, duplicates };
+}
+
+/**
+ * O razão de uma conta num intervalo, só com o que a segunda camada de duplicata compara
+ * (D142). Paginado: o PostgREST devolve no máximo mil linhas por pedido, e um extrato de
+ * três meses da conta corrente passa disso.
+ */
+async function razaoNoIntervalo(
+  entityId: string,
+  accountId: string,
+  de: IsoDate,
+  ate: IsoDate,
+): Promise<(MovimentoPorDocumento & { dedupHash: string })[]> {
+  const supabase = await createClient();
+  const PAGINA = 1000;
+  const linhas: (MovimentoPorDocumento & { dedupHash: string })[] = [];
+
+  for (let inicio = 0; ; inicio += PAGINA) {
+    const { data, error } = await supabase
+      .from("cash_entries")
+      .select("id, occurred_on, amount, direction, counterparty_tax_id, dedup_hash")
+      .eq("entity_id", entityId)
+      .eq("account_id", accountId)
+      .gte("occurred_on", de)
+      .lte("occurred_on", ate)
+      .order("id", { ascending: true })
+      .range(inicio, inicio + PAGINA - 1);
+
+    if (error) throw new Error(`não foi possível conferir duplicatas no razão: ${error.message}`);
+
+    const pagina = data as {
+      occurred_on: IsoDate;
+      amount: string | number;
+      direction: EntryDirection;
+      counterparty_tax_id: string | null;
+      dedup_hash: string;
+    }[];
+    for (const row of pagina) {
+      linhas.push({
+        occurredOn: row.occurred_on,
+        // PostgREST manda `numeric` como número JSON; `fromNumeric` já lida com isso (D77).
+        amount: fromNumeric(row.amount),
+        direction: row.direction,
+        counterpartyTaxId: row.counterparty_tax_id,
+        dedupHash: row.dedup_hash,
+      });
+    }
+    if (pagina.length < PAGINA) break;
+  }
+  return linhas;
 }
 
 async function existingHashes(entityId: string, hashes: string[]): Promise<Set<string>> {

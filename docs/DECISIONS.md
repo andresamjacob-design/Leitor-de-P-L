@@ -3195,6 +3195,41 @@ da planilha (1.984 de 1.984); nenhuma célula de setembro a dezembro preenchida.
 `Receita Projetos` e `Time - Interno` são médias, e várias linhas repetem julho. Julho está
 fechado de verdade.
 
+→ **Resolvido em 25/09:** o Andre mandou as versões de 24/09, com agosto fechado nas duas. O
+saldo final de julho do fluxo passou a ser R$ 711.916,33 — o mesmo caixa total que o app
+calcula pelo extrato. Conferido de volta: 4.233 campos, zero diferentes.
+
+### D142 — Extrato parcial: o mesmo movimento com outro texto é reconhecido pelo documento
+O Andre perguntou em 25/09 se pode mandar extratos parciais. A deduplicação é por movimento,
+não por arquivo, então a resposta deveria ser sim — e o ensaio de um extrato real disse que
+não era. O de 25/08 cobre 27/05 a 25/08, tudo já no razão: **73 de 248 reconhecidos.** Os
+outros 175 entrariam em duplicata.
+
+Nenhum era dinheiro novo. O Itaú escreve o mesmo movimento com textos diferentes conforme o
+export — `SAÍDA BOLETO  PAGO PRUDENTIAL` num, `BOLETO PAGO PRUDENTIAL` no outro;
+`RECEBIMENTOS SISPAG FAST ESCOVA FRANCHI` num, `RECEBIMENTOS` no outro —, e o hash da D78
+depende da descrição. O CPF/CNPJ da contraparte era o mesmo dos dois lados.
+
+→ **Uma segunda camada**, `duplicatasPorDocumento`, soma-se ao hash sem mudar nenhum hash
+gravado: mesma conta, mesma data, mesmo valor, mesmo sentido e **mesmo documento da
+contraparte**, um para um. Três travas — só linha com documento (data e valor sozinhos
+juntariam dois movimentos que só coincidem no valor), contagem um para um (duas mensalidades
+iguais no mesmo dia são duas), e a linha do razão que o hash já reconheceu sai do estoque
+antes (senão absolveria duas linhas novas). A tela e o script chamam a mesma função.
+
+**Medido de novo: 247 de 248.** Eu tinha previsto 248, e errei por não conferir: o único que
+sobra é o boleto de R$ 8.300 de 15/06, que **não existe mais como uma linha no razão** — foi
+partido em 3.300 + 5.000 na D109 —, e não tem documento. Ele entraria como linha pendente
+num dia que já está no razão.
+
+**E a rede de segurança que eu descrevi ao Andre não existe.** Eu disse que, se algo
+entrasse duplicado, "o saldo deixa de bater e a importação avisa". A tela confere o extrato
+contra os saldos que ele mesmo declara, mas nunca compara o saldo do razão com o do banco
+depois de aprovar — é o item 3 da §6 do handover, ainda não feito. Corrigido na conversa.
+
+O extrato de setembro que ele vai testar cobre 25/08 a 24/09: os 9 movimentos da última
+semana de agosto já estão no razão e **os 9 são reconhecidos**, com ou sem a camada nova.
+
 
 ---
 

@@ -42,8 +42,9 @@ import postgres, { type Sql } from "postgres";
 import { loadEnvLocal } from "./load-env.ts";
 import { readXlsx } from "@/lib/import/xlsx";
 import { parseItauStatement, reconcileStatement } from "@/lib/import/itau-statement";
-import { dedupHash } from "@/lib/dedup";
-import { formatMoney, toNumeric, type Cents } from "@/lib/money";
+import { dedupHash, duplicatasPorDocumento } from "@/lib/dedup";
+import { formatMoney, fromNumeric, toNumeric, type Cents } from "@/lib/money";
+import type { IsoDate } from "@/lib/dates";
 import type { StatementParse } from "@/lib/import/types";
 
 loadEnvLocal();
@@ -258,9 +259,40 @@ try {
          where entity_id = ${entityId} and dedup_hash = any(${hashes})`;
       const existing = new Set(inLedger.map((r) => r.dedupHash));
 
+      // Segunda camada (D142), a mesma da tela: o Itaú escreve o mesmo movimento com outro
+      // texto em outro export, e o hash depende do texto. Data, valor, sentido e documento
+      // da contraparte, um para um, na conta e no intervalo do arquivo.
+      const datas = s.parse.transactions.map((t) => t.occurredOn).sort();
+      const razao =
+        datas.length === 0
+          ? []
+          : await db<{ occurredOn: string; amount: string; direction: "in" | "out"; taxId: string | null; dedupHash: string }[]>`
+              select occurred_on::text as "occurredOn", amount::text as amount, direction,
+                     counterparty_tax_id as "taxId", dedup_hash as "dedupHash"
+                from cash_entries
+               where entity_id = ${entityId} and account_id = ${account.id}
+                 and occurred_on between ${datas[0] as string} and ${datas[datas.length - 1] as string}`;
+      const duplicata = duplicatasPorDocumento(
+        s.parse.transactions.map((t) => ({
+          occurredOn: t.occurredOn,
+          amount: t.amount,
+          direction: t.direction,
+          counterpartyTaxId: t.counterpartyTaxId,
+        })),
+        hashes.map((hash) => existing.has(hash)),
+        razao.map((r) => ({
+          occurredOn: r.occurredOn as IsoDate,
+          amount: fromNumeric(r.amount),
+          direction: r.direction,
+          counterpartyTaxId: r.taxId,
+          dedupHash: r.dedupHash,
+        })),
+        existing,
+      );
+
       for (const [index, t] of s.parse.transactions.entries()) {
         const hash = hashes[index] as string;
-        const isDuplicate = existing.has(hash);
+        const isDuplicate = duplicata[index] === true;
         if (isDuplicate) duplicates += 1;
 
         await db`
