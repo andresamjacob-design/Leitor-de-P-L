@@ -38,16 +38,16 @@ const DIM = "\u001b[2m";
 const RESET = "\u001b[0m";
 
 /**
- * As versões de 01/09, as mais novas que existem — as de 12/08 e 24/08 são de antes de julho e
- * agosto fecharem, e continuam na pasta porque `comparar`, `comparar:fluxo` e `folha` ainda
- * as leem pelo nome antigo.
+ * As versões de 24/09, que o Andre mandou como as mais recentes — agosto fechado nas duas. As
+ * de 12/08, 24/08 e 01/09 continuam na pasta: `comparar`, `comparar:fluxo` e `folha` ainda
+ * leem as mais antigas pelo nome, e as outras ficam como histórico.
  */
 const argumento = (nome: string): string | undefined => {
   const i = process.argv.indexOf(nome);
   return i >= 0 ? process.argv[i + 1] : undefined;
 };
-const DRE = argumento("--dre") ?? "docs/reference/DRE - Dynamics Data 2026 (01-09).xlsx";
-const FLUXO = argumento("--fluxo") ?? "docs/reference/Fluxo de Caixa - 2026 (01-09).xlsx";
+const DRE = argumento("--dre") ?? "docs/reference/DRE - Dynamics Data 2026 (24-09).xlsx";
+const FLUXO = argumento("--fluxo") ?? "docs/reference/Fluxo de Caixa - 2026 (24-09).xlsx";
 const ATE = argumento("--ate") ?? "2026-08";
 if (!/^2026-(0[1-9]|1[0-2])$/.test(ATE)) throw new Error(`--ate precisa ser AAAA-MM de 2026, veio ${ATE}`);
 const ULTIMO_MES = Number(ATE.slice(5, 7));
