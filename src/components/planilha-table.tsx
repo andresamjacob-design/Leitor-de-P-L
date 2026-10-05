@@ -18,7 +18,10 @@ export function PlanilhaTable({
   linhas: readonly LinhaPlanilha[];
   ano: string;
 }) {
-  const meses = Array.from({ length: 12 }, (_, i) => `${ano}-${String(i + 1).padStart(2, "0")}-01`);
+  const meses = Array.from(
+    { length: 12 },
+    (_, i) => `${ano}-${String(i + 1).padStart(2, "0")}-01`,
+  );
   const colunas = meses.length + 2;
 
   function valor(celula: string | null, percentual: boolean) {
@@ -64,34 +67,37 @@ export function PlanilhaTable({
 
             const percentual = linha.tipo === "percentual";
             return (
-                <tr
-                  key={linha.ordem}
+              <tr
+                key={linha.ordem}
+                className={cn(
+                  linha.tipo === "total" &&
+                    "border-t-2 border-border font-semibold",
+                  linha.tipo === "grupo" && "font-medium",
+                  percentual && "text-muted",
+                )}
+              >
+                <Td
                   className={cn(
-                    linha.tipo === "total" && "border-t-2 border-border font-semibold",
-                    linha.tipo === "grupo" && "font-medium",
-                    percentual && "text-muted",
+                    "sticky left-0 whitespace-nowrap bg-background",
+                    linha.tipo === "linha" && "pl-6",
                   )}
                 >
-                  <Td
-                    className={cn(
-                      "sticky left-0 whitespace-nowrap bg-background",
-                      linha.tipo === "linha" && "pl-6",
-                    )}
-                  >
-                    {linha.rotulo}
-                    {linha.detalhe ? (
-                      <span className="ml-2 text-xs font-normal text-muted">{linha.detalhe}</span>
-                    ) : null}
+                  {linha.rotulo}
+                  {linha.detalhe ? (
+                    <span className="ml-2 text-xs font-normal text-muted">
+                      {linha.detalhe}
+                    </span>
+                  ) : null}
+                </Td>
+                {linha.valores.map((celula, i) => (
+                  <Td key={meses[i]} numeric>
+                    {valor(celula, percentual)}
                   </Td>
-                  {linha.valores.map((celula, i) => (
-                    <Td key={meses[i]} numeric>
-                      {valor(celula, percentual)}
-                    </Td>
-                  ))}
-                  <Td numeric className="font-medium">
-                    {valor(linha.total, percentual)}
-                  </Td>
-                </tr>
+                ))}
+                <Td numeric className="font-medium">
+                  {valor(linha.total, percentual)}
+                </Td>
+              </tr>
             );
           })}
         </tbody>
