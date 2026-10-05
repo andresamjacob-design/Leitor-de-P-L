@@ -3618,3 +3618,39 @@ Precisam de resposta antes da fase indicada.
 | Q17 | **Guardar o arquivo do contrato no Supabase Storage?** Hoje a extração lê o arquivo e o descarta, ficando só o rascunho e os trechos. Guardar o original ajuda numa auditoria futura, mas precisa de bucket, policy e de um projeto Supabase para testar. Ver D67. | Fase 8 |
 | Q16 | **Importar os contratos de 2026 da aba `DRE Geral`?** A aba tem o valor espalhado por mês, mas não início, fim, método nem se o valor é mensal ou total — tudo isso teria de ser inferido do formato de cobrança. Prefere cadastrar à mão a partir dela, ou definimos as regras de inferência? Ver D51. | Fase 6 |
 | Q11 | **O caminho de escrita do app está sendo exercitado.** Migrations, seed, RLS e **importação** confirmados em 14/08/2026 — a importação sozinha revelou cinco bugs (D77–D81), um deles corrompendo todo valor inteiro. Falta exercitar: aprovar para o ledger, espelho de competência, reconhecimento de contrato e POC. | uso real |
+
+
+### D143 — Um lugar para os arquivos do mês, e a conta lida de dentro de cada um
+O Andre não achou onde enviar o extrato: `Importações` era o nono item de vinte no menu. E o
+formulário abria com a conta `Contabilizei` — **inativa** — escolhida: um extrato do Itaú
+enviado sem mexer no menu iria para a conta errada.
+
+→ Uma área de arrastar ou escolher, vários arquivos, extrato e fatura misturados, **sem menu
+de conta**: `contaDoArquivo` lê a identidade que cada leitor já extraía. O extrato traz o
+número da conta; a fatura traz o final da conta de cobrança **e** dos cartões — a conta
+`8384` tem o cartão `8299`, que é como ela foi cadastrada. Zero ou duas contas batendo é
+recusa com motivo, nunca chute. O item subiu para o segundo lugar do menu como `Enviar
+extrato e faturas`, e as abas Fluxo e DRE ganharam o atalho.
+
+Os limites do Next cortariam o envio — Server Action recusa acima de 1 MB e o proxy trunca
+em silêncio acima de 10 MB —; os dois foram a 25 MB.
+
+### D144 — DD Group e GSJacob viram uma empresa só
+Pedido do Andre em 05/10: *"não quero que exista separação entre a gsjacob e a ddgroup,
+deixe tudo como um só"*.
+
+No app a GSJ estava vazia — 63 categorias da instalação, nenhuma conta, nenhum lançamento —,
+e existia só como opção no seletor. **Foi desativada, não apagada** (`active = false`): some
+do seletor, que agora nem aparece com uma empresa só, e volta com um `update`. O
+`verify:rls` continua testando o isolamento entre as duas, porque não filtra inativa.
+
+Na DRE copiada, a planilha separa a receita em blocos `DDGROUP` e `GSJACOB`. `unificarEmpresas`
+junta: a `Receita` é a linha `(dd+gsj)` **da planilha**, os clientes dos dois blocos viram uma
+lista só — mesmo nome e mesmo tipo de receita somados numa linha —, `Impostos` é a soma dos
+dois, e `Receita Liquida` e `Lucro Bruto` são as linhas `(dd+gsj)` sem o sufixo.
+
+**Conferido na planilha de 24/09:** os clientes somam a Receita dela em **12 de 12 meses**
+(maior diferença R$ 0,01, de arredondar dízimas), e Receita − Impostos = Receita Líquida em
+12 de 12. O importador **recusa gravar** se a soma dos clientes não fechar. Sobram cinco nomes
+repetidos — Fast Escova, PDG IT, CSO, Hogrefe, Âncora —, e não são das duas empresas: são o
+mesmo cliente com dois tipos de receita, separados assim na própria planilha.

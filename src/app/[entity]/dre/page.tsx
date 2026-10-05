@@ -51,9 +51,11 @@ export default async function PlPage({
         <FonteToggle slug={slug} pagina="dre" atual="planilha" />
         <p className="mb-4 text-xs text-muted">
           Cópia de <span className="font-medium">{planilha.arquivo}</span>, aba DRE Geral, feita
-          em {planilha.copiadaEm?.slice(0, 10).split("-").reverse().join("/")}. Os números são os
-          seus, sem recálculo; o total é a coluna de total da própria planilha. Quando a
-          planilha mudar, rode <code>npm run importar:planilhas -- --aplicar</code> de novo.
+          em {planilha.copiadaEm?.slice(0, 10).split("-").reverse().join("/")}. DD Group e GSJacob
+          aparecem como uma empresa só: a Receita é a linha (dd+gsj) da sua planilha, cliente
+          que está nos dois blocos vira uma linha somada, e Impostos é a soma dos dois. O resto
+          é a sua planilha, sem recálculo. Quando ela mudar, rode{" "}
+          <code>npm run importar:planilhas -- --aplicar</code> de novo.
         </p>
         <PlanilhaTable linhas={planilha.linhas} ano={year} />
       </>

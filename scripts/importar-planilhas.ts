@@ -27,7 +27,7 @@ import { basename } from "node:path";
 import postgres from "postgres";
 import { loadEnvLocal } from "./load-env.ts";
 import { readXlsx, type Sheet } from "@/lib/import/xlsx";
-import { cortarDepoisDe, lerDre, lerFluxo, type Leitura } from "@/lib/planilha";
+import { cortarDepoisDe, lerDre, lerFluxo, unificarEmpresas, type Leitura } from "@/lib/planilha";
 
 loadEnvLocal();
 
@@ -62,8 +62,22 @@ function aba(abas: Sheet[], nome: string, arquivo: string): Sheet {
 const dreAbas = readXlsx(readFileSync(DRE));
 const fluxoAbas = readXlsx(readFileSync(FLUXO));
 
+/**
+ * DD Group e GSJacob numa empresa só (D144): a planilha separa a receita em dois blocos, e o
+ * Andre pediu tudo junto. A junção só é gravada se os clientes somados derem a `Receita` que
+ * a própria planilha declara, mês a mês — junção que não fecha é junção errada.
+ */
+const dreLida = lerDre(aba(dreAbas, "DRE Geral", DRE));
+const unificada = unificarEmpresas(dreLida.linhas);
+if (unificada.receitaFecha < unificada.receitaMeses) {
+  throw new Error(
+    `ao juntar DD Group e GSJacob, os clientes somam a Receita da planilha em só ` +
+      `${unificada.receitaFecha} de ${unificada.receitaMeses} meses — nada foi gravado.`,
+  );
+}
+
 const lidos: { relatorio: "dre" | "fluxo"; arquivo: string; leitura: Leitura }[] = [
-  { relatorio: "dre", arquivo: basename(DRE), leitura: lerDre(aba(dreAbas, "DRE Geral", DRE)) },
+  { relatorio: "dre", arquivo: basename(DRE), leitura: { ...dreLida, linhas: unificada.linhas } },
   {
     relatorio: "fluxo",
     arquivo: basename(FLUXO),
@@ -85,6 +99,12 @@ console.log(
   `${DIM}janeiro a ${ATE.slice(5, 7)}/2026 como estão na planilha; os meses seguintes vazios, ` +
     `para o app gerar${RESET}\n`,
 );
+if (unificada.receitaMeses > 0) {
+  console.log(
+    `${DIM}DD Group e GSJacob numa empresa só: os clientes somam a Receita da planilha em ` +
+      `${unificada.receitaFecha} de ${unificada.receitaMeses} meses${RESET}\n`,
+  );
+}
 for (const { relatorio, arquivo, leitura } of relatorios) {
   const porTipo = new Map<string, number>();
   for (const l of leitura.linhas) porTipo.set(l.tipo, (porTipo.get(l.tipo) ?? 0) + 1);

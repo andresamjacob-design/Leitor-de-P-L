@@ -307,3 +307,115 @@ export function cortarDepoisDe(linhas: readonly LinhaPlanilha[], ultimoMes: numb
     return { ...l, valores, total };
   });
 }
+
+// ---------------------------------------------------------------------------
+// Uma empresa só (D144)
+// ---------------------------------------------------------------------------
+
+/** `Receita (dd+gsj)` → `Receita`: depois de juntar, o sufixo não distingue mais nada. */
+const semSufixoDdGsj = (rotulo: string) => rotulo.replace(/\s*\(dd\s*\+\s*gsj\)\s*$/i, "");
+const temSufixoDdGsj = (rotulo: string) => semSufixoDdGsj(rotulo) !== rotulo;
+
+function somar(a: string | null, b: string | null): string | null {
+  if (a === null && b === null) return null;
+  return toNumeric((a === null ? 0n : fromNumeric(a)) + (b === null ? 0n : fromNumeric(b)));
+}
+
+/** O tipo de receita é o começo do detalhe: `Projeto · Kickoff · Aberto` → `Projeto`. */
+const tipoDeReceita = (l: LinhaPlanilha) => (l.detalhe ?? "").split(" · ")[0] ?? "";
+
+export type Unificacao = {
+  linhas: LinhaPlanilha[];
+  /** Meses em que a soma dos clientes bate com a `Receita` da planilha, ao centavo. */
+  receitaFecha: number;
+  /** Meses com valor em pelo menos um dos dois lados — o denominador honesto. */
+  receitaMeses: number;
+};
+
+/**
+ * Junta os blocos `DDGROUP` e `GSJACOB` da DRE numa empresa só. Pedido do Andre em 05/10:
+ * *"não quero que exista separação entre a gsjacob e a ddgroup, deixe tudo como um só"*.
+ *
+ * A planilha dele já faz metade disso: custos, OPBB e as linhas `(dd+gsj)` são das duas
+ * somadas. O que é separado é só a receita — cada bloco com clientes, `Impostos` e `Receita
+ * Liquida` próprios. Então:
+ *
+ *   - `Receita` passa a ser a linha `Receita (dd+gsj)` **da planilha** — não uma soma nova;
+ *   - os clientes dos dois blocos viram uma lista só, na ordem da DD e depois os novos da GSJ.
+ *     Cliente que está nos dois — mesmo nome e mesmo tipo de receita, como a Hogrefe, que
+ *     mudou de conta em agosto — vira **uma linha**, somada mês a mês;
+ *   - `Impostos` é a soma dos dois `Impostos` (a planilha não tem a linha conjunta);
+ *   - `Receita Liquida (dd+gsj)` e `Lucro Bruto (dd + gsj)` ficam, sem o sufixo;
+ *   - o resto não muda: já era das duas.
+ *
+ * A conferência que sai junto é a que diz se a junção é verdadeira: a soma dos clientes tem
+ * de dar a `Receita` dele, mês a mês. Planilha sem bloco `GSJACOB` volta como entrou.
+ */
+export function unificarEmpresas(linhas: readonly LinhaPlanilha[]): Unificacao {
+  const ondeGsj = linhas.findIndex((l) => l.tipo === "secao" && /gsj/i.test(l.rotulo));
+  if (ondeGsj < 0) return { linhas: [...linhas], receitaFecha: 0, receitaMeses: 0 };
+
+  const dd = linhas.slice(0, ondeGsj).filter((l) => l.tipo !== "secao");
+  const resto = linhas.slice(ondeGsj + 1);
+  // O bloco da GSJ vai até a `Receita Liquida` dela, a sem sufixo; depois vêm as das duas.
+  const fimGsj = resto.findIndex((l) => l.tipo === "total" && l.rotulo === "Receita Liquida");
+  const gsj = fimGsj < 0 ? resto : resto.slice(0, fimGsj + 1);
+  const depois = fimGsj < 0 ? [] : resto.slice(fimGsj + 1);
+
+  const receitaConjunta = dd.find((l) => l.tipo === "total" && temSufixoDdGsj(l.rotulo));
+  const clientes = (bloco: readonly LinhaPlanilha[]) => {
+    const inicio = bloco.findIndex((l) => l.tipo === "total" && l.rotulo === "Receita");
+    const fim = bloco.findIndex((l) => l.rotulo === "Impostos");
+    return bloco.slice(inicio + 1, fim < 0 ? undefined : fim).filter((l) => l.tipo === "linha");
+  };
+  const impostos = (bloco: readonly LinhaPlanilha[]) => bloco.find((l) => l.rotulo === "Impostos");
+
+  const lista: LinhaPlanilha[] = clientes(dd).map((l) => ({ ...l, valores: [...l.valores] }));
+  for (const cliente of clientes(gsj)) {
+    const mesmo = lista.find(
+      (l) => l.rotulo === cliente.rotulo && tipoDeReceita(l) === tipoDeReceita(cliente),
+    );
+    if (mesmo) {
+      mesmo.valores = mesmo.valores.map((v, i) => somar(v, cliente.valores[i] ?? null));
+      mesmo.total = somar(mesmo.total, cliente.total);
+    } else {
+      lista.push({ ...cliente, valores: [...cliente.valores] });
+    }
+  }
+
+  const impDd = impostos(dd);
+  const impGsj = impostos(gsj);
+  const saida: Omit<LinhaPlanilha, "ordem">[] = [];
+  if (receitaConjunta) saida.push({ ...receitaConjunta, rotulo: "Receita" });
+  saida.push(...lista);
+  if (impDd || impGsj) {
+    saida.push({
+      tipo: "linha",
+      rotulo: "Impostos",
+      detalhe: null,
+      valores: Array.from({ length: MESES }, (_, i) =>
+        somar(impDd?.valores[i] ?? null, impGsj?.valores[i] ?? null),
+      ),
+      total: somar(impDd?.total ?? null, impGsj?.total ?? null),
+    });
+  }
+  for (const l of depois) saida.push({ ...l, rotulo: semSufixoDdGsj(l.rotulo) });
+
+  // A conferência: clientes somados contra a `Receita` que a planilha declara.
+  let receitaFecha = 0;
+  let receitaMeses = 0;
+  for (let i = 0; i < MESES; i += 1) {
+    const declarada = receitaConjunta?.valores[i] ?? null;
+    const soma = lista.reduce((a, l) => a + (l.valores[i] ? fromNumeric(l.valores[i] as string) : 0n), 0n);
+    if (declarada === null && soma === 0n) continue;
+    receitaMeses += 1;
+    // Cada célula foi arredondada uma vez ao virar centavo, e cada arredondamento erra no
+    // máximo meio centavo: com N clientes, a soma pode se afastar até N/2 centavos sem nada
+    // estar errado. Medido na planilha de 24/09: a maior diferença foi R$ 0,01.
+    const folga = BigInt(Math.ceil(lista.length / 2));
+    const diferenca = (declarada === null ? 0n : fromNumeric(declarada)) - soma;
+    if (diferenca >= -folga && diferenca <= folga) receitaFecha += 1;
+  }
+
+  return { linhas: saida.map((l, i) => ({ ...l, ordem: i + 1 })), receitaFecha, receitaMeses };
+}

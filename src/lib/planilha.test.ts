@@ -7,6 +7,7 @@ import {
   lerDre,
   lerFluxo,
   razaoEmPercentual,
+  unificarEmpresas,
 } from "@/lib/planilha";
 
 /** Uma linha de planilha com células nas colunas dadas; o resto fica vazio. */
@@ -304,5 +305,79 @@ describe("lerFluxo", () => {
   it("numera de 1 em diante e não ignora nada", () => {
     expect(linhas.map((l) => l.ordem)).toEqual(linhas.map((_, i) => i + 1));
     expect(ignoradas).toEqual([]);
+  });
+});
+
+describe("unificarEmpresas", () => {
+  const cab = (empresa: string) =>
+    linha({ 0: empresa, 2: "P&L 2026 Squads - PBI", ...meses(4, MESES_DRE), 16: "Receita" });
+  const aba: Sheet = {
+    name: "DRE Geral",
+    rows: [
+      cab("DDGROUP"),
+      linha({ 1: "Escopo", 2: "Receita (dd+gsj)", 3: "DRE", 4: "1300", 5: "500", 16: "1800" }),
+      linha({ 1: "Escopo", 2: "Receita", 3: "DRE", 4: "1000", 5: "400" }),
+      linha({ 1: "Ongoing", 2: "Gringo", 3: "Mensal", 4: "1000", 5: "100", 16: "1100" }),
+      linha({ 1: "Projeto", 2: "Hogrefe", 3: "Kickoff", 5: "300", 16: "300" }),
+      linha({ 2: "Impostos", 4: "100", 5: "40" }),
+      linha({ 2: "Receita Liquida", 4: "900", 5: "360" }),
+      cab("GSJACOB"),
+      linha({ 1: "Escopo", 2: "Receita", 3: "DRE", 4: "300", 5: "100" }),
+      linha({ 1: "Projeto", 2: "Hogrefe", 3: "Kickoff", 4: "200", 16: "200" }),
+      linha({ 1: "Ongoing", 2: "PDG IT", 3: "Kickoff", 4: "100", 5: "100", 16: "200" }),
+      linha({ 2: "Impostos", 4: "30", 5: "10" }),
+      linha({ 2: "Receita Liquida", 4: "270", 5: "90" }),
+      linha({ 2: "Receita Liquida (dd+gsj)", 4: "1170", 5: "450" }),
+      linha({ 2: "Lucro Bruto (dd + gsj)", 4: "1170", 5: "450" }),
+      linha({ 2: "- Salários", 4: "500" }),
+      linha({ 2: "OPBB %", 4: "0.5" }),
+    ],
+  };
+  const u = unificarEmpresas(lerDre(aba).linhas);
+  const achar = (r: string) => u.linhas.find((l) => l.rotulo === r);
+
+  it("não sobra título de empresa nem receita separada por empresa", () => {
+    expect(u.linhas.some((l) => l.tipo === "secao")).toBe(false);
+    expect(u.linhas.filter((l) => l.rotulo === "Receita")).toHaveLength(1);
+    expect(u.linhas.filter((l) => l.rotulo === "Receita Liquida")).toHaveLength(1);
+    expect(u.linhas.filter((l) => l.rotulo === "Impostos")).toHaveLength(1);
+  });
+
+  it("a Receita é a linha (dd+gsj) da planilha, não uma soma nova", () => {
+    expect(achar("Receita")?.valores.slice(0, 2)).toEqual(["1300", "500"]);
+    expect(achar("Receita")?.total).toBe("1800");
+  });
+
+  it("cliente nos dois blocos, mesmo nome e mesmo tipo, vira uma linha somada", () => {
+    const hogrefe = u.linhas.filter((l) => l.rotulo === "Hogrefe");
+    expect(hogrefe).toHaveLength(1);
+    expect(hogrefe[0]?.valores.slice(0, 2)).toEqual(["200.00", "300.00"]);
+    expect(hogrefe[0]?.total).toBe("500.00");
+  });
+
+  it("cliente só da GSJ entra depois dos da DD, na ordem dela", () => {
+    const ordem = u.linhas.map((l) => l.rotulo);
+    expect(ordem.slice(0, 5)).toEqual(["Receita", "Gringo", "Hogrefe", "PDG IT", "Impostos"]);
+  });
+
+  it("os impostos das duas são somados", () => {
+    expect(achar("Impostos")?.valores.slice(0, 2)).toEqual(["130.00", "50.00"]);
+  });
+
+  it("as linhas (dd+gsj) perdem o sufixo e o resto segue igual", () => {
+    expect(achar("Receita Liquida")?.valores[0]).toBe("1170");
+    expect(achar("Lucro Bruto")?.valores[0]).toBe("1170");
+    expect(achar("Salários")?.valores[0]).toBe("500");
+    expect(u.linhas.map((l) => l.ordem)).toEqual(u.linhas.map((_, i) => i + 1));
+  });
+
+  it("confere que os clientes somam a Receita da planilha", () => {
+    expect(u.receitaFecha).toBe(2);
+    expect(u.receitaMeses).toBe(2);
+  });
+
+  it("planilha sem bloco da GSJ volta como entrou", () => {
+    const so = lerDre({ name: "DRE Geral", rows: aba.rows.slice(0, 7) }).linhas;
+    expect(unificarEmpresas(so).linhas).toEqual(so);
   });
 });
