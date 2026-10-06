@@ -14,10 +14,15 @@ import { cn } from "@/lib/utils";
 export function PlanilhaTable({
   linhas,
   ano,
+  mesesCalculados = [],
 }: {
-  linhas: readonly LinhaPlanilha[];
+  /** `calculado`, quando vem, marca as células que o app preencheu a partir do extrato (D146). */
+  linhas: readonly (LinhaPlanilha & { calculado?: boolean[] })[];
   ano: string;
+  /** Os meses (janeiro = 0) que o app preencheu — o cabeçalho deles leva a marca. */
+  mesesCalculados?: readonly number[];
 }) {
+  const doApp = new Set(mesesCalculados);
   const meses = Array.from(
     { length: 12 },
     (_, i) => `${ano}-${String(i + 1).padStart(2, "0")}-01`,
@@ -41,9 +46,15 @@ export function PlanilhaTable({
         <thead>
           <tr>
             <Th className="sticky left-0 bg-background">Linha</Th>
-            {meses.map((mes) => (
-              <Th key={mes} numeric>
+            {meses.map((mes, i) => (
+              <Th
+                key={mes}
+                numeric
+                className={doApp.has(i) ? "text-accent" : undefined}
+                title={doApp.has(i) ? "calculado pelo app a partir do extrato" : undefined}
+              >
                 {formatPeriodShort(mes)}
+                {doApp.has(i) ? " · app" : ""}
               </Th>
             ))}
             <Th numeric>Total</Th>
@@ -90,7 +101,11 @@ export function PlanilhaTable({
                   ) : null}
                 </Td>
                 {linha.valores.map((celula, i) => (
-                  <Td key={meses[i]} numeric>
+                  <Td
+                    key={meses[i]}
+                    numeric
+                    className={linha.calculado?.[i] ? "bg-accent/5 italic" : undefined}
+                  >
                     {valor(celula, percentual)}
                   </Td>
                 ))}

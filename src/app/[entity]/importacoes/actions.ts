@@ -4,13 +4,14 @@ import { createHash } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireWriteContext } from "@/lib/actions/context";
-import { listAccounts } from "@/lib/data/accounts";
+import { accountBalances, listAccounts } from "@/lib/data/accounts";
 import { listCategories } from "@/lib/data/categories";
 import {
   approveStaged,
   discardImport,
   findImportByHash,
   getImport,
+  listStaged,
   rejectStaged,
   stageImport,
   type ImportFormat,
@@ -32,6 +33,10 @@ import { formatPtBRDate } from "@/lib/dates";
 import { FormError, toFormState, type FormState } from "@/lib/form";
 import type { AnyParse } from "@/lib/import/types";
 import { contaDoArquivo, type IdentidadeDoArquivo } from "@/lib/import/conta-do-arquivo";
+import { decidirAprovacao, saldoDeConferencia } from "@/lib/import/aprovacao";
+import { isCashAccount } from "@/lib/ledger-types";
+import type { Cents } from "@/lib/money";
+import type { IsoDate } from "@/lib/dates";
 
 const MAX_BYTES = 15 * 1024 * 1024;
 
@@ -53,6 +58,13 @@ export type ResultadoDoArquivo =
       linhas: number;
       duplicatas: number;
       avisos: string[];
+      /** Foi para o razão sem ninguém olhar (D145)? */
+      aprovado: boolean;
+      /** Quantos lançamentos entraram, e quantos deles sem categoria. */
+      lancamentos: number;
+      semCategoria: number;
+      /** Por que ficou esperando revisão, quando ficou. */
+      motivoRevisao: string | null;
     }
   | { arquivo: string; ok: false; erro: string };
 
@@ -102,6 +114,9 @@ export async function enviarArquivosAction(
     }
 
     revalidatePath(`/${slug}/importacoes`);
+    revalidatePath(`/${slug}/lancamentos`);
+    revalidatePath(`/${slug}/fluxo-de-caixa`);
+    revalidatePath(`/${slug}/dre`);
     return { resultados };
   } catch (cause) {
     return { erro: cause instanceof Error ? cause.message : "não foi possível enviar. Tente de novo." };
@@ -139,6 +154,7 @@ async function importarArquivo(
   // ---- Parse ------------------------------------------------------------
   let parse: AnyParse;
   let closingBalance = null;
+  let fechamento: { data: IsoDate; saldo: Cents } | null = null;
   let identidade: IdentidadeDoArquivo;
 
   if (format === "pdf") {
@@ -168,6 +184,7 @@ async function importarArquivo(
         (typeof statement.declaredBalances)[number] | null
       >((latest, candidate) => (latest === null || candidate.date > latest.date ? candidate : latest), null);
       closingBalance = closing?.balance ?? null;
+      fechamento = saldoDeConferencia(statement.declaredBalances);
       identidade = { tipo: "extrato", conta: statement.source.account };
       parse = statement;
     } else {
@@ -223,6 +240,7 @@ async function importarArquivo(
       (typeof statement.declaredBalances)[number] | null
     >((latest, candidate) => (latest === null || candidate.date > latest.date ? candidate : latest), null);
     closingBalance = closing?.balance ?? null;
+    fechamento = saldoDeConferencia(statement.declaredBalances);
     identidade = { tipo: "extrato", conta: statement.source.account };
     parse = statement;
   }
@@ -262,6 +280,51 @@ async function importarArquivo(
     );
   }
 
+  // ---- Vai sozinho, se o banco assinar embaixo (D145) -------------------
+  // O extrato só entra sem revisão se o saldo do app, com as linhas novas, der exatamente o
+  // saldo que o próprio extrato declara. A fatura já teve o total conferido na leitura.
+  const pendentes = (await listStaged(staged.id)).filter((row) => row.status === "pending");
+  const ehCaixa = isCashAccount(account.type);
+  const contaCompleta = contas.find((c) => c.id === account.id);
+  const saldoNoRazao =
+    ehCaixa && fechamento && contaCompleta
+      ? ((await accountBalances([contaCompleta], { until: fechamento.data })).get(account.id) ?? null)
+      : null;
+  const decisao = decidirAprovacao({
+    conta: ehCaixa ? "caixa" : "cartao",
+    saldoNoRazao,
+    fechamento,
+    novas: pendentes,
+  });
+
+  let lancamentos = 0;
+  let semCategoria = 0;
+  let motivoRevisao: string | null = null;
+  if (!decisao.aprovar) {
+    motivoRevisao = decisao.motivo;
+  } else if (pendentes.length > 0) {
+    // As categorias são as que o motor acabou de sugerir; linha sem sugestão entra sem
+    // categoria e aparece no fluxo como tal — o saldo é do banco, a categoria é opinião.
+    const categorias = await listCategories([entityId], { includeInactive: true });
+    const resultado = await approveStaged(
+      entityId,
+      account.id,
+      staged.id,
+      pendentes.map((row) => row.id),
+      new Map(),
+      categorias,
+      userId,
+    );
+    lancamentos = resultado.approved;
+    semCategoria = pendentes.filter((row) => row.suggestedCategoryId === null).length;
+    for (const falha of resultado.failures.slice(0, 5)) {
+      notices.push(`“${falha.description}” não entrou: ${falha.reason}`);
+    }
+    if (resultado.failures.length > 0) {
+      motivoRevisao = `${resultado.failures.length} linha(s) não entraram e esperam revisão.`;
+    }
+  }
+
   return {
     arquivo: file.name,
     ok: true,
@@ -270,6 +333,10 @@ async function importarArquivo(
     linhas: parse.transactions.length,
     duplicatas: staged.duplicates,
     avisos: notices,
+    aprovado: decisao.aprovar && motivoRevisao === null,
+    lancamentos,
+    semCategoria,
+    motivoRevisao,
   };
 }
 

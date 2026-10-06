@@ -49,7 +49,7 @@ export default async function ImportsPage({
     <>
       <PageHeader
         title="Importações"
-        description="Coloque aqui o extrato do Itaú (xlsx) e as faturas do cartão (pdf) do mês. Nada entra no razão sem a sua aprovação."
+        description="Coloque aqui o extrato do Itaú (xlsx) e as faturas do cartão (pdf) do mês. O que fecha com o saldo do banco entra sozinho no razão."
       />
 
       {accounts.length === 0 ? (

@@ -3654,3 +3654,50 @@ dois, e `Receita Liquida` e `Lucro Bruto` são as linhas `(dd+gsj)` sem o sufixo
 12 de 12. O importador **recusa gravar** se a soma dos clientes não fechar. Sobram cinco nomes
 repetidos — Fast Escova, PDG IT, CSO, Hogrefe, Âncora —, e não são das duas empresas: são o
 mesmo cliente com dois tipos de receita, separados assim na própria planilha.
+
+
+### D145 — O que fecha com o saldo do banco entra sozinho
+O Andre em 05/10: *"os documentos ficam aguardando revisão, quero que o sistema já faça tudo
+sozinho e me dê o fluxo pronto"*. A revisão existia para pegar linha duplicada ou faltando;
+ela foi **trocada por uma conferência que o banco assina**, não removida.
+
+→ `decidirAprovacao`: o extrato entra sozinho quando o saldo do razão até o dia conferido,
+mais as linhas novas, dá **exatamente** o saldo que o extrato declara. Um centavo de
+diferença e o arquivo fica para revisão, com a diferença e o sentido dela escritos. A fatura
+entra sozinha porque o total dela já foi conferido na leitura (D-B). Linha sem categoria
+entra do mesmo jeito: o saldo é do banco, a categoria é opinião (D135).
+
+**O ponto de conferência quase saiu errado.** A primeira versão usava o saldo de data mais
+recente, e o extrato de 24/09 ficaria parado por R$ 7,08: o último saldo do arquivo é
+`SALDO EM CONTA CORRENTE`, uma fotografia da hora da exportação que difere do fechamento pelo
+rendimento ainda não pago — o leitor já documentava isso desde a D35. `saldoDeConferencia`
+usa o último `SALDO TOTAL DISPONÍVEL DIA`, e o extrato de setembro bate ao centavo
+(R$ 264.170,37 em 22/09). Medido sem gravar: setembro entraria sozinho; o extrato antigo de
+25/08, que traria de volta o boleto partido de 15/06, ficaria para revisão.
+
+**Achado de passagem:** em 24/08 o razão está R$ 5.000 abaixo do banco, e em 31/08 os dois
+batem. Provavelmente a data de uma metade do boleto partido. Não afeta setembro; um extrato
+parcial que termine no meio de agosto seria parado por isso.
+
+`accountBalances` passou a paginar: o `.limit(50000)` não passa por cima do teto de mil
+linhas do PostgREST, e o saldo sairia errado sem aviso quando a conta passasse disso.
+
+### D146 — O fluxo pronto: a planilha onde ela tem, o razão onde ela não tem
+A aba Fluxo mostra a planilha do Andre, que para em agosto (D141). `preencherComORazao`
+preenche os meses seguintes — até o último que tem extrato — com o relatório do razão, nas
+mesmas linhas: célula da planilha nunca é sobrescrita, cada conta vai para uma linha só, o
+grupo é a soma das linhas, e o que não tem linha vira "Outras" no nível dos grupos. A tela
+marca os meses "· app".
+
+O mapa linha → conta saiu do `comparar:fluxo` para `src/lib/linhas-da-planilha.ts`, e os
+dois usam a mesma cópia. Ganhou as receitas, medidas contra janeiro a agosto: `Receita
+Salesforce` é a `3.03` (6 de 8 meses iguais); `Ongoing` e `Projetos` são `3.01` e `3.02`,
+mas o app divide pelo contrato e ele às vezes divide diferente — o total de `Sales` fecha.
+
+**Simulado em janeiro a julho** (a planilha apagada, o app preenchendo): Ending balance
+7 de 7 ao centavo, Total Expenses 6 de 7 (os R$ 169 do estorno de tarifa), linhas somando os
+grupos em 77 de 77. A simulação achou a Ciclo: sem linha própria na planilha, ela caía em
+"Outras" e `Pessoas` ficava R$ 16.000 abaixo; com a `8.03` junto de `Time - Interno`, Pessoas
+fecha 7 de 7. De quebra, o `comparar:fluxo` linha a linha caiu de R$ 22.981,47 para
+R$ 7.419,23 — e a mudança expôs que ele contava a `6.10` duas vezes quando duas linhas a
+dividiam; agora junta as linhas que compartilham conta.

@@ -52,7 +52,7 @@
 import { readFileSync } from "node:fs";
 import postgres from "postgres";
 import { loadEnvLocal } from "./load-env.ts";
-import { TO_CODE } from "./plano-de-contas.ts";
+import { contasDaLinha, normalizarRotulo as normalizar } from "@/lib/linhas-da-planilha";
 import { buildCashFlow, periodRange, type FlowEntry, type FlowCategory } from "@/lib/cash-flow";
 import { quebrarFaturas, type Fatura, type Pagamento } from "@/lib/card-bills";
 import { GROUP_OF_CODE, SOCIOS_LABEL } from "@/lib/data/cash-flow-report";
@@ -87,30 +87,6 @@ const MESES = ["01", "02", "03", "04", "05", "06", "07", "08"] as const;
 const CARD_BILL_CODE = "99.02";
 /** Pró-labore e distribuição: uma linha só no caixa (D112). */
 const SOCIOS_CODES = ["6.11", "99.04"];
-
-/**
- * Onde a aba `Expenses` chama uma conta por outro nome que a `DRE Geral`. O resto sai do
- * `TO_CODE`, que é o mesmo mapa para os dois arquivos.
- */
-const APELIDOS: Record<string, string[]> = {
-  "Time - Interno": ["6.10"],
-  "Time - Freelancers": ["6.10"],
-  "Distribuição de Lucro": ["6.11", "99.04"],
-  "Legal & Professional Fees": ["8.02"],
-  "Plano de saude": ["6.06"],
-  "Insurance - Estags": ["6.07"],
-  Other: ["10.05"],
-  "Máquinas e Computadores": ["5.01"],
-  Imposto: ["4.01"],
-  // A conta que a D117 criou: freelancer que é empresa, separado do time nos dois arquivos.
-  "Freelancer (outras empresas)": ["6.12"],
-};
-
-const normalizar = (b: string) =>
-  b
-    .replace(/^-\s*/, "")
-    .replace(/\s*\([^)]*\)\s*$/, "")
-    .trim();
 
 const centavos = (b: string | null): Cents => {
   const t = (b ?? "").trim();
@@ -409,10 +385,7 @@ try {
     const rotulo = normalizar(bruto);
     // O apelido é procurado **antes** de normalizar também: `Freelancer (outras empresas)`
     // perde o parêntese na normalização e vira `Freelancer`, que não é conta nenhuma.
-    const codes =
-      APELIDOS[bruto] ??
-      APELIDOS[rotulo] ??
-      (TO_CODE[rotulo] ? [TO_CODE[rotulo] as string] : null);
+    const codes = contasDaLinha(bruto);
     const plan = MESES.map((_, i) => centavos(row[PRIMEIRA_COLUNA + i] ?? null));
 
     if (!codes) {
@@ -420,10 +393,16 @@ try {
       continue;
     }
 
-    const chave = codes.join("+");
-    const ja = juntos.get(chave);
-    if (ja) ja.plan = ja.plan.map((v, i) => v + (plan[i] as Cents));
-    else juntos.set(chave, { rotulo: `${grupo} · ${rotulo}`, codes, plan });
+    // Linhas que dividem uma conta são uma linha só na comparação: `Time - Interno` (6.10 e
+    // Ciclo) e `Time - Freelancers` (6.10) disputam a mesma conta do app, e comparar cada uma
+    // com o valor inteiro dela contaria o dinheiro duas vezes.
+    const ja = [...juntos.values()].find((j) => j.codes.some((c) => codes.includes(c)));
+    if (ja) {
+      ja.plan = ja.plan.map((v, i) => v + (plan[i] as Cents));
+      ja.codes = [...new Set([...ja.codes, ...codes])];
+    } else {
+      juntos.set(codes.join("+"), { rotulo: `${grupo} · ${rotulo}`, codes, plan });
+    }
   }
 
   let distancia = 0n;

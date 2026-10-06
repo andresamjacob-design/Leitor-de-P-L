@@ -125,8 +125,8 @@ export function EnviarArquivos({ slug }: { slug: string }) {
               : "Enviar"}
         </Button>
         <span className="text-xs text-muted">
-          Nada entra no razão agora — cada arquivo vira uma lista para você
-          conferir e aprovar.
+          O que fecha com o saldo do banco entra sozinho; o que não fecha fica
+          para você conferir.
         </span>
       </div>
 
@@ -148,20 +148,36 @@ export function EnviarArquivos({ slug }: { slug: string }) {
                     <span className="font-medium">{r.arquivo}</span>
                     <span className="text-muted">→ {r.conta}</span>
                   </div>
-                  <div className="flex flex-wrap items-baseline gap-x-3 text-muted">
-                    <span>
-                      {r.linhas} linha{r.linhas === 1 ? "" : "s"}
-                      {r.duplicatas > 0
-                        ? ` · ${r.duplicatas} já ${r.duplicatas === 1 ? "estava" : "estavam"} no razão`
-                        : ""}
-                    </span>
-                    <Link
-                      href={`/${slug}/importacoes/${r.importId}`}
-                      className="font-medium text-accent underline underline-offset-2"
-                    >
-                      Revisar e aprovar →
-                    </Link>
-                  </div>
+                  {r.aprovado ? (
+                    <div className="flex flex-wrap items-baseline gap-x-3">
+                      <span className="text-green-700 dark:text-green-400">
+                        ✓ entrou no razão: {r.lancamentos} lançamento
+                        {r.lancamentos === 1 ? "" : "s"}
+                        {r.semCategoria > 0 ? ` (${r.semCategoria} sem categoria)` : ""}
+                        {r.duplicatas > 0
+                          ? ` · ${r.duplicatas} já ${r.duplicatas === 1 ? "estava" : "estavam"} lá`
+                          : ""}
+                      </span>
+                      <Link
+                        href={`/${slug}/fluxo-de-caixa`}
+                        className="font-medium text-accent underline underline-offset-2"
+                      >
+                        Ver o fluxo →
+                      </Link>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col gap-1">
+                      <span className="text-amber-700 dark:text-amber-300">
+                        ficou para revisão: {r.motivoRevisao}
+                      </span>
+                      <Link
+                        href={`/${slug}/importacoes/${r.importId}`}
+                        className="font-medium text-accent underline underline-offset-2"
+                      >
+                        Revisar e aprovar →
+                      </Link>
+                    </div>
+                  )}
                   {r.avisos.length > 0 ? (
                     <ul className="mt-1 list-disc pl-5 text-xs text-muted">
                       {r.avisos.map((aviso) => (

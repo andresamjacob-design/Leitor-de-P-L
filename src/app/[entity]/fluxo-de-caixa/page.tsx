@@ -9,7 +9,8 @@ import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
 import { Amount, Table, TableScroll, Td, Th } from "@/components/ui/table";
-import { groupCashFlowRows, loadCashFlow } from "@/lib/data/cash-flow-report";
+import { groupCashFlowRows, loadCashFlow, SOCIOS_LABEL } from "@/lib/data/cash-flow-report";
+import { preencherComORazao } from "@/lib/fluxo-da-planilha";
 import { loadPlanilha } from "@/lib/data/planilha";
 import { resolveScope } from "@/lib/entities";
 import { daysInMonth, formatPeriodShort, todayInSaoPaulo } from "@/lib/dates";
@@ -45,6 +46,34 @@ export default async function CashFlowPage({
   const temPlanilha = planilha !== null && planilha.linhas.length > 0;
 
   if (planilha && temPlanilha && search.fonte !== "razao") {
+    // O fluxo pronto (D146): os meses depois do último que a planilha tem são preenchidos com
+    // o razão, nas mesmas linhas — mas só até o último mês que tem extrato. Mês sem extrato
+    // não é mês de movimento zero; é mês que ainda não chegou.
+    const ultimoCopiado = Math.max(
+      -1,
+      ...planilha.linhas.flatMap((linha) =>
+        linha.valores.flatMap((valor, i) => (valor === null ? [] : [i])),
+      ),
+    );
+    const { report: doRazao } = await loadCashFlow({
+      entityIds: entities.map((entity) => entity.id),
+      from: `${year}-01-01`,
+      to: `${year}-12-31`,
+    });
+    const comMovimento = doRazao.periods
+      .map((period, i) => ({ mes: Number(period.slice(5, 7)) - 1, i }))
+      .filter(({ i }) => doRazao.sections.some((secao) => secao.totals[i] !== 0n))
+      .map(({ mes }) => mes);
+    const ultimoComExtrato = Math.max(-1, ...comMovimento);
+    const mesesDoApp = Array.from(
+      { length: Math.max(0, ultimoComExtrato - ultimoCopiado) },
+      (_, k) => ultimoCopiado + 1 + k,
+    );
+    const linhasMostradas =
+      mesesDoApp.length > 0
+        ? preencherComORazao(planilha.linhas, doRazao, mesesDoApp, SOCIOS_LABEL)
+        : planilha.linhas;
+
     return (
       <>
         <PageHeader
@@ -59,7 +88,18 @@ export default async function CashFlowPage({
           seus, sem recálculo; os totais são os que a própria planilha declara. Quando a planilha
           mudar, rode <code>npm run importar:planilhas -- --aplicar</code> de novo.
         </p>
-        <PlanilhaTable linhas={planilha.linhas} ano={year} />
+        {mesesDoApp.length > 0 ? (
+          <p className="mb-4 text-xs text-muted">
+            <span className="text-accent">Os meses marcados “· app”</span> não estão na sua
+            planilha: o app calculou a partir dos extratos e faturas enviados, e pôs nas mesmas
+            linhas. Os totais são os do banco. Duas ressalvas: o app não separa{" "}
+            <em>Time - Interno</em> de <em>Time - Freelancers</em> (vai tudo na primeira), e
+            divide <em>Ongoing</em> e <em>Projetos</em> pelo contrato de cada cliente, que às vezes
+            não é como você divide — o total de <em>Sales</em> é o mesmo. O que não tem linha na
+            sua planilha aparece em “Outras”.
+          </p>
+        ) : null}
+        <PlanilhaTable linhas={linhasMostradas} ano={year} mesesCalculados={mesesDoApp} />
       </>
     );
   }
