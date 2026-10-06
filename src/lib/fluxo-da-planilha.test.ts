@@ -125,6 +125,22 @@ describe("preencherComORazao", () => {
     expect(achar("Inadimplencia")?.valores[SET]).toBeNull();
   });
 
+  it("sem transferência que sobre, não aparece linha de transferência", () => {
+    expect(achar("Transferências e saldo de abertura de conta")).toBeUndefined();
+  });
+
+  it("a abertura de conta no mês aparece antes do Ending balance (D147)", () => {
+    const comAbertura: CashFlowReport = {
+      ...report,
+      sections: [entradas, saidas, secao("transfer", [row(null, "Saldo de abertura — GSJ", 0n, 19_000_00n)])],
+    };
+    const x = preencherComORazao(planilha, comAbertura, [SET], SOCIOS);
+    const i = x.findIndex((y) => y.rotulo === "Transferências e saldo de abertura de conta");
+    expect(x[i]?.valores[SET]).toBe("19000.00");
+    expect(x[i]?.calculado[SET]).toBe(true);
+    expect(x[i + 1]?.rotulo).toBe("Ending balance");
+  });
+
   it("o total da linha passa a incluir o mês calculado", () => {
     expect(achar("Receita Ongoing")?.total).toBe("1100.00");
     // Saldo não se soma: a linha de saldo não tem total.

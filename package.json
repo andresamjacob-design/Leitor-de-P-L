@@ -51,7 +51,10 @@
     "respostas": "vite-node --config vitest.config.ts scripts/respostas-cartao.ts",
     "fundir": "vite-node --config vitest.config.ts scripts/fundir-clientes.ts",
     "aprovar": "vite-node --config vitest.config.ts scripts/aprovar-import.ts",
-    "apagar:2025": "vite-node --config vitest.config.ts scripts/apagar-2025.ts"
+    "apagar:2025": "vite-node --config vitest.config.ts scripts/apagar-2025.ts",
+    "conferir:banco": "vite-node --config vitest.config.ts scripts/conferir-banco.ts",
+    "abrir:conta": "vite-node --config vitest.config.ts scripts/abrir-conta.ts",
+    "fluxo:pronto": "vite-node --config vitest.config.ts scripts/fluxo-pronto.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.4",

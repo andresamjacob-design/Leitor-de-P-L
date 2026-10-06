@@ -4,7 +4,7 @@ Onde tudo está, o que foi feito, e o que falta. Escrito para quem chega sem con
 nenhum, inclusive eu mesmo numa conversa nova.
 
 Leia junto quando precisar do detalhe: `docs/PLAN.md` (o roteiro original),
-`docs/DECISIONS.md` (decisões numeradas D1–D146 e pendências Q2–Q18) e `README.md`.
+`docs/DECISIONS.md` (decisões numeradas D1–D147 e pendências Q2–Q18) e `README.md`.
 
 > **A prioridade, dita pelo Andre em 14/09 (D136), e ela reordena o resto:**
 > *"Não preciso de um sistema que categorize absolutamente todos os gastos sem nenhum erro,
@@ -106,7 +106,7 @@ Todos os scripts que gravam têm dry run por padrão e pedem `--aplicar`. Vário
 
 ```
 npm run dev
-npm run check               # typecheck + lint + 534 testes
+npm run check               # typecheck + lint + 537 testes
 npm run test:e2e            # Playwright, 25 testes
 npm run db:migrate          # aplica migrations
 npm run db:seed             # 62 categorias × 2 entidades
@@ -134,6 +134,9 @@ npm run comparar            # a DRE do app contra a da planilha, linha a linha (
 npm run comparar:fluxo      # o fluxo do app contra a planilha: totais, linhas e grupos (D139)
 npm run ramos               # re-mede quanto cada ramo do banco concentra numa conta (D140)
 npm run importar:planilhas  # copia DRE e Fluxo para as abas (--ate 2026-08 --aplicar, D141)
+npm run conferir:banco      # cada fechamento de dia dos extratos contra o razão (D147)
+npm run fluxo:pronto        # o fluxo da aba, nos meses que o app calcula (--mes 9)
+npm run abrir:conta         # saldo de abertura e a data dele (--ensaio / --aplicar)
 
 npm run propose:rules       # regras de texto vindas da planilha
 npm run propose:parties     # casa nome da planilha ↔ contraparte do extrato
@@ -149,12 +152,12 @@ npm run import:invoices     # faturas de cartão em massa
 
 | | |
 |---|---|
-| Razão de caixa | **1.341 lançamentos**, 06/08/2025 a **05/10/2026** |
-| Categorizados | **1.323 — 98,7%** · faltam 18, R$ 261.852,44 (§6) |
+| Razão de caixa | **1.344 lançamentos**, 06/08/2025 a **05/10/2026** |
+| Categorizados | **1.336 — 99,4%** · faltam 8, R$ 1.922,99, todas abaixo de R$ 1.400 |
 | Competência | 1.097 lançamentos |
 | Receita reconhecida | **R$ 3.556.736,91** (2026) |
 | Contratos | 80 · Clientes 68 (**21 sem CNPJ**) · Pessoas 40 |
-| Regras | 239 · Importações 20 |
+| Regras | 244 · Importações 20 |
 | Notas fiscais | **0** |
 
 ### Contas
@@ -162,16 +165,17 @@ npm run import:invoices     # faturas de cartão em massa
 | Conta | Tipo | Lançamentos | Situação |
 |---|---|---|---|
 | Itaú — conta corrente | banco | 760 | ✅ **= o extrato ao centavo nos 28 dias de set–05/10** |
-| Itau GSJACOB — 0099290-1 | banco | 30 | ❌ **R$ 19.000,00 abaixo do banco todos os dias** — sem saldo de abertura (§6) |
+| Itau GSJACOB — 0099290-1 | banco | 30 | ✅ **= o extrato ao centavo** desde a abertura de R$ 19.000 em 07/09 (D147) |
+| Itau GSJACOB — CDB DI | aplicação | 2 | criada em 06/10: R$ 340.000 aplicados em setembro (D147) |
 | Itaucard Empresas — 5780 | cartão | 484 | |
 | Itaucard — 8299 | cartão | 62 | recebe também as faturas do cartão final 8384 (D143) |
-| Itaú — CDB DI | aplicação | 5 | |
+| Itaú — CDB DI | aplicação | 6 | R$ 520.000 de principal — nenhum extrato do CDB ainda |
 | Contabilizei | banco | 0 | inativa |
 
 ### As conferências que fecham
 
-- **A conta corrente da DD bate com o extrato ao centavo** em todos os dias de setembro e
-  outubro até 05/10 (conferido em 06/10 contra o `SALDO TOTAL DISPONÍVEL DIA` de cada dia).
+- **As duas contas correntes batem com o extrato ao centavo** nos 34 fechamentos de 25/08 a
+  02/10. `npm run conferir:banco -- <extratos.xlsx>` refaz isso a qualquer momento (D147).
 - **A DRE e o fluxo fecham nos 13 meses**, resíduo zero (`verify:reconcile`, 06/10).
 - **O fluxo contra a planilha** (`comparar:fluxo`, jan–jul, meses com projeção fora): totais
   a **R$ 387,88**, linhas a R$ 7.419,23, grupos a R$ 6.056,77 (D139, D146). O número antigo de
@@ -603,26 +607,24 @@ categorizadas, o custo cresce e o resultado cai, **sem o caixa mudar um centavo*
 
 ## 6. O que falta, e em que ordem
 
-### Agora: fechar o envio de setembro (as perguntas estão com o Andre desde 06/10)
+### Agora
 
-1. **A conta da GSJacob está R$ 19.000,00 abaixo do banco em todos os dias.** O extrato
-   começa em 08/09, sem saldo anterior, e o app não tem nenhum movimento antes disso. A
-   explicação mais provável é a Hogrefe de agosto (D138), paga nessa conta. Há duas saídas:
-   (a) o Andre manda o extrato da GSJacob de agosto, ou (b) lançar um saldo de abertura de
-   R$ 19.000 em 07/09. **Decisão dele; nada foi lançado.**
-2. **18 linhas sem categoria, R$ 261.852,44** (`npm run pendencias`). No fluxo elas caem em
-   "Outras entradas/saídas", e por isso setembro mostra R$ 180.957,93 em "Outras entradas".
-   | Linha | Valor | Palpite, a confirmar com ele |
-   |---|---|---|
-   | `FIN COMPRA C2026…` (03/09 e 24/09) | R$ 180.957,93 de entrada | **não é** o padrão da Salesforce (essa entra como `OP REC EXT`); sem nome nem CNPJ no extrato — perguntar ao Andre |
-   | `BUSINESS 7502-5964` (08/09 e 05/10) | R$ 49.555,84 de saída | **`99.02`, conferido:** é o cartão Empresas 5780 com o código do Itaú trocado (antes `7502-5632`). 08/09 = fatura até 25/08 (R$ 50.233,55 − crédito de R$ 31.966,08 da fatura de julho, estornos Salesforce); 05/10 = fatura até ~23/09, **que falta enviar** |
-   | `AMERICAN AIR*` | R$ 22.314,20 | passagem, `9.01`? |
-   | `LOBBY TECNOLOGIA` | R$ 7.001,50 | brindes? |
-   | `REVERSAO DE CREDITO` | R$ 1.394,43 | sem palpite |
-   | `TIM*` (estornos) | R$ 99,98 | telefonia, `10.01` |
-   | mais 8 linhas pequenas | < R$ 300 cada | |
-3. **Commit e push.** São 10 commits locais, e esta atualização do handoff ainda não foi
-   commitada.
+Setembro está fechado (D147): as respostas de 06/10 aplicadas, a GSJacob abrindo em 07/09, e o
+CDB com as pernas de setembro. O fluxo de setembro sai com `npm run fluxo:pronto`.
+
+1. **Agosto não emenda com setembro** — pergunta para o Andre. A planilha dele declara
+   `Ending balance` de agosto R$ 697.003,87, mas julho (R$ 711.916,33) + o `Net savings` dela
+   (−R$ 28.817,62) dá R$ 683.098,71. O app fecha agosto em R$ 662.798,72 (`Net savings`
+   −R$ 49.117,61). Como os meses do app partem do razão, setembro está certo contra o banco;
+   o que não fecha é a emenda visual na aba.
+2. **O PDF da Salesforce com a divisão por cliente.** O Andre pediu um leitor; falta um
+   exemplo do arquivo em `docs/reference/`. Até lá o `FIN COMPRA` cai em `3.03` sem cliente.
+3. **A fatura do cartão até ~23/09** ainda não foi enviada. O pagamento de 05/10
+   (R$ 31.288,37) e o de 08/09 (R$ 18.267,47, líquido de um crédito, por isso não casa com a
+   fatura) aparecem em "Outras saídas" em vez das compras — inclusive os R$ 22 mil de
+   passagens.
+4. **Nenhum extrato do CDB** — R$ 520.000 e R$ 340.000 são o principal; rendimento que tenha
+   ficado dentro não aparece.
 
 ### Depois
 

@@ -168,6 +168,36 @@ export function preencherComORazao(
       continue;
     }
 
+    if (secao === "resumo" && original.rotulo === "Ending balance") {
+      // `Net savings` é entradas menos saídas; o saldo também anda por transferência que não
+      // se cancela dentro do relatório — hoje, só a abertura de uma conta no meio do ano
+      // (D147). Sem esta linha, o `Ending balance` pularia mais do que a soma explica.
+      const transferencias = report.sections.find((s) => s.key === "transfer")?.totals;
+      const valores: (string | null)[] = Array.from({ length: MESES }, () => null);
+      const calculado = Array.from({ length: MESES }, () => false);
+      let temAlgo = false;
+      for (const m of alvo) {
+        const v = valorDoRelatorio(transferencias, m);
+        if (v === null) continue;
+        valores[m] = toNumeric(v);
+        calculado[m] = true;
+        if (v !== 0n) temAlgo = true;
+      }
+      if (temAlgo) {
+        empurrar(
+          {
+            ordem: 0,
+            tipo: "total",
+            rotulo: "Transferências e saldo de abertura de conta",
+            detalhe: null,
+            valores,
+            total: null,
+          },
+          calculado,
+        );
+      }
+    }
+
     const linha = empurrar(original);
 
     if (secao === "resumo") {

@@ -287,18 +287,39 @@ export function buildCashFlow({
 
   // ---- Opening balance ----------------------------------------------------
   // An account's opening balance is money that was already there before the first
-  // reported month. If the account claims to open inside the range, saying so is the
-  // only honest option — inventing a placement for it would corrupt a month (SPEC §14).
+  // reported month.
+  //
+  // Uma conta que **abre dentro do relatório** não tinha esse dinheiro antes (D147). A
+  // GSJacob entrou no fluxo em 07/09 com R$ 19.000: somá-los ao saldo de janeiro poria
+  // R$ 19 mil a mais em todo mês de janeiro a agosto, que hoje batem com a planilha. Eles
+  // entram no mês em que a conta abre, em Transferências — mexem no saldo, como mexeram no
+  // banco, mas não são entrada: ninguém ganhou esse dinheiro, ele só passou a ser contado.
+  const aberturas: { label: string; index: number; amount: Cents }[] = [];
   let opening = 0n;
   for (const account of accounts) {
-    opening += account.openingBalance;
-    if (compareDates(account.openingDate, rangeStart) > 0) {
+    if (compareDates(account.openingDate, rangeStart) <= 0) {
+      opening += account.openingBalance;
+      continue;
+    }
+    const index = indexOfPeriod.get(periodOf(account.openingDate));
+    if (index === undefined) {
+      // Abre depois do fim do relatório: nesse intervalo a conta ainda não existia.
       warnings.push(
         `A conta "${account.name}" tem saldo de abertura em ${account.openingDate}, ` +
-          `depois do início do relatório — o saldo inicial abaixo o considera como se ` +
-          `já existisse no primeiro mês.`,
+          `depois do fim do relatório — ele não entra em nenhum mês daqui.`,
       );
+      continue;
     }
+    if (account.openingBalance === 0n) continue;
+    aberturas.push({
+      label: `Saldo de abertura — ${account.name}`,
+      index,
+      amount: account.openingBalance,
+    });
+    warnings.push(
+      `A conta "${account.name}" abre em ${account.openingDate}, dentro do relatório: o ` +
+        `saldo de abertura dela aparece em Transferências daquele mês, não em Entradas.`,
+    );
   }
 
   const cashEntries = entries.filter((entry) => accountIds.has(entry.accountId));
@@ -347,6 +368,16 @@ export function buildCashFlow({
     // O grupo aparece onde o **primeiro** dos seus membros apareceria, e não no fim: os
     // sócios pertencem ao bloco de pessoal, que é onde a planilha do Andre também os põe.
     grupos.set(chave, { label: grupo.label, sortOrder: menorSortOrder });
+  });
+
+  // A abertura dentro do relatório usa a mesma ficha dos grupos: linha sem conta, que não
+  // leva a lançamento nenhum quando clicada — não há lançamento por trás dela.
+  aberturas.forEach((abertura, i) => {
+    const chave = `abertura:${i}`;
+    grupos.set(chave, { label: abertura.label, sortOrder: Number.MAX_SAFE_INTEGER });
+    const values = zeros(periods.length);
+    values[abertura.index] = abertura.amount;
+    (buckets.get("transfer") as Map<string, Cents[]>).set(chave, values);
   });
 
   for (const entry of cashEntries) {

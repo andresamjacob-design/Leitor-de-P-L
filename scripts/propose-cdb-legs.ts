@@ -32,9 +32,16 @@
  * Uses the same mechanism as the Lançamentos screen: category 99.03 pairs as
  * `investment` in `transfer_pairs`, and the counterpart carries its own dedup hash.
  *
+ * **Cada perna vai para o CDB da mesma agência da conta de origem** (D147). Em setembro a
+ * GSJacob (agência 2863) aplicou R$ 340.000 no CDB *dela*, que é outra posição no banco: pôr
+ * a contrapartida no CDB da DD (agência 0561) acertaria o caixa total e deixaria o saldo
+ * daquela conta sem extrato nenhum que o confirme. Sem CDB na agência, a perna fica de fora
+ * — a menos que `--criar-cdb` crie a conta, com abertura zero na data de abertura da origem.
+ *
  *   npm run propose:cdb
  *   npm run propose:cdb -- --ensaio
  *   npm run propose:cdb -- --aplicar
+ *   npm run propose:cdb -- --aplicar --criar-cdb
  */
 
 import postgres from "postgres";
@@ -47,6 +54,7 @@ loadEnvLocal();
 
 const APPLY = process.argv.includes("--aplicar");
 const REHEARSE = process.argv.includes("--ensaio");
+const CRIAR_CDB = process.argv.includes("--criar-cdb");
 
 const GREEN = "[32m";
 const YELLOW = "[33m";
@@ -90,25 +98,38 @@ async function balances(db: postgres.Sql | postgres.TransactionSql) {
 }
 
 try {
-  const [cdb] = await sql<{ id: string; name: string; opening_balance: string }[]>`
-    select id, name, opening_balance from accounts where name ilike '%CDB%'`;
-  if (!cdb) throw new Error("conta CDB não encontrada");
+  type Cdb = { id: string; name: string; opening_balance: string; branch: string | null };
+  const cdbs = await sql<Cdb[]>`
+    select id, name, opening_balance, branch from accounts
+     where type = 'investment' and name ilike '%CDB%'`;
+  if (cdbs.length === 0) throw new Error("conta CDB não encontrada");
+  const cdbIds = cdbs.map((c) => c.id);
 
   // The 99.03 lines of the conta corrente that name the CDB. `APL/RES APLIC AUT` is the
   // automatic overnight sweep and is discarded on import (D35), so it cannot appear here.
-  const legs = await sql<Leg[]>`
+  const legs = await sql<(Leg & { branch: string | null; origem: string; origem_od: string })[]>`
     select e.id, e.entity_id, e.account_id, e.occurred_on, e.direction, e.amount,
-           e.description, e.category_id,
+           e.description, e.category_id, a.branch, a.name as origem,
+           a.opening_date::text as origem_od,
            (select p.id from transfer_pairs p where p.from_cash_entry_id = e.id) as paired
     from cash_entries e
     join categories c on c.id = e.category_id
     join accounts a on a.id = e.account_id
     where c.code = '99.03'
-      and a.id <> ${cdb.id}
+      and a.id <> all(${cdbIds})
       and (upper(e.description) like '%CDB%')
     order by e.occurred_on`;
 
-  const pending = legs.filter((leg) => leg.paired === null);
+  // A agência da origem decide o CDB. Agência sem CDB: a conta é criada só com --criar-cdb.
+  const semCdb = [...new Set(legs.filter((l) => !cdbs.some((c) => c.branch === l.branch)).map((l) => l.origem))];
+  for (const origem of semCdb) {
+    const leg = legs.find((l) => l.origem === origem)!;
+    console.log(`${YELLOW}${origem} (agência ${leg.branch ?? "?"}) não tem CDB cadastrado${RESET}` +
+      (CRIAR_CDB ? ` — será criado "${origem} — CDB DI"` : ` — rode com --criar-cdb`));
+  }
+  const cdbDe = (leg: { branch: string | null }) => cdbs.find((c) => c.branch === leg.branch);
+
+  const pending = legs.filter((leg) => leg.paired === null && (cdbDe(leg) || CRIAR_CDB));
 
   console.log(`\n${BOLD}${legs.length} transferências de CDB na conta corrente${RESET}`);
   let derived = 0n;
@@ -123,11 +144,19 @@ try {
     );
   }
 
-  const abertura = fromNumeric(cdb.opening_balance);
-  console.log(`\n${BOLD}O que o CDB deveria ter${RESET}`);
-  console.log(`  abertura em 01/01/2026 ......... ${formatBRL(abertura).padStart(16)}`);
-  console.log(`  movimento derivado ............. ${formatBRL(derived).padStart(16)}`);
-  console.log(`  ${BOLD}saldo ..........................${formatBRL(abertura + derived).padStart(16)}${RESET}`);
+  console.log(`\n${BOLD}O que cada CDB deveria ter${RESET}`);
+  for (const branch of [...new Set(legs.map((l) => l.branch))]) {
+    const cdb = cdbDe({ branch });
+    const abertura = cdb ? fromNumeric(cdb.opening_balance) : 0n;
+    const movimento = legs
+      .filter((l) => l.branch === branch)
+      .reduce((a, l) => a + (l.direction === "out" ? fromNumeric(l.amount) : -fromNumeric(l.amount)), 0n);
+    console.log(`  agência ${branch ?? "?"} — ${cdb?.name ?? "(sem conta)"}`);
+    console.log(`    abertura ..................... ${formatBRL(abertura).padStart(16)}`);
+    console.log(`    movimento derivado ........... ${formatBRL(movimento).padStart(16)}`);
+    console.log(`    ${BOLD}saldo ........................${formatBRL(abertura + movimento).padStart(16)}${RESET}`);
+  }
+  void derived;
   console.log(
     `\n${DIM}  Não enxerga rendimento que tenha ficado dentro do CDB em vez de ser varrido para\n` +
       `  a conta corrente. R$ 485.000,00 é o principal; só um extrato do CDB prova o centavo.${RESET}`,
@@ -144,7 +173,24 @@ try {
     );
   } else {
     const write = async (db: postgres.TransactionSql) => {
+      const criados = new Map<string | null, string>();
       for (const leg of pending) {
+        let cdbId = cdbDe(leg)?.id ?? criados.get(leg.branch);
+        if (!cdbId) {
+          const [novo] = await db<{ id: string }[]>`
+            insert into accounts ${db({
+              entity_id: leg.entity_id,
+              name: `${leg.origem} — CDB DI`,
+              type: "investment",
+              institution: "Itaú Unibanco",
+              branch: leg.branch,
+              opening_balance: "0",
+              opening_date: leg.origem_od,
+            })} returning id`;
+          cdbId = novo!.id;
+          criados.set(leg.branch, cdbId);
+        }
+        const cdb = { id: cdbId };
         const opposite: EntryDirection = leg.direction === "out" ? "in" : "out";
         const amount = fromNumeric(leg.amount);
         const occurredOn = isoDate(leg.occurred_on);

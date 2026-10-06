@@ -3701,3 +3701,56 @@ grupos em 77 de 77. A simulação achou a Ciclo: sem linha própria na planilha,
 fecha 7 de 7. De quebra, o `comparar:fluxo` linha a linha caiu de R$ 22.981,47 para
 R$ 7.419,23 — e a mudança expôs que ele contava a `6.10` duas vezes quando duas linhas a
 dividiam; agora junta as linhas que compartilham conta.
+
+### D147 — Setembro fechado: as respostas de 06/10, a GSJacob abre em 07/09, e o CDB ganha as pernas de setembro
+Respostas do Andre em 06/10, aplicadas e medidas.
+
+**As regras** (`npm run respostas`, mesmo caminho da D128): `FIN COMPRA` entrada → `3.03`
+(*"Conversão de Dolar das NFs pagas para a salesforce"*); `AMERICAN AIR` → `9.01`; `LOBBY
+TECNOL` → `10.02`; `TIM*` **entrada** → `10.01`; `7502-5964` → `99.02`. Dez linhas, R$ 259.929,45,
+nenhuma a mais — o ensaio mostrou exatamente as dez antes de gravar.
+
+- **O handover estava errado sobre o FIN COMPRA.** Escrevi *"não é Salesforce"* porque ela entra
+  como `OP REC EXT`; é o câmbio das NFs que ela paga em dólar. A divisão por cliente vem num PDF
+  que ainda não tem leitor — falta um exemplo do arquivo —, então a regra não liga cliente.
+- **A regra `TIM*` existia, só para saída.** Os estornos são entrada e passavam por baixo dela.
+- **O `7502-5964` não é resposta do Andre**: é o cartão 5780 com o código do Itaú trocado, já
+  conferido contra a fatura de 25/08.
+
+Custo: resultado acumulado −R$ 29.215,72 (passagens + brindes − estornos); cobertura 98,7% →
+99,4%; `Saídas de caixa sem competência` R$ 56.591,34 → R$ 34,00.
+
+**A abertura da GSJacob** (`npm run abrir:conta`): R$ 19.000 em **07/09**, não em 01/01, que era
+a data cadastrada — em 01/01 somaria R$ 19 mil a janeiro–agosto, que batem com a planilha. A
+evidência de que o dinheiro estava lá: sem ele o app punha a conta **negativa** em 09/09
+(−R$ 15.748,24), e o banco nunca esteve. O script recusa abertura posterior a movimento.
+
+**Conta que abre dentro do relatório** (`buildCashFlow`). Antes, todo saldo de abertura ia para
+o primeiro mês, com aviso. Agora uma conta que abre no meio entra com linha própria em
+**Transferências**, no mês em que abre: mexe no saldo, não é entrada. O fluxo pronto ganhou a
+linha `Transferências e saldo de abertura de conta` antes do `Ending balance`, só quando há
+algo nela — sem ela o saldo final pularia mais do que `Net savings` explica.
+
+**E essa linha achou R$ 375.000 sumidos.** Em setembro ela mostrou −R$ 355.986,37 em vez de
++R$ 19.000: três `APLICACAO CDB DI` (35 mil da DD em 03/09; 190 mil e 150 mil da GSJacob em 09/09
+e 24/09) saíam da conta corrente e não chegavam a conta nenhuma — o defeito da D84 de volta.
+Antes da linha nova, o salto ficava escondido dentro do `Ending balance`.
+
+→ O `propose:cdb` passou a mandar cada perna para o CDB **da mesma agência** da origem. A
+GSJacob aplica no CDB dela (agência 2863), que é outra posição no banco; pôr no CDB da DD
+acertaria o total e deixaria aquele saldo sem extrato que o confirme. `--criar-cdb` criou
+`Itau GSJACOB — CDB DI`. Os dois fecham redondo, que é o sinal da D84: **R$ 520.000,00** e
+**R$ 340.000,00**. Caixa total +R$ 375.000; contas correntes intactas.
+
+**`listCashEntries` passou a paginar.** A tela pedia `limit: 20000` e o PostgREST devolve mil.
+Ordenada do mais novo ao mais antigo, o que cairia fora seriam os lançamentos que formam o saldo
+de abertura — calado, no dia em que a conta passasse de mil linhas. Hoje são 795.
+
+**Conferido depois de tudo:** `npm run conferir:banco` (novo — todo `SALDO TOTAL DISPONÍVEL DIA`
+dos extratos contra o razão) — DD e GSJacob batem nos 34 fechamentos de 25/08 a 02/10, ao
+centavo; ponte 13/13; `comparar:fluxo` jan–jul **sem custo** (R$ 387,88 / 7.419,23 / 6.056,77,
+idênticos); `verify:rls` ok; 537 testes.
+
+**Aberto:** agosto não emenda. A planilha declara `Ending balance` R$ 697.003,87, mas julho
+(R$ 711.916,33) + o `Net savings` dela (−R$ 28.817,62) dá R$ 683.098,71; e o `Net savings` de
+agosto do app é −R$ 49.117,61. O app fecha agosto em R$ 662.798,72 sem os CDBs de setembro.

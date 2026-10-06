@@ -152,6 +152,30 @@ const RESPOSTAS: Resposta[] = [
     code: "9.03",
     disse: "o banco classificou como ALIMENTAÇÃO (.SAO PAULO)",
   },
+  // O envio de setembro (06/10, D147). As duas primeiras não são de cartão — são da conta
+  // corrente —, mas são respostas do mesmo tipo e entram pelo mesmo caminho.
+  //
+  // O handover dizia *"FIN COMPRA não é Salesforce"*, porque a Salesforce entra como `OP REC
+  // EXT`. Estava errado: é o câmbio das NFs que ela paga em dólar. A divisão por cliente vem
+  // num PDF à parte, que ainda não tem leitor — por isso a regra não liga cliente nenhum.
+  {
+    pattern: "FIN COMPRA",
+    direction: "in",
+    code: "3.03",
+    disse: "Conversão de Dolar das NFs pagas para a salesforce",
+  },
+  // O cartão Empresas 5780 com o código do Itaú trocado — antes `7502-5632`, que já tem
+  // regra. Não é resposta do Andre: é a fatura de 25/08 batendo com o pagamento de 08/09.
+  {
+    pattern: "7502-5964",
+    direction: "out",
+    code: "99.02",
+    disse: "conferido contra a fatura até 25/08 (R$ 50.233,55 − crédito de R$ 31.966,08)",
+  },
+  { pattern: "AMERICAN AIR", direction: "out", code: "9.01", disse: "Passagens" },
+  { pattern: "LOBBY TECNOL", direction: "out", code: "10.02", disse: "Brindes" },
+  // A regra `TIM*` existe só para saída; os estornos são entrada e passavam por baixo dela.
+  { pattern: "TIM*", direction: "in", code: "10.01", disse: "TIM estornos → Claro e TIM" },
 ];
 
 /**

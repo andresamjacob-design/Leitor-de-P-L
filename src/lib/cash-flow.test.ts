@@ -215,6 +215,26 @@ describe("buildCashFlow", () => {
     expect(result.warnings[0]).toContain("saldo de abertura");
   });
 
+  it("conta que abre dentro do relatório entra no mês dela, em Transferências (D147)", () => {
+    const GSJ = { id: "gsj", name: "GSJ", openingBalance: parseMoney("19.000,00"), openingDate: "2026-09-07" };
+    const result = buildCashFlow({
+      periods: periodRange("2026-08-01", "2026-09-30"),
+      accounts: [BANK, GSJ],
+      entries: [entry("2026-09-08", "100,00", "in", "rev", "gsj")],
+      categories: CATEGORIES,
+    });
+
+    // Agosto não vê a conta nova: o saldo de abertura é só o do banco.
+    expect(result.opening[0]).toBe(parseMoney("10.000,00"));
+    expect(result.closing[0]).toBe(parseMoney("10.000,00"));
+    const transfer = result.sections[2];
+    expect(transfer?.rows[0]?.label).toBe("Saldo de abertura — GSJ");
+    expect(transfer?.rows[0]?.values).toEqual([0n, parseMoney("19.000,00")]);
+    // Não é entrada: o que a operação gerou em setembro são os R$ 100.
+    expect(result.operating[1]).toBe(parseMoney("100,00"));
+    expect(result.closing[1]).toBe(parseMoney("29.100,00"));
+  });
+
   it("intervalo vazio devolve um relatório vazio, não um erro", () => {
     const result = buildCashFlow({
       periods: [],
