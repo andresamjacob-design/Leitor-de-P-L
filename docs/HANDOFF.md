@@ -1,10 +1,10 @@
-# Handover — 22/09/2026
+# Handover — 06/10/2026
 
 Onde tudo está, o que foi feito, e o que falta. Escrito para quem chega sem contexto
 nenhum, inclusive eu mesmo numa conversa nova.
 
 Leia junto quando precisar do detalhe: `docs/PLAN.md` (o roteiro original),
-`docs/DECISIONS.md` (decisões numeradas D1–D138 e pendências Q2–Q18) e `README.md`.
+`docs/DECISIONS.md` (decisões numeradas D1–D146 e pendências Q2–Q18) e `README.md`.
 
 > **A prioridade, dita pelo Andre em 14/09 (D136), e ela reordena o resto:**
 > *"Não preciso de um sistema que categorize absolutamente todos os gastos sem nenhum erro,
@@ -20,7 +20,9 @@ Plataforma financeira multi-entidade que substitui três planilhas, para duas pe
 jurídicas:
 
 - **DD Group / Dynamics Data** (`dd-group`) — tem dados de verdade
-- **Gabriel Sampaio Jacob LTDA - ME** (`gabriel-sampaio-jacob`) — cadastrada, vazia (Q2)
+- **Gabriel Sampaio Jacob LTDA - ME** (`gabriel-sampaio-jacob`) — **desativada em 05/10**
+  (`active = false`, não apagada). O Andre pediu *"deixe tudo como um só"* (D144): a conta
+  Itaú da GSJacob (0099290-1) vive dentro da DD Group, e a DRE copiada junta os dois blocos.
 
 Next.js 16.3 (App Router; a convenção `middleware` virou `proxy`), React 19, TypeScript
 strict com `noUncheckedIndexedAccess`, Supabase (Postgres + Auth magic link + RLS),
@@ -104,7 +106,7 @@ Todos os scripts que gravam têm dry run por padrão e pedem `--aplicar`. Vário
 
 ```
 npm run dev
-npm run check               # typecheck + lint + 402 testes
+npm run check               # typecheck + lint + 534 testes
 npm run test:e2e            # Playwright, 25 testes
 npm run db:migrate          # aplica migrations
 npm run db:seed             # 62 categorias × 2 entidades
@@ -129,7 +131,9 @@ npm run corrigir            # conta errada em linha que já tem conta (D119)
 npm run folha               # a folha em competência, lida da Colaboradores (D120)
 npm run socios              # separa distribuição de lucro do salário dos sócios (D110)
 npm run comparar            # a DRE do app contra a da planilha, linha a linha (D114)
-npm run comparar:fluxo      # o fluxo do app contra a aba Expenses, linha a linha (D116)
+npm run comparar:fluxo      # o fluxo do app contra a planilha: totais, linhas e grupos (D139)
+npm run ramos               # re-mede quanto cada ramo do banco concentra numa conta (D140)
+npm run importar:planilhas  # copia DRE e Fluxo para as abas (--ate 2026-08 --aplicar, D141)
 
 npm run propose:rules       # regras de texto vindas da planilha
 npm run propose:parties     # casa nome da planilha ↔ contraparte do extrato
@@ -145,8 +149,8 @@ npm run import:invoices     # faturas de cartão em massa
 
 | | |
 |---|---|
-| Razão de caixa | **1.064 lançamentos**, 06/08/2025 a **31/08/2026** |
-| Categorizados | **1.064 — 100,0%** |
+| Razão de caixa | **1.341 lançamentos**, 06/08/2025 a **05/10/2026** |
+| Categorizados | **1.323 — 98,7%** · faltam 18, R$ 261.852,44 (§6) |
 | Competência | 1.097 lançamentos |
 | Receita reconhecida | **R$ 3.556.736,91** (2026) |
 | Contratos | 80 · Clientes 68 (**21 sem CNPJ**) · Pessoas 40 |
@@ -157,19 +161,21 @@ npm run import:invoices     # faturas de cartão em massa
 
 | Conta | Tipo | Lançamentos | Situação |
 |---|---|---|---|
-| Itaú — conta corrente | banco | 628 | ✅ **R$ 177.798,72 = o extrato, ao centavo, em 31/08** |
-| Itaucard Empresas — 5780 | cartão | 383 | |
-| Itaucard — 8299 | cartão | 48 | falta a fatura de maio/2026 (R$ 830,97) |
+| Itaú — conta corrente | banco | 760 | ✅ **= o extrato ao centavo nos 28 dias de set–05/10** |
+| Itau GSJACOB — 0099290-1 | banco | 30 | ❌ **R$ 19.000,00 abaixo do banco todos os dias** — sem saldo de abertura (§6) |
+| Itaucard Empresas — 5780 | cartão | 484 | |
+| Itaucard — 8299 | cartão | 62 | recebe também as faturas do cartão final 8384 (D143) |
 | Itaú — CDB DI | aplicação | 5 | |
 | Contabilizei | banco | 0 | inativa |
 
 ### As conferências que fecham
 
-- **A conta corrente bate com o extrato ao centavo**, R$ 177.798,72 em 31/08/2026.
-- **A DRE e o fluxo fecham nos 11 meses**, resíduo zero (`verify:reconcile`). Eram 13 antes
-  de 2025 sair (D137); os dois meses que sumiram só existiam por causa das faturas apagadas.
-- **O fluxo bate com a planilha do Andre**: saídas a **R$ 2.468,99** de distância em oito
-  meses de R$ 2,9 milhões, **cinco meses ao centavo** (D138).
+- **A conta corrente da DD bate com o extrato ao centavo** em todos os dias de setembro e
+  outubro até 05/10 (conferido em 06/10 contra o `SALDO TOTAL DISPONÍVEL DIA` de cada dia).
+- **A DRE e o fluxo fecham nos 13 meses**, resíduo zero (`verify:reconcile`, 06/10).
+- **O fluxo contra a planilha** (`comparar:fluxo`, jan–jul, meses com projeção fora): totais
+  a **R$ 387,88**, linhas a R$ 7.419,23, grupos a R$ 6.056,77 (D139, D146). O número antigo de
+  R$ 2.468,99 incluía a coluna de agosto, que na planilha ainda era projeção.
 - Receita reconhecida bate com a planilha mês a mês.
 - `verify:import` — 32 arquivos reais reconciliam contra si mesmos.
 - `verify:rls` — isolamento entre entidades, 7/7.
@@ -190,6 +196,46 @@ Quem for comparar o fluxo com a planilha do Andre precisa das três, ou erra por
    era R$ 115.000 e fechava janeiro sozinha.
 
 ## 4. O que foi feito
+
+### A sessão de 22/09–06/10 (D139–D146)
+
+O Andre mudou o rumo no meio da sessão: *"preciso que tudo bata com a planilha… basicamente
+copie os valores das planilhas no app"*, e depois *"quero que o sistema já faça tudo sozinho
+e me dê o fluxo pronto"*. O app deixou de tentar reproduzir a planilha. Agora ele **mostra a
+planilha** até o último mês fechado e **calcula** só os meses seguintes, a partir do extrato.
+
+- **`comparar:fluxo` usa o próprio `buildCashFlow`** e as três convenções do §3, e mede
+  totais, linhas e grupos. Os meses com projeção (mais de duas casas decimais na planilha)
+  ficam fora (D139).
+- **O ramo do banco ficou na última camada do motor**, e `npm run ramos` re-mede a
+  concentração quando quiser (D140).
+- **As abas DRE e Fluxo mostram as planilhas do Andre, copiadas** para a tabela
+  `planilha_linhas` (migration `0006`), na ordem dele. A fonte é a versão de 24/09, com
+  `--ate 2026-08`: setembro em diante fica vazio de propósito, para o app preencher. Na DRE, o
+  botão "Calculado pelo razão" ainda mostra a visão antiga (D141).
+- **Extrato parcial funciona.** Um segundo filtro de duplicata compara data, valor, sentido e
+  CPF/CNPJ, um para um (`duplicatasPorDocumento`). Ele pega o mesmo movimento que voltou com
+  outro texto. Medido: 247 de 248; o que escapou foi o boleto de R$ 8.300 partido em dois
+  (D142).
+- **Tela "Enviar extrato e faturas"** (`/importacoes`, segundo item do menu): vários arquivos
+  de uma vez, arrastados. A conta é lida de dentro de cada arquivo (`contaDoArquivo`): extrato
+  pelo número da conta, fatura pelo final do cartão (8384 → conta 8299). O limite de upload é
+  25 MB (`next.config.ts`) (D143).
+- **DD Group e GSJacob viraram uma empresa só** (D144); ver §1.
+- **Aprovação automática** (`src/lib/import/aprovacao.ts`). Um extrato entra sozinho quando o
+  saldo do razão mais as linhas novas dá exatamente o último `SALDO TOTAL DISPONÍVEL DIA` do
+  arquivo. Uma fatura entra sozinha. Se não fecha, fica para revisão, com a diferença escrita
+  (D145).
+- **O fluxo pronto**: `preencherComORazao` preenche os meses depois da cópia, até o último mês
+  com extrato, nas mesmas linhas da planilha. Os meses calculados aparecem como "· app", e
+  um mês incompleto aparece como "· app até 05/10" (D146).
+- **O primeiro envio real** (05–06/10): o Andre mandou pelo app os extratos de setembro e
+  outubro da DD e da GSJacob, mais faturas. A DD bate ao centavo. Os resultados estão no §6.
+  Dois envios em que todas as linhas já estavam no razão ficavam "aguardando revisão" para
+  sempre; isso foi corrigido em `255a3b1`.
+
+Commits desta sessão, em ordem: `1719857`, `cea25bc`, `44948ff`, `3f64b7b`, `3b34026`,
+`1bf5993`, `0f8afe4`, `02db0ad`, `d947e41`, `255a3b1`. **Os 10 ainda não foram empurrados.**
 
 ### A sessão de 01–22/09 (D126–D138)
 
@@ -557,7 +603,40 @@ categorizadas, o custo cresce e o resultado cai, **sem o caixa mudar um centavo*
 
 ## 6. O que falta, e em que ordem
 
-### Primeiro: onde o app vai morar
+### Agora: fechar o envio de setembro (as perguntas estão com o Andre desde 06/10)
+
+1. **A conta da GSJacob está R$ 19.000,00 abaixo do banco em todos os dias.** O extrato
+   começa em 08/09, sem saldo anterior, e o app não tem nenhum movimento antes disso. A
+   explicação mais provável é a Hogrefe de agosto (D138), paga nessa conta. Há duas saídas:
+   (a) o Andre manda o extrato da GSJacob de agosto, ou (b) lançar um saldo de abertura de
+   R$ 19.000 em 07/09. **Decisão dele; nada foi lançado.**
+2. **18 linhas sem categoria, R$ 261.852,44** (`npm run pendencias`). No fluxo elas caem em
+   "Outras entradas/saídas", e por isso setembro mostra R$ 180.957,93 em "Outras entradas".
+   | Linha | Valor | Palpite, a confirmar com ele |
+   |---|---|---|
+   | `FIN COMPRA C2026…` (03/09 e 24/09) | R$ 180.957,93 de entrada | câmbio da receita Salesforce, `3.03`? |
+   | `BUSINESS 7502-5964` (08/09 e 05/10) | R$ 49.555,84 de saída | fatura de um cartão final 5964 que o app não conhece: `99.02`, e cadastrar o cartão |
+   | `AMERICAN AIR*` | R$ 22.314,20 | passagem, `9.01`? |
+   | `LOBBY TECNOLOGIA` | R$ 7.001,50 | brindes? |
+   | `REVERSAO DE CREDITO` | R$ 1.394,43 | sem palpite |
+   | `TIM*` (estornos) | R$ 99,98 | telefonia, `10.01` |
+   | mais 8 linhas pequenas | < R$ 300 cada | |
+3. **Commit e push.** São 10 commits locais, e esta atualização do handoff ainda não foi
+   commitada.
+
+### Depois
+
+- **Em 24/08 o razão está R$ 5.000 abaixo do banco**; em 31/08 os dois voltam a bater (D145).
+  É provavelmente a data de uma das metades do boleto partido. Não afeta setembro, mas
+  qualquer extrato que termine no meio de agosto vai ficar parado por isso.
+- **A visão "Calculado pelo razão" da DRE ainda erra agosto em R$ 10.578,79**: a folha de
+  julho foi paga em 05/08, e o pró-labore está em Freelancers. Só importa quando o app passar
+  a gerar a DRE sozinho.
+- **A DRE de setembro em diante** ainda não é preenchida pelo app; só o Fluxo é. Fazer isso
+  depende de a folha entrar em competência (a `Colaboradores` só vai até julho).
+- **Os avisos amarelos** (item 4 da lista antiga) ainda não foram feitos.
+
+### Onde o app vai morar
 
 **É o item que destrava todos os outros, e a sessão de 22/09 provou por que.** O app roda só
 em `localhost` e o Supabase é free tier: ele **hiberna depois de ~7 dias sem uso**, e o Andre
@@ -573,20 +652,15 @@ rodar `npm run dev`. Nenhuma melhoria de upload conserta isso.
 > voltou vazio" e dei um susto no Andre. **A ordem certa é: auth responde → testa o Postgres
 > direto → só desconfia de perda se os dois concordarem.** O REST é o último a voltar.
 
-### Depois, na ordem
+> O Andre disse em 22/09: *"ainda não vamos publicar"*. Segue em aberto.
 
-1. **Ensinar as três convenções do fluxo ao `comparar:fluxo`** (§3). Hoje a medição certa
-   existe só como consulta descartável; na ferramenta, vira repetível.
-2. **Caçar o que sobrou:** R$ 1.000,00 em maio e R$ 1.299,99 em agosto, sem nome. Mais
-   R$ 85.000 de resgate de CDB em julho e os R$ 19.000 da Hogrefe em agosto — esses dois têm
-   nome e são de filtro, não de dado.
-3. **A tela da importação**, três coisas pequenas que só valem depois do deploy: vários
-   arquivos de uma vez, a conta detectada do arquivo (o parser já lê), e **a conferência com
-   o banco aparecendo na tela** — o app tem os dois números e nunca os subtrai.
-4. **Os avisos amarelos.** Hoje tudo é amarelo, inclusive *"saldo confere em 16 dias"*. O
-   Andre pediu para manter só o que exige ação dele. São quatro: conta de cartão errada,
-   extrato de conta errada, cartão importado em conta de caixa, e saldo que não fecha. O
-   resto vira cinza ou some. **Ainda não feito.**
+### Feito desde 22/09, da lista antiga
+
+- ~~Ensinar as convenções ao `comparar:fluxo`~~ (D139).
+- ~~Vários arquivos de uma vez e a conta lida do arquivo~~ (D143). ~~A conferência com o
+  banco~~ virou a regra da aprovação automática (D145).
+- **Os avisos amarelos** — conta de cartão errada, extrato de conta errada, cartão em conta de
+  caixa, saldo que não fecha; o resto vira cinza. **Ainda não feito.**
 
 ### O que depende de decisão do Andre
 
@@ -594,7 +668,7 @@ rodar `npm run dev`. Nenhuma melhoria de upload conserta isso.
 |---|---|
 | **A folha de agosto em diante** | A competência está lida da `Colaboradores` só até julho. Ele disse *"ajustamos os próximos meses juntos"* — é a única coisa do desenho que segue aberta. |
 | **As notas fiscais** | Zero cadastradas, e existe uma fase inteira que concilia NF contra caixa. Ou elas entram, ou aquela parte é peso morto. |
-| **A segunda empresa** | Setembro fechou: as NFs de agosto venceram e o dinheiro entrou em alguma conta. É o mês que responde de quem é o quê **por extrato, não por dedução**. |
+| ~~**A segunda empresa**~~ | Resolvido em 05/10: é uma empresa só (D144). |
 | **As metas** | Receita de R$ 7 milhões e OPBB de 36% entram na tela? (Q4) |
 | **`Vendas e Perdas`** | É um CRM e nenhuma fase cobre. (Q8) |
 
@@ -612,7 +686,27 @@ rodar `npm run dev`. Nenhuma melhoria de upload conserta isso.
 
 ## 7. Armadilhas já pagas — não repetir
 
-### Desta sessão
+### Da sessão de 22/09–06/10
+
+- **O PostgREST devolve no máximo 1.000 linhas**, e o `.limit(50000)` não muda isso. Toda
+  consulta ao razão tem de paginar; o saldo da conta já saiu errado sem aviso por causa disso.
+- **`SALDO EM CONTA CORRENTE` não fecha dia nenhum.** É uma fotografia da hora em que o
+  extrato foi exportado. O ponto de conferência é sempre o último `SALDO TOTAL DISPONÍVEL DIA`.
+- **Coluna de planilha com mais de 2 casas decimais é projeção**, não fechamento. Comparar
+  contra ela inventa diferença.
+- **Uma conta, uma linha.** Quando duas linhas da planilha dividem uma conta (`6.10`), o valor
+  vai para a primeira. Senão o dinheiro conta duas vezes; o `comparar:fluxo` chegou a
+  R$ 917 mil de diferença por isso.
+- **Agrupar duplicata sem o sentido dá alarme falso.** Os pares da TIM são compra e estorno.
+- **No zsh, variável sem aspas não é dividida em palavras.** Um `git rm $LIXO` "conferido"
+  não fez nada. Use caminhos explícitos e nunca `git add -A` neste worktree: há arquivos de
+  ferramenta soltos (estão em `.git/info/exclude`).
+- **O driver `postgres` devolve NULL dentro de `text[]` como a string `"NULL"`.** Para conferir
+  um array, use `to_json`.
+- **Antes de afirmar que um valor está faltando, confira o espelho de caixa.** Eu disse que a
+  folha de agosto de R$ 233 mil faltava; ela estava lá, e a diferença real era R$ 10.578,79.
+
+### Da sessão de 01–22/09
 
 - **Ausência não é evidência.** Errei três vezes com a mesma forma: li "não vi cliente azul
   pagando a Gabriel" como "pagaram a DD" (não tinham pago ninguém); li "o REST lista zero
