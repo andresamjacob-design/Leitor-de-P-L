@@ -542,3 +542,21 @@ async function syncTransferCounterpart(
   }
   return [];
 }
+
+/**
+ * O último dia com lançamento numa conta de caixa (D146): até onde os extratos enviados
+ * chegam. A aba Fluxo usa para dizer que o mês corrente está pela metade.
+ */
+export async function ultimoDiaComExtrato(entityIds: string[]): Promise<IsoDate | null> {
+  if (entityIds.length === 0) return null;
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("cash_entries")
+    .select("occurred_on, accounts!inner(type)")
+    .in("entity_id", entityIds)
+    .in("accounts.type", ["bank", "cash", "investment"])
+    .order("occurred_on", { ascending: false })
+    .limit(1);
+  if (error) throw new Error(`não foi possível ler o último dia do extrato: ${error.message}`);
+  return ((data ?? [])[0] as { occurred_on: IsoDate } | undefined)?.occurred_on ?? null;
+}

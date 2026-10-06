@@ -533,7 +533,7 @@ export async function rejectStaged(importId: string, stagedIds: string[]): Promi
 }
 
 /** An import is done once nothing in it is still waiting for a decision. */
-async function refreshImportStatus(importId: string): Promise<void> {
+export async function refreshImportStatus(importId: string): Promise<void> {
   const supabase = await createClient();
   const pending = (await listStaged(importId)).some((row) => row.status === "pending");
   await supabase

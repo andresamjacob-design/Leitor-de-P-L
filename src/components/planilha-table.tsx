@@ -15,12 +15,15 @@ export function PlanilhaTable({
   linhas,
   ano,
   mesesCalculados = [],
+  parcialAte = {},
 }: {
   /** `calculado`, quando vem, marca as células que o app preencheu a partir do extrato (D146). */
   linhas: readonly (LinhaPlanilha & { calculado?: boolean[] })[];
   ano: string;
   /** Os meses (janeiro = 0) que o app preencheu — o cabeçalho deles leva a marca. */
   mesesCalculados?: readonly number[];
+  /** Mês que o extrato ainda não fechou → o último dia que ele cobre (`05/10`). */
+  parcialAte?: Readonly<Record<number, string>>;
 }) {
   const doApp = new Set(mesesCalculados);
   const meses = Array.from(
@@ -55,6 +58,7 @@ export function PlanilhaTable({
               >
                 {formatPeriodShort(mes)}
                 {doApp.has(i) ? " · app" : ""}
+                {parcialAte[i] ? ` até ${parcialAte[i]}` : ""}
               </Th>
             ))}
             <Th numeric>Total</Th>

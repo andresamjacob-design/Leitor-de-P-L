@@ -12,6 +12,7 @@ import {
   findImportByHash,
   getImport,
   listStaged,
+  refreshImportStatus,
   rejectStaged,
   stageImport,
   type ImportFormat,
@@ -302,7 +303,11 @@ async function importarArquivo(
   let motivoRevisao: string | null = null;
   if (!decisao.aprovar) {
     motivoRevisao = decisao.motivo;
-  } else if (pendentes.length > 0) {
+  } else if (pendentes.length === 0) {
+    // Tudo já estava no razão: não há o que aprovar, mas a importação está concluída — sem
+    // isto ela ficava "aguardando revisão" para sempre, com zero linhas pendentes.
+    await refreshImportStatus(staged.id);
+  } else {
     // As categorias são as que o motor acabou de sugerir; linha sem sugestão entra sem
     // categoria e aparece no fluxo como tal — o saldo é do banco, a categoria é opinião.
     const categorias = await listCategories([entityId], { includeInactive: true });

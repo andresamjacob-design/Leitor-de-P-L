@@ -12,6 +12,7 @@ import { Amount, Table, TableScroll, Td, Th } from "@/components/ui/table";
 import { groupCashFlowRows, loadCashFlow, SOCIOS_LABEL } from "@/lib/data/cash-flow-report";
 import { preencherComORazao } from "@/lib/fluxo-da-planilha";
 import { loadPlanilha } from "@/lib/data/planilha";
+import { ultimoDiaComExtrato } from "@/lib/data/cash-entries";
 import { resolveScope } from "@/lib/entities";
 import { daysInMonth, formatPeriodShort, todayInSaoPaulo } from "@/lib/dates";
 import { formatMoney } from "@/lib/money";
@@ -69,6 +70,15 @@ export default async function CashFlowPage({
       { length: Math.max(0, ultimoComExtrato - ultimoCopiado) },
       (_, k) => ultimoCopiado + 1 + k,
     );
+    // O último mês com extrato quase sempre está pela metade: o cabeçalho diz até que dia,
+    // para cinco dias de outubro não serem lidos como outubro inteiro.
+    const parcialAte: Record<number, string> = {};
+    const ultimoDia = await ultimoDiaComExtrato(entities.map((entity) => entity.id));
+    if (ultimoDia && mesesDoApp.includes(Number(ultimoDia.slice(5, 7)) - 1)) {
+      const mes = Number(ultimoDia.slice(5, 7)) - 1;
+      const fim = monthEnd(`${ultimoDia.slice(0, 7)}-01`);
+      if (ultimoDia < fim) parcialAte[mes] = `${ultimoDia.slice(8, 10)}/${ultimoDia.slice(5, 7)}`;
+    }
     const linhasMostradas =
       mesesDoApp.length > 0
         ? preencherComORazao(planilha.linhas, doRazao, mesesDoApp, SOCIOS_LABEL)
@@ -99,7 +109,12 @@ export default async function CashFlowPage({
             sua planilha aparece em “Outras”.
           </p>
         ) : null}
-        <PlanilhaTable linhas={linhasMostradas} ano={year} mesesCalculados={mesesDoApp} />
+        <PlanilhaTable
+          linhas={linhasMostradas}
+          ano={year}
+          mesesCalculados={mesesDoApp}
+          parcialAte={parcialAte}
+        />
       </>
     );
   }
