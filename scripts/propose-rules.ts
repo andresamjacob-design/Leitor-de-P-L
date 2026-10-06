@@ -1,0 +1,506 @@
+/**
+ * Turns the cost block of the `DRE Geral` sheet into categorisation rules.
+ *
+ * The spreadsheet already carries the judgement someone made by hand, one line per
+ * supplier — Clicksign, Gsuite, Salesforce, Uber. The chart of accounts was derived from
+ * those same lines, so each one maps onto a code. What is missing is the bridge between
+ * the supplier's name in the sheet and how it is written in a statement, and that is what
+ * the aliases below are.
+ *
+ * It **proposes**. Nothing is written unless `--aplicar` is passed, and even then the
+ * rules only produce suggestions — a rule never approves anything by itself.
+ *
+ *   npm run propose:rules              # mostra o que faria
+ *   npm run propose:rules -- --aplicar # grava as regras
+ */
+
+import { readFileSync } from "node:fs";
+import postgres from "postgres";
+import { loadEnvLocal } from "./load-env.ts";
+import { TO_CODE } from "./plano-de-contas.ts";
+import { readXlsx } from "@/lib/import/xlsx";
+import { normalizeDescription } from "@/lib/dedup";
+
+loadEnvLocal();
+
+const SPREADSHEET = "docs/reference/Claude de DRE - Dynamics Data 2026.xlsx";
+const APPLY = process.argv.includes("--aplicar");
+
+const GREEN = "[32m";
+const RED = "[31m";
+const DIM = "[2m";
+const RESET = "[0m";
+
+/**
+ * Which way the money went, from the signed amount.
+ *
+ * `amount` arrives as text straight from the driver — `numeric` is never read as a JS
+ * number here, for the reason D77 records: a float round-trip once turned R$ 800,00 into
+ * R$ 80,80 across 327 lines. The sign is all this needs, and the sign survives in text.
+ */
+function directionOf(amount: string): Direction {
+  return amount.trim().startsWith("-") ? "out" : "in";
+}
+
+/**
+ * How each cost line of the sheet is written in a bank statement or a card invoice.
+ *
+ * Read off the real files: the card prints `DL *GOOGLE Workspacedd` for what the sheet
+ * calls Gsuite, and `EBN*Canva04748 36` for Canva. A line with no alias falls back to its
+ * own name, which is right for the ones that match already (Adobe, Slack).
+ */
+const ALIASES: Record<string, string[]> = {
+  Gsuite: ["GOOGLE"],
+  ChatGPT: ["OPENAI", "CHATGPT"],
+  Claude: ["CLAUDE.AI", "ANTHROPIC"],
+  // Táxi, estacionamento e locadora entram junto do Uber: a linha da planilha se chama
+  // "Uber e Transporte", e o transporte é o que ela quer dizer.
+  "Uber e Transporte": [
+    "UBER",
+    "TAXISAMP",
+    "GUARUCOOP",
+    "ACE PARKING",
+    "ALLPARK",
+    "GARAGEM TEC",
+    "HORA PARK",
+    "INDIGO ",
+    "UNIDAS LOCADORA",
+  ],
+  "Claro e TIM": ["CLARO", "TIM*"],
+  // A lista original tinha só as companhias que apareciam nos arquivos do dia em que ela
+  // foi escrita. Estas são as que faltavam, lidas do que ficou sem conta — e a American
+  // entra como `AMERICAN0` porque o cartão gruda o número do bilhete no nome.
+  Passagem: [
+    "AZUL LINHAS",
+    "FLY*",
+    "MAXMILHAS",
+    "GOL ",
+    "LATAM",
+    "AVIANCA",
+    "AMERICAN0",
+    "CVC BRASIL",
+    "ZUPPER",
+    "123 MILHAS",
+    "123VIAGENS",
+    "ALASKA A",
+  ],
+  // O apelido era a palavra `HOTEL`, que nenhuma bandeira de hotel escreve no extrato.
+  Hotels: ["HOTEL", "MARRIOTT", "HYATT", "BOOKING.COM", "IBIS", "MERCURE"],
+  /**
+   * A lista estava **vazia**, e por isso a regra caía na palavra "Alimentação" — que não
+   * aparece em extrato de cartão nenhum. Eram 68 linhas de restaurante sem conta.
+   *
+   * O sufixo `-CT` do cartão **não** serve de atalho: ele é separador de campo, e aparece
+   * igual em hotel (`HS ANALIA FR-CT`), táxi (`GUARUCOOP TA-CT`) e posto
+   * (`POSTO DE SER-CT`). Não há como pegar comida por formato; tem de ser por nome.
+   *
+   * O Andre confirmou em 25/08/2026 que restaurante em viagem também entra aqui, e não em
+   * `Travel Meals`.
+   */
+  Alimentação: [
+    "ASSADOR REST",
+    "BOTECO SAO P",
+    "FOGO MORUMBI",
+    "RAUL S RETAU",
+    "CALUMA BUFFE",
+    "MALAGUETA ",
+    "SUCESSO REDE",
+    "ELEPHANT & C",
+    "THE NOR",
+    "BECO ALFAS",
+    "MERCATTO II",
+    "VARANDA GO",
+    "BADARO ",
+    "BACIO DI LAT",
+    "CEREJA GRILL",
+    "RESTAURANTE ",
+    "FRANS CAFE",
+    "STARBUCKS",
+    "DI ZUCCA",
+    "MENDONCA FOO",
+    "HAMSGRILL",
+    "BARDOPONTO",
+    "CAKE SWEET",
+    "SFB COMERCIO",
+    "FIDELE CHURRASCARJA",
+    "IFD*",
+    "PALACIO DAS PIZZAS",
+  ],
+  // The statement truncates the counterparty, so `ATTENTIVE CONTABILIDADE` never matches:
+  // it arrives as `BOLETO PAGO ATTENTIVE CO`. The prefix alone is enough, and it also
+  // catches `ATTENTIVE SERVICOS ADMINISTRAT`, which is the same office billing separately.
+  Contabilidade: ["ATTENTIVE"],
+  // Same shape, different cause: the sheet writes the product name with a dot, which
+  // normalises to `ESCOLA I`, and the bank writes the company, `ESCOLAI SERVICOS`. A dot
+  // is not a space, and the two never met.
+  "Escola.i": ["ESCOLAI"],
+  "Agência Ciclo": ["CICLO"],
+  "Bank Charges": ["TAR CAMB", "TARIFA"],
+  IOF: ["IOF"],
+  Freelancers: [],
+  Juridico: [],
+  // `PG *INNOVATION BRINDES` vale R$ 1.345,40, e a linha `- Brindes` da DRE vale
+  // R$ 1.345,40 no ano inteiro. Igual ao centavo, e é o ano todo dos dois lados.
+  Brindes: ["INNOVATION BRINDES"],
+  // Três nomes que a planilha escreve por extenso e o extrato abrevia. Sem o apelido, a
+  // regra procura a frase inteira e nunca acha nada — foi por isso que as três marcaram
+  // zero linhas desde sempre.
+  "Railway Corporation": ["RAILWAY"],
+  Tactic: ["TACTIQ"],
+  // `MERCADO*2ELETROINF`, três parcelas de R$ 1.030,12 = R$ 3.090,36, que é a linha
+  // `Maquinas` da DRE ao centavo. O apelido é `2ELETROINF` e não `MERCADO` de propósito:
+  // `MERCADO` sozinho pegaria `RECEBIMENTOS SUPERMERCADO HIROTA`, que é receita de cliente.
+  Maquinas: ["2ELETROINF"],
+  "Job Materials": [],
+  "Travel Meals": [],
+  Entertainment: [],
+  Outros: [],
+  "Reembolsos Comercial": [],
+  Salários: [],
+  Férias: [],
+  "13º Salário": [],
+  "Plano de Saude": [],
+  "Seguro Saúde (estag)": [],
+  "Ticket Restaurante": [],
+  VT: [],
+  "Penalties & Settlements": [],
+};
+
+/**
+ * Rules that come from the statement's own vocabulary, not from the sheet.
+ *
+ * The card bill debit is the one that matters most: `BUSINESS 7502-5632` is the 5780
+ * account and `BUSINESS 4005-1044` is the 8299 one, and both are transfers — booking them
+ * as expense would double-count every purchase already on the invoice (D-C).
+ */
+const STATEMENT_RULES: { pattern: string; code: string; direction: Direction; note: string }[] = [
+  /**
+   * O câmbio. Confirmado pelo Andre em 24–25/08/2026.
+   *
+   * `OP REC EXT` é a conversão de NF emitida em **dólar**, e a conta sai da própria planilha:
+   * a aba `Income` tem exatamente três linhas de receita — `Receita Ongoing`,
+   * `Receita Projetos` e `Receita Salesforce` —, e as duas primeiras já são 3.01 e 3.02.
+   *
+   * A terceira **não é só Salesforce**: ela vale R$ 1.800,00 em maio, julho e agosto, que é
+   * o valor exato dos recebimentos da Ciclo — e a Ciclo já está em **3.03** no razão. A
+   * linha é o fluxo de parceria inteiro, e é isso que fecha o mapa das três.
+   *
+   * **Sem documento**, então tem de ser regra de texto: o extrato não nomeia quem mandou o
+   * dinheiro de fora. É a exceção que a D40 admite, não uma preferência.
+   *
+   * O valor que cai no banco **não é o da NF**, e não deveria mesmo: a NF sai em dólar e a
+   * conversão acontece depois, a outra cotação. Em janeiro o banco creditou R$ 900 a menos
+   * que a planilha; em junho, R$ 30.506,22 a mais. Isso **não** vira conta nova — os dois
+   * razões são separados (D2), a receita nasce de contrato e NF (SPEC §5), e a diferença
+   * aparece nomeada na ponte da D85. É exatamente o caso para o qual a ponte existe.
+   */
+  { pattern: "OP REC EXT", code: "3.03", direction: "in", note: "conversão de NF em dólar — a linha `Receita Salesforce` da planilha, que é 3.03" },
+  { pattern: "BUSINESS 7502-5632", code: "99.02", direction: "out", note: "débito da fatura do cartão 5780" },
+  { pattern: "BUSINESS 4005-1044", code: "99.02", direction: "out", note: "débito da fatura do cartão 8299" },
+  // Same account, opposite sides: the sweep out and the sweep back. Without a direction
+  // one of them would swallow the other's lines.
+  { pattern: "APLICACAO CDB", code: "99.03", direction: "out", note: "aplicação no CDB" },
+  { pattern: "RESGATE CDB", code: "99.03", direction: "in", note: "resgate do CDB" },
+  { pattern: "APLICACAO TRUST", code: "99.03", direction: "out", note: "aplicação no Trust DI" },
+  { pattern: "RESGATE TRUST", code: "99.03", direction: "in", note: "resgate do Trust DI" },
+  // Decisão do usuário em 16/08/2026: o rendimento fica junto da movimentação que o
+  // gerou, e não vira receita. O plano de contas não tem conta de receita financeira, e
+  // criar uma mudaria um plano que até aqui saiu inteiro da planilha.
+  //
+  // O padrão é `REND PAGO` e não a frase inteira porque os bancos a escrevem de dois
+  // jeitos — `RENDIMENTOS REND PAGO APLIC AUT MAIS` e `ENTRADA REND PAGO APLIC AUT MAIS` —
+  // e o pedaço que os dois compartilham é justamente o que importa. A varredura
+  // `APL/RES APLIC AUT` continua descartada na importação (D35).
+  { pattern: "REND PAGO", code: "99.03", direction: "in", note: "rendimento da aplicação automática" },
+  // Tributo, nas três formas em que os dois bancos o escrevem. O Itaú manda
+  // `PAGAMENTOS TRIB COD BARRAS` com a contraparte no campo próprio; a Contabilizei
+  // escreve `Boleto pago - Simples Nacional` e não preenche contraparte nenhuma.
+  { pattern: "SIMPLES NACIONAL", code: "4.01", direction: "out", note: "Simples Nacional" },
+  { pattern: "DARF", code: "4.01", direction: "out", note: "DARF" },
+  { pattern: "SISPAG TRIBUTOS", code: "4.01", direction: "out", note: "tributo pago em lote" },
+  { pattern: "PAGAMENTOS TRIB", code: "4.01", direction: "out", note: "tributo pago por código de barras" },
+  { pattern: "ANUIDADE", code: "11.01", direction: "out", note: "anuidade do cartão" },
+
+  // ---- tarifa bancária e o estorno dela (D121) ----
+  //
+  // O Andre perguntou se a saída de R$ 169 que sobrava na ponte não tinha sido estornada. Foi:
+  // `TAR PLANO ADAPT 1 02/26` saiu em 03/03 e voltou em 05/03. Os dois estavam sem conta, e
+  // por isso o estorno não abatia nada — a DRE contava a tarifa e ignorava a devolução.
+  //
+  // Olhando a família inteira, o mesmo valia para 21 estornos de anuidade: `11.01` tinha
+  // R$ 1.861,50 de tarifa cobrada e **nenhum** dos R$ 1.288,73 devolvidos. A tarifa líquida
+  // de verdade é R$ 741,77.
+  //
+  // **Entrada em conta de custo precisa de regra explícita** — a D86 barra o histórico de
+  // fazer isso, e deixa a exceção escrita: regra pode, porque tem `direction` para declarar
+  // que quis. É o mesmo caminho da D103, com as devoluções do Ricardo.
+  //
+  // O par não pode ser resolvido pelo `refundedEntryIds` (D107) e nunca vai poder: aquele
+  // exige documento, e **tarifa de banco não tem contraparte** — o banco não é contraparte no
+  // extrato, é o próprio extrato. O que faz os dois se cancelarem aqui é o espelho de
+  // competência: saída entra como custo positivo, entrada como negativo (D2a).
+  { pattern: "ESTORNO ANUIDADE", code: "11.01", direction: "in", note: "anuidade estornada pelo banco" },
+  { pattern: "ESTORNO TAR", code: "11.01", direction: "in", note: "tarifa estornada pelo banco" },
+  { pattern: "TAR PLANO ADAPT", code: "11.01", direction: "out", note: "tarifa de plano de conta" },
+  // O banco escreve o mesmo estorno de três jeitos, e `ESTORNO ANUIDADE` não pega
+  // `ESTORNO DE ANUIDADE` — a preposição no meio. E o de IOF é **11.02**, não tarifa:
+  // devolver o custo de IOF alivia o IOF, não a anuidade.
+  { pattern: "ESTORNO DE ANUIDADE", code: "11.01", direction: "in", note: "anuidade estornada, outra grafia do banco" },
+  { pattern: "ESTORNO CUSTO DE IOF", code: "11.02", direction: "in", note: "IOF estornado pelo banco" },
+
+  // ---- as descrições de cartão que o Andre aprovou em 28/08/2026 (D122) ----
+  //
+  // Eu propus e ele confirmou. **Foram propostas, não aplicadas**, e a distinção importa:
+  // nome de estabelecimento é evidência, não prova, e a D100 pagou caro por casar contraparte
+  // por semelhança de texto. O que autoriza estas é ele ter dito sim, não elas parecerem
+  // óbvias para mim.
+  //
+  // Combustível e táxi entram em `9.04` junto do Uber, como a D106 já tinha estabelecido —
+  // a linha da planilha se chama `Uber e Transporte` e cobre táxi, estacionamento e locadora.
+  { pattern: "POSTO DE SER", code: "9.04", direction: "out", note: "posto de combustível — pega `POSTO DE SER-CT` e `POSTO DE SERVICOS`" },
+  { pattern: "AUTO POSTO", code: "9.04", direction: "out", note: "posto de combustível" },
+  { pattern: "EVERALDO TAX", code: "9.04", direction: "out", note: "táxi" },
+
+  { pattern: "VAI DE PROMO", code: "9.01", direction: "out", note: "site de passagem promocional" },
+  { pattern: "EBN*TRIP", code: "9.01", direction: "out", note: "Trip.com" },
+
+  { pattern: "ASSIST CARD", code: "9.05", direction: "out", note: "seguro de viagem" },
+  { pattern: "BRASILIA AIR", code: "9.05", direction: "out", note: "aeroporto de Brasília" },
+  { pattern: "CARTS SFO", code: "9.05", direction: "out", note: "carrinho no aeroporto de San Francisco" },
+  { pattern: "WI-FI ONBOARD", code: "9.05", direction: "out", note: "wi-fi de bordo" },
+
+  // ---- os estornos de cartão, aprovados no mesmo dia ----
+  //
+  // Cada um destes é **compra e devolução da mesma coisa**, e a conta tem de ser a mesma nos
+  // dois sentidos — é isso que faz o espelho de competência somar zero (D2a). Sem a regra do
+  // sentido `in`, a devolução ficaria sem conta e a DRE contaria a compra inteira, que é
+  // exatamente o defeito que a D121 achou nas tarifas do banco.
+  //
+  // Vimeo e Miro vão para **7.00**, a conta genérica de ferramentas: nenhum dos dois tem
+  // linha própria na planilha do Andre, e inventar uma seria dizer mais do que se sabe. O
+  // `pl.ts` agrupa por `dreGroup` e não por hierarquia, então lançar no pai não conta duas
+  // vezes.
+  { pattern: "VIMEO", code: "7.00", direction: "out", note: "assinatura de vídeo" },
+  { pattern: "VIMEO", code: "7.00", direction: "in", note: "a mesma assinatura, estornada três dias depois" },
+  { pattern: "MIRO.COM", code: "7.00", direction: "out", note: "assinatura de quadro branco" },
+  { pattern: "MIRO.COM", code: "7.00", direction: "in", note: "a mesma assinatura, estornada no dia seguinte" },
+  { pattern: "GOL LINHAS", code: "9.01", direction: "in", note: "centavo estornado pela companhia aérea" },
+  { pattern: "LATAM AIR", code: "9.01", direction: "in", note: "centavo estornado pela companhia aérea" },
+  { pattern: "RAUL S RETAU", code: "9.03", direction: "in", note: "restaurante estornado" },
+];
+
+type Direction = "in" | "out";
+
+type Proposal = {
+  pattern: string;
+  code: string;
+  direction: Direction;
+  source: "planilha" | "extrato";
+  note: string;
+};
+
+function cleanLabel(raw: string): string {
+  return raw
+    .replace(/^[-–]\s*/, "")
+    .replace(/\((cart[ãa]o de credito|cart[ãa]o|boleto|outras empresas|estag)\)/gi, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function readSheetLines(): { label: string; code: string }[] {
+  const sheets = readXlsx(new Uint8Array(readFileSync(SPREADSHEET)));
+  const dre = sheets.find((sheet) => sheet.name === "DRE Geral");
+  if (!dre) throw new Error("aba “DRE Geral” não encontrada");
+
+  const found: { label: string; code: string }[] = [];
+  for (const row of dre.rows) {
+    const raw = String(row[2] ?? "").trim();
+    if (!raw.startsWith("-") && raw !== "Maquinas") continue;
+
+    const label = cleanLabel(raw);
+    const code = TO_CODE[label];
+    if (code) found.push({ label, code });
+  }
+  return found;
+}
+
+function proposalsFrom(lines: { label: string; code: string }[]): Proposal[] {
+  const out: Proposal[] = [];
+  /**
+   * A chave leva o **sentido**, e não só o texto (D122).
+   *
+   * Deduplicar só pelo padrão descartava em silêncio toda regra de entrada cujo texto já
+   * viesse do bloco de custo da planilha — que produz sempre `out`. Foi assim que
+   * `RAUL S RETAU → 9.03 in` sumiu sem aviso: o apelido de restaurante já existia como
+   * saída, e a devolução ficou sem conta.
+   *
+   * Sentido é o que a D82, a D86 e a D99 existem para proteger, e uma contraparte pode estar
+   * dos dois lados do balcão — a Ciclo é o caso. Uma chave que ignora sentido é a mesma
+   * classe de defeito que aquelas decisões consertaram no motor, agora em quem escreve as
+   * regras.
+   */
+  const seen = new Set<string>();
+
+  for (const line of lines) {
+    const patterns = ALIASES[line.label] ?? [line.label];
+    const list = patterns.length > 0 ? patterns : [];
+
+    for (const pattern of list) {
+      const key = `${normalizeDescription(pattern)}|out`;
+      if (normalizeDescription(pattern) === "" || seen.has(key)) continue;
+      seen.add(key);
+      // Every one of these comes from the *cost* block of the sheet, so it describes money
+      // leaving. Saying so is what keeps `CICLO` from booking the five Ciclo receipts as
+      // agency expense — the partner's name never says which way the money went.
+      out.push({ pattern, code: line.code, direction: "out", source: "planilha", note: line.label });
+    }
+  }
+
+  for (const rule of STATEMENT_RULES) {
+    const key = `${normalizeDescription(rule.pattern)}|${rule.direction}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({
+      pattern: rule.pattern,
+      code: rule.code,
+      direction: rule.direction,
+      source: "extrato",
+      note: rule.note,
+    });
+  }
+
+  return out;
+}
+
+const sql = postgres(process.env.DATABASE_URL as string, { max: 1, connect_timeout: 20 });
+
+try {
+  const entities = await sql<{ id: string; slug: string }[]>`
+    select id, slug from entities where slug = 'dd-group'`;
+  const entity = entities[0];
+  if (!entity) throw new Error("entidade dd-group não encontrada — rode npm run db:seed");
+
+  const categories = await sql<{ id: string; code: string; name: string }[]>`
+    select id, code, name from categories where entity_id = ${entity.id}`;
+  const byCode = new Map(categories.map((category) => [category.code, category]));
+
+  // Every line the company actually has, which is the ledger plus whatever staging still
+  // holds — the same correction the party matcher needed, and for the same reason:
+  // `import:sispag` (D96) writes straight to `cash_entries`, so a rule measured against
+  // staging alone reports a reach short by every line that never passed through it. The
+  // rules proposed do not change — they are read from the sheet — but the count printed
+  // beside each one is the evidence a human uses to accept it, and understated evidence
+  // argues for the wrong answer.
+  //
+  // `status = 'pending'` is what keeps the two from overlapping, and it says the thing
+  // exactly: an *approved* staged row already **is** a `cash_entries` row, and a
+  // `duplicate` or `rejected` one never was money at all. Today that reads 1.064 ledger
+  // lines plus nothing pending, where staging alone offered 1.046 — 977 approved and 69
+  // duplicates, the duplicates counted as reach they never had.
+  //
+  // The sign has to be restored on the ledger side: `staged_transactions.amount` is signed,
+  // while `cash_entries` keeps a magnitude and puts the way the money went in `direction`.
+  // `directionOf` below reads the sign and nothing else.
+  const staged = await sql<{ description: string; amount: string }[]>`
+    select
+      description,
+      (case when direction = 'out' then -amount else amount end)::text as amount
+    from cash_entries
+    where entity_id = ${entity.id}
+    union all
+    select description, amount::text
+    from staged_transactions
+    where entity_id = ${entity.id} and status = 'pending'`;
+
+  const proposals = proposalsFrom(readSheetLines());
+
+  console.log(`${proposals.length} regras propostas, contra ${staged.length} linhas importadas\n`);
+
+  const claimed = new Set<number>();
+  let matchedRules = 0;
+
+  for (const proposal of proposals) {
+    const category = byCode.get(proposal.code);
+    if (!category) {
+      console.log(`  ${DIM}sem conta ${proposal.code} no plano — “${proposal.pattern}” ignorada${RESET}`);
+      continue;
+    }
+
+    const needle = normalizeDescription(proposal.pattern);
+    const hits: number[] = [];
+    // Lines the text matches but the direction rejects. Counting them separately is the
+    // point of the preview: it shows what the rule *would* have swallowed before 0004.
+    let blocked = 0;
+    for (const [index, row] of staged.entries()) {
+      if (!normalizeDescription(row.description).includes(needle)) continue;
+      if (directionOf(row.amount) !== proposal.direction) {
+        blocked += 1;
+        continue;
+      }
+      hits.push(index);
+    }
+    for (const index of hits) claimed.add(index);
+    if (hits.length > 0) matchedRules += 1;
+
+    const sample = hits.slice(0, 2).map((index) => staged[index]?.description ?? "").join(" · ");
+    const arrow = proposal.direction === "out" ? "↓" : "↑";
+    console.log(
+      `  ${hits.length > 0 ? GREEN : DIM}${String(hits.length).padStart(4)}${RESET} ${arrow} ` +
+        `${proposal.pattern.padEnd(24)} → ${proposal.code} ${category.name.padEnd(26)}` +
+        `${blocked > 0 ? `${RED}${String(blocked).padStart(3)} barradas${RESET} ` : "           "}` +
+        `${DIM}${sample.slice(0, 40)}${RESET}`,
+    );
+  }
+
+  const remaining = staged.filter((_, index) => !claimed.has(index));
+  console.log(
+    `\n${claimed.size} de ${staged.length} linhas seriam categorizadas ` +
+      `por ${matchedRules} regras. ${remaining.length} continuam sem categoria.`,
+  );
+
+  // What is left is the honest part: the descriptions nobody taught the system yet.
+  const rest = new Map<string, number>();
+  for (const row of remaining) {
+    const key = normalizeDescription(row.description).split(" ").slice(0, 3).join(" ");
+    rest.set(key, (rest.get(key) ?? 0) + 1);
+  }
+  console.log("\nO que sobra, por frequência:");
+  for (const [label, count] of [...rest].sort((a, b) => b[1] - a[1]).slice(0, 12)) {
+    console.log(`  ${String(count).padStart(4)}  ${label}`);
+  }
+
+  if (!APPLY) {
+    console.log(`\n${DIM}nada foi gravado. Rode com --aplicar para criar as regras.${RESET}`);
+  } else {
+    let created = 0;
+    for (const proposal of proposals) {
+      const category = byCode.get(proposal.code);
+      if (!category) continue;
+
+      // `is not distinct from` e não `=`, porque `direction` é nulo nas regras que valem
+      // para os dois sentidos, e `null = null` é nulo em SQL — a comparação simples deixaria
+      // toda regra sem sentido declarado passar por inexistente e duplicar a cada execução.
+      //
+      // O sentido entra na chave pelo mesmo motivo da dedup lá em cima (D122): sem ele, uma
+      // regra de entrada cujo texto já existe como saída **nunca é criada**, e o script
+      // reporta "0 regras criadas" sem dizer que descartou alguma.
+      const exists = await sql`
+        select 1 from categorization_rules
+        where entity_id = ${entity.id}
+          and pattern = ${proposal.pattern}
+          and direction is not distinct from ${proposal.direction}
+        limit 1`;
+      if (exists.length > 0) continue;
+
+      await sql`
+        insert into categorization_rules
+          (entity_id, priority, match_type, pattern, category_id, direction, active)
+        values (${entity.id}, ${proposal.source === "extrato" ? 50 : 100}, 'contains',
+                ${proposal.pattern}, ${category.id}, ${proposal.direction}, true)`;
+      created += 1;
+    }
+    console.log(`\n${GREEN}${created} regras criadas.${RESET} Use “Categorizar” na tela de Regras.`);
+  }
+} finally {
+  await sql.end();
+}

@@ -17,6 +17,67 @@ import { listStaged, type StagedTransaction } from "@/lib/data/imports";
 /** Where a recognised person's salary lands, by chart-of-accounts code. */
 const PAYROLL_CODE = "6.02";
 
+/**
+ * As contas que o espelho de competência assina pelo sentido — as mesmas de
+ * `planCashMirror`. O motor usa isso para não deixar o histórico pôr uma entrada em conta
+ * de custo (D83).
+ */
+const COST_KINDS = ["cost", "expense", "tax"];
+
+/** O outro lado da mesma trava: o histórico não põe saída em conta de receita (D99). */
+const REVENUE_KINDS = ["revenue"];
+
+/**
+ * Ramo que o banco atribui à compra de cartão → conta, por código (D130).
+ *
+ * **Só entra ramo que se provou**, medido contra as 452 linhas de cartão já decididas:
+ *
+ * | ramo | virou | acerto |
+ * |---|---|---|
+ * | `VEÍCULOS` | `9.04` Uber e transporte | 158 de 159 |
+ * | `ALIMENTAÇÃO` | `9.03` Alimentação | 24 de 25 |
+ *
+ * **E `DIVERSOS` fica de fora de propósito**, apesar de ser o ramo mais frequente: as 114
+ * linhas dele estão espalhadas por treze contas, e a maior fatia é 35%. Um ramo que não
+ * concentra não é pista, é ruído com aparência de dado — e mapeá-lo encheria a tela de
+ * sugestões erradas com ar de fundamentadas.
+ *
+ * A mesma medição desqualifica o campo como veredito: `TURISMO E ENTRETENIM` traz quatorze
+ * linhas de **Wix**, mais Adobe e Salesforce. Quem classifica é o credenciador, e ele
+ * descreve o lojista, não o gasto.
+ *
+ * ## Esta tabela é de setembro, e tabela não se remede sozinha
+ *
+ * **`npm run ramos` refaz a medição contra o razão de hoje** e avisa quando um ramo do mapa
+ * deixa de concentrar. Ele existe porque o número acima envelheceu sem ninguém ver: o
+ * `VESTUÁRIO` abaixo entrou por decisão do Andre e hoje está **1 de 2** — a D138 descobriu
+ * que uma das duas linhas era um hotel que o credenciador cadastrou como loja de roupa.
+ *
+ * Antes de mexer neste mapa, rode o comando. Ele mede; quem decide é o Andre.
+ */
+export const MERCHANT_CATEGORY_CODES: Record<string, string> = {
+  "VEÍCULOS": "9.04",
+  "ALIMENTAÇÃO": "9.03",
+  /**
+   * **Este não é medido, é declarado** — e a diferença importa para quem ler depois.
+   *
+   * `VEÍCULOS` e `ALIMENTAÇÃO` acima ganharam lugar por acerto contra o histórico. O
+   * `VESTUÁRIO` não tinha **um único precedente** no livro: nunca se comprou roupa aqui. O
+   * que o põe no mapa é uma regra que o Andre deu em 10/09/2026, sobre o ramo inteiro e não
+   * sobre as duas linhas que existiam — *"os pagamentos em roupas são brindes"* (D132).
+   *
+   * Declarado vale mais que medido, porque quem decide é ele. Mas a proveniência fica
+   * escrita: se um dia isto errar, o lugar de olhar é a regra, não a amostra.
+   *
+   * → **E errou.** Medido em 24/09 por `npm run ramos`: das duas linhas de `VESTUÁRIO`, uma
+   * está em `10.02` e a outra em `9.02` — 50%. A que saiu foi o `HS ANALIA FR-CT`, hotel
+   * que o credenciador cadastrou como loja de roupa (D138). A regra do Andre não está
+   * errada; o campo é que não distingue roupa comprada de hotel com nome de loja. O mapa
+   * fica até ele decidir, e o comando passa a gritar toda vez que rodar.
+   */
+  "VESTUÁRIO": "10.02",
+};
+
 export async function loadEngineInput(entityIds: string[]): Promise<EngineInput> {
   const [rules, history, people, categories] = await Promise.all([
     listRules(entityIds),
@@ -26,7 +87,35 @@ export async function loadEngineInput(entityIds: string[]): Promise<EngineInput>
   ]);
 
   const payroll = categories.find((category) => category.code === PAYROLL_CODE);
-  return { rules, history, people, payrollCategoryId: payroll?.id ?? null };
+  const costCategoryIds = new Set(
+    categories
+      .filter((category) => COST_KINDS.includes(category.kind))
+      .map((category) => category.id),
+  );
+
+  const revenueCategoryIds = new Set(
+    categories
+      .filter((category) => REVENUE_KINDS.includes(category.kind))
+      .map((category) => category.id),
+  );
+
+  // Um código que não existe no plano desta entidade simplesmente não entra no mapa: a
+  // camada some para esse ramo em vez de apontar para nada.
+  const merchantCategories = new Map<string, string>();
+  for (const [ramo, code] of Object.entries(MERCHANT_CATEGORY_CODES)) {
+    const category = categories.find((c) => c.code === code);
+    if (category) merchantCategories.set(ramo, category.id);
+  }
+
+  return {
+    rules,
+    history,
+    people,
+    payrollCategoryId: payroll?.id ?? null,
+    costCategoryIds,
+    revenueCategoryIds,
+    merchantCategories,
+  };
 }
 
 export type SuggestionResult = {
@@ -70,6 +159,55 @@ export async function suggestForImport(
   return { suggestions, undecided: staged.length - suggestions.size };
 }
 
+/**
+ * O ramo, sem a cidade, de dentro do `detalhe` da fatura (D130).
+ *
+ * `ALIMENTAÇÃO .SAO PAULO` e `ALIMENTAÇÃO .GASPAR` são o mesmo ramo em lugares diferentes,
+ * e mapear com a cidade dentro daria um mapa que nunca casa duas vezes. Então o que vale é
+ * o que vem **antes do primeiro ponto**.
+ *
+ * O ponto é o separador, e ele **nem sempre tem espaço antes** — medido nos 101 valores
+ * distintos que a fatura já produziu:
+ *
+ * ```
+ * ALIMENTAÇÃO .SAO PAULO            espaço antes do ponto
+ * TURISMO E ENTRETENIM.SAO PAULO    colado, e é sempre este ramo
+ * DIVERSOS .                        cidade vazia, ramo mesmo assim
+ * ```
+ *
+ * Cortar em `" ."` — como se fazia — partia o primeiro e **não partia o segundo**: cada
+ * cidade virava um ramo próprio, e `TURISMO E ENTRETENIM` nunca existia como chave. Eram
+ * catorze pseudo-ramos de uma linha cada, num campo que tem 46 linhas desse ramo só.
+ *
+ * ## E metade do campo não é ramo nenhum
+ *
+ * Compra internacional usa o mesmo `detalhe` para a conversão, e sobra do outro lado:
+ *
+ * ```
+ * SAN FRANCISCO 1.848,24 BRL 366,21 · Dólar de Conversão R$ 5,36
+ * Total de outros lançamentos - 39.089,44
+ * BARUERI                           cidade sozinha, sem ramo
+ * ```
+ *
+ * Nenhuma delas é ramo, e antes todas voltavam como se fossem — inclusive `SAO PAULO`, que
+ * tinha 7 linhas fingindo ser uma categoria de lojista. O que as separa é barato e não
+ * depende de lista: **ramo não tem dígito dentro**, e onde não há ponto não há o separador
+ * que faz um ramo existir. As duas condições juntas classificam os 101 valores sem exceção.
+ *
+ * Extrato de conta corrente não tem `detalhe` nenhum e devolve nulo — a camada some.
+ */
+export function merchantCategoryOf(raw: Record<string, unknown> | null): string | null {
+  const detalhe = raw?.["detalhe"];
+  if (typeof detalhe !== "string") return null;
+  // Sem ponto não há separador, e o que está ali é cidade ou conversão de câmbio.
+  const corte = detalhe.indexOf(".");
+  if (corte < 0) return null;
+  const ramo = detalhe.slice(0, corte).trim().toUpperCase();
+  // Dígito denuncia valor, telefone ou câmbio — `SAN FRANCISCO 1` antes de `.848,24`.
+  if (ramo === "" || /\d/.test(ramo)) return null;
+  return ramo;
+}
+
 function subjectOfStaged(row: StagedTransaction, accountId: string) {
   return {
     description: row.description,
@@ -78,9 +216,17 @@ function subjectOfStaged(row: StagedTransaction, accountId: string) {
     accountId,
     counterpartyTaxId: row.counterpartyTaxId,
     counterpartyName: row.counterpartyName,
+    merchantCategory: merchantCategoryOf(row.rawJson),
   };
 }
 
+/**
+ * O razão não guarda o `raw_json` — ele fica no staging —, então esta camada não alcança
+ * linha que já virou lançamento. É consequência do desenho, não esquecimento: o `raw` é
+ * matéria-prima da importação, e o razão guarda o que foi decidido, não o que o arquivo
+ * dizia. Quem chega pela importação tem a pista; quem já está no razão se resolve por
+ * regra, como sempre.
+ */
 function subjectOfEntry(entry: CashEntry) {
   return {
     description: entry.description,

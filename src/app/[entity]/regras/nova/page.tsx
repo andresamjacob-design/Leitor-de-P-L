@@ -64,6 +64,9 @@ export default async function NewRulePage({
         matchType: proposal.matchType,
         pattern: proposal.pattern,
         counterpartyTaxId: proposal.counterpartyTaxId,
+        // A rule born from a movement inherits its direction: the user meant "this kind of
+        // payment", not "this word anywhere".
+        direction: entry.direction,
         amountMin: null,
         amountMax: null,
         accountId: null,

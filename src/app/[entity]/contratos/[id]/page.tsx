@@ -5,6 +5,7 @@ import { Amount, Table, TableScroll, Td, Th } from "@/components/ui/table";
 import { ContractForm } from "../contract-form";
 import { PocForm, RunRecognition } from "../poc-form";
 import { getClient, listClients } from "@/lib/data/clients";
+import { listCategories } from "@/lib/data/categories";
 import {
   getContract,
   listPocReports,
@@ -35,9 +36,10 @@ export default async function ContractPage({
 
   const today = periodOf(todayInSaoPaulo());
 
-  const [client, clients, reports, recognition, invoices, receipts] = await Promise.all([
+  const [client, clients, categories, reports, recognition, invoices, receipts] = await Promise.all([
     getClient(contract.clientId),
     listClients([contract.entityId], { includeInactive: true }),
+    listCategories([contract.entityId]),
     listPocReports(contract.id),
     listRecognitionForContract(contract.id),
     listInvoices([contract.entityId], { contractId: contract.id }),
@@ -249,7 +251,13 @@ export default async function ContractPage({
             — ele guarda a versão anterior e não reescreve os meses já reconhecidos.
           </p>
         )}
-        <ContractForm slug={slug} contract={contract} clients={clients} amend={amending} />
+        <ContractForm
+          slug={slug}
+          contract={contract}
+          clients={clients}
+          revenueCategories={categories.filter((category) => category.kind === "revenue")}
+          amend={amending}
+        />
       </section>
     </>
   );

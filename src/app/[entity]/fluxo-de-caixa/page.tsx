@@ -1,18 +1,24 @@
+import { Fragment } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { EmptyState } from "@/components/empty-state";
 import { ExportLinks } from "@/components/export-links";
+import { FonteToggle } from "@/components/fonte-toggle";
+import { PlanilhaTable } from "@/components/planilha-table";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
 import { Amount, Table, TableScroll, Td, Th } from "@/components/ui/table";
-import { loadCashFlow } from "@/lib/data/cash-flow-report";
+import { groupCashFlowRows, loadCashFlow, SOCIOS_LABEL } from "@/lib/data/cash-flow-report";
+import { preencherComORazao } from "@/lib/fluxo-da-planilha";
+import { loadPlanilha } from "@/lib/data/planilha";
+import { ultimoDiaComExtrato } from "@/lib/data/cash-entries";
 import { resolveScope } from "@/lib/entities";
 import { daysInMonth, formatPeriodShort, todayInSaoPaulo } from "@/lib/dates";
 import { formatMoney } from "@/lib/money";
 import type { CashFlowRow, CashFlowSection } from "@/lib/cash-flow";
 
-type Search = { de?: string; ate?: string };
+type Search = { de?: string; ate?: string; fonte?: string };
 
 function monthEnd(period: string): string {
   return `${period.slice(0, 8)}${String(daysInMonth(period)).padStart(2, "0")}`;
@@ -32,6 +38,86 @@ export default async function CashFlowPage({
 
   const entities = scope.kind === "consolidated" ? scope.entities : [scope.entity];
   const year = todayInSaoPaulo().slice(0, 4);
+
+  // A aba mostra a planilha de fluxo do Andre por padrão (D141) — Income, Expenses e o
+  // fechamento da Summary, na ordem dele. O cálculo pelo extrato continua a um clique: é ele
+  // que bate com o banco ao centavo, e a cópia não o substitui.
+  const planilha =
+    scope.kind === "consolidated" ? null : await loadPlanilha(scope.entity.id, "fluxo");
+  const temPlanilha = planilha !== null && planilha.linhas.length > 0;
+
+  if (planilha && temPlanilha && search.fonte !== "razao") {
+    // O fluxo pronto (D146): os meses depois do último que a planilha tem são preenchidos com
+    // o razão, nas mesmas linhas — mas só até o último mês que tem extrato. Mês sem extrato
+    // não é mês de movimento zero; é mês que ainda não chegou.
+    const ultimoCopiado = Math.max(
+      -1,
+      ...planilha.linhas.flatMap((linha) =>
+        linha.valores.flatMap((valor, i) => (valor === null ? [] : [i])),
+      ),
+    );
+    const { report: doRazao } = await loadCashFlow({
+      entityIds: entities.map((entity) => entity.id),
+      from: `${year}-01-01`,
+      to: `${year}-12-31`,
+    });
+    const comMovimento = doRazao.periods
+      .map((period, i) => ({ mes: Number(period.slice(5, 7)) - 1, i }))
+      .filter(({ i }) => doRazao.sections.some((secao) => secao.totals[i] !== 0n))
+      .map(({ mes }) => mes);
+    const ultimoComExtrato = Math.max(-1, ...comMovimento);
+    const mesesDoApp = Array.from(
+      { length: Math.max(0, ultimoComExtrato - ultimoCopiado) },
+      (_, k) => ultimoCopiado + 1 + k,
+    );
+    // O último mês com extrato quase sempre está pela metade: o cabeçalho diz até que dia,
+    // para cinco dias de outubro não serem lidos como outubro inteiro.
+    const parcialAte: Record<number, string> = {};
+    const ultimoDia = await ultimoDiaComExtrato(entities.map((entity) => entity.id));
+    if (ultimoDia && mesesDoApp.includes(Number(ultimoDia.slice(5, 7)) - 1)) {
+      const mes = Number(ultimoDia.slice(5, 7)) - 1;
+      const fim = monthEnd(`${ultimoDia.slice(0, 7)}-01`);
+      if (ultimoDia < fim) parcialAte[mes] = `${ultimoDia.slice(8, 10)}/${ultimoDia.slice(5, 7)}`;
+    }
+    const linhasMostradas =
+      mesesDoApp.length > 0
+        ? preencherComORazao(planilha.linhas, doRazao, mesesDoApp, SOCIOS_LABEL)
+        : planilha.linhas;
+
+    return (
+      <>
+        <PageHeader
+          title="Fluxo de caixa"
+          description="A sua planilha de fluxo, copiada linha a linha e na mesma ordem."
+        />
+        <FonteToggle slug={slug} pagina="fluxo-de-caixa" atual="planilha" />
+        <p className="mb-4 text-xs text-muted">
+          Cópia de <span className="font-medium">{planilha.arquivo}</span> — abas Income,
+          Expenses e Summary —, feita em{" "}
+          {planilha.copiadaEm?.slice(0, 10).split("-").reverse().join("/")}. Os números são os
+          seus, sem recálculo; os totais são os que a própria planilha declara. Quando a planilha
+          mudar, rode <code>npm run importar:planilhas -- --aplicar</code> de novo.
+        </p>
+        {mesesDoApp.length > 0 ? (
+          <p className="mb-4 text-xs text-muted">
+            <span className="text-accent">Os meses marcados “· app”</span> não estão na sua
+            planilha: o app calculou a partir dos extratos e faturas enviados, e pôs nas mesmas
+            linhas. Os totais são os do banco. Duas ressalvas: o app não separa{" "}
+            <em>Time - Interno</em> de <em>Time - Freelancers</em> (vai tudo na primeira), e
+            divide <em>Ongoing</em> e <em>Projetos</em> pelo contrato de cada cliente, que às vezes
+            não é como você divide — o total de <em>Sales</em> é o mesmo. O que não tem linha na
+            sua planilha aparece em “Outras”.
+          </p>
+        ) : null}
+        <PlanilhaTable
+          linhas={linhasMostradas}
+          ano={year}
+          mesesCalculados={mesesDoApp}
+          parcialAte={parcialAte}
+        />
+      </>
+    );
+  }
 
   const from = /^\d{4}-\d{2}$/.test(search.de ?? "") ? `${search.de}-01` : `${year}-01-01`;
   const toMonth = /^\d{4}-\d{2}$/.test(search.ate ?? "") ? `${search.ate}-01` : `${year}-12-01`;
@@ -86,6 +172,33 @@ export default async function CashFlowPage({
     return `/${slug}/lancamentos?${query.toString()}`;
   }
 
+  function rowTr(sectionKey: string, row: CashFlowRow) {
+    return (
+      <tr key={`${sectionKey}-${row.categoryId ?? "none"}`}>
+        <Td className="whitespace-nowrap">
+          <span className="text-xs text-muted tabular">{row.code ?? "—"}</span> {row.label}
+        </Td>
+        {row.values.map((value, index) => (
+          <Td key={periods[index]} numeric>
+            {value === 0n ? (
+              <span className="text-muted">—</span>
+            ) : (
+              <Link
+                href={drillDown(periods[index] as string, row)}
+                className="hover:text-accent hover:underline"
+              >
+                <Amount value={value} format={formatMoney} />
+              </Link>
+            )}
+          </Td>
+        ))}
+        <Td numeric className="font-medium">
+          <Amount value={row.total} format={formatMoney} />
+        </Td>
+      </tr>
+    );
+  }
+
   function sectionRows(section: CashFlowSection, label: string) {
     if (section.rows.length === 0) return null;
 
@@ -100,31 +213,65 @@ export default async function CashFlowPage({
             {label}
           </Th>
         </tr>
-        {section.rows.map((row) => (
-          <tr key={`${section.key}-${row.categoryId ?? "none"}`}>
-            <Td className="whitespace-nowrap">
-              <span className="text-xs text-muted tabular">{row.code ?? "—"}</span>{" "}
-              {row.label}
+        {section.rows.map((row) => rowTr(section.key, row))}
+        <tr className="font-medium">
+          <Td>Total de {label.toLowerCase()}</Td>
+          {section.totals.map((value, index) => (
+            <Td key={periods[index]} numeric>
+              <Amount value={value} format={formatMoney} />
             </Td>
-            {row.values.map((value, index) => (
-              <Td key={periods[index]} numeric>
-                {value === 0n ? (
-                  <span className="text-muted">—</span>
-                ) : (
-                  <Link
-                    href={drillDown(periods[index] as string, row)}
-                    className="hover:text-accent hover:underline"
-                  >
-                    <Amount value={value} format={formatMoney} />
-                  </Link>
-                )}
+          ))}
+          <Td numeric>
+            <Amount value={section.total} format={formatMoney} />
+          </Td>
+        </tr>
+      </>
+    );
+  }
+
+  /**
+   * As saídas ganham a mesma cara da aba `Expenses` da planilha do Andre: grupo, as linhas
+   * de dentro, subtotal — em vez da lista achatada que `sectionRows` mostra para entrada e
+   * transferência. `groupCashFlowRows` só reúne visualmente; o total do grupo é a soma das
+   * mesmas linhas, e o que não pertence a grupo nenhum continua aparecendo, sem grupo.
+   */
+  function outflowRows(section: CashFlowSection, label: string) {
+    if (section.rows.length === 0) return null;
+    const { groups, ungrouped } = groupCashFlowRows(section.rows, periods.length);
+
+    return (
+      <>
+        <tr>
+          <Th
+            scope="colgroup"
+            colSpan={periods.length + 2}
+            className="bg-surface text-xs uppercase tracking-wide"
+          >
+            {label}
+          </Th>
+        </tr>
+        {groups.map((group) => (
+          <Fragment key={`${section.key}-grupo-${group.label}`}>
+            <tr>
+              <Th scope="rowgroup" colSpan={periods.length + 2} className="text-xs font-medium">
+                {group.label}
+              </Th>
+            </tr>
+            {group.rows.map((row) => rowTr(section.key, row))}
+            <tr className="text-sm text-muted">
+              <Td className="pl-4">Subtotal — {group.label}</Td>
+              {group.totals.map((value, index) => (
+                <Td key={periods[index]} numeric>
+                  <Amount value={value} format={formatMoney} />
+                </Td>
+              ))}
+              <Td numeric>
+                <Amount value={group.total} format={formatMoney} />
               </Td>
-            ))}
-            <Td numeric className="font-medium">
-              <Amount value={row.total} format={formatMoney} />
-            </Td>
-          </tr>
+            </tr>
+          </Fragment>
         ))}
+        {ungrouped.map((row) => rowTr(section.key, row))}
         <tr className="font-medium">
           <Td>Total de {label.toLowerCase()}</Td>
           {section.totals.map((value, index) => (
@@ -155,6 +302,8 @@ export default async function CashFlowPage({
           to={toMonth.slice(0, 7)}
         />
       </div>
+
+      {temPlanilha ? <FonteToggle slug={slug} pagina="fluxo-de-caixa" atual="razao" /> : null}
 
       {rangeForm}
 
@@ -205,7 +354,7 @@ export default async function CashFlowPage({
               </tr>
 
               {sectionRows(inflow, "Entradas")}
-              {sectionRows(outflow, "Saídas")}
+              {outflowRows(outflow, "Saídas")}
 
               <tr className="font-medium">
                 <Td>Resultado de caixa</Td>

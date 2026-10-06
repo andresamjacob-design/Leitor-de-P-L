@@ -27,6 +27,7 @@ function rule(pattern: string, categoryId: string, extra: Partial<Rule> = {}): R
     matchType: "contains",
     pattern,
     counterpartyTaxId: null,
+    direction: null,
     amountMin: null,
     amountMax: null,
     accountId: null,

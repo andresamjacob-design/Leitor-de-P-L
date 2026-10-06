@@ -102,23 +102,31 @@ export async function accountBalances(
   if (accounts.length === 0) return balances;
 
   const supabase = await createClient();
-  let query = supabase
-    .from("cash_entries")
-    .select("account_id, amount, direction")
-    .in(
-      "account_id",
-      accounts.map((account) => account.id),
-    );
-  if (until) query = query.lte("occurred_on", until);
+  // Paginado: o PostgREST devolve no máximo mil linhas por pedido, e o `.limit(50000)` que
+  // estava aqui não passa por cima disso — com mais de mil lançamentos o saldo sairia errado
+  // sem aviso. A aprovação automática (D145) decide pelo saldo, então ele tem de ser inteiro.
+  const PAGINA = 1000;
+  for (let inicio = 0; ; inicio += PAGINA) {
+    let query = supabase
+      .from("cash_entries")
+      .select("id, account_id, amount, direction")
+      .in(
+        "account_id",
+        accounts.map((account) => account.id),
+      );
+    if (until) query = query.lte("occurred_on", until);
 
-  const { data, error } = await query.limit(50000);
-  if (error) throw new Error(`não foi possível calcular os saldos: ${error.message}`);
+    const { data, error } = await query.order("id").range(inicio, inicio + PAGINA - 1);
+    if (error) throw new Error(`não foi possível calcular os saldos: ${error.message}`);
 
-  for (const row of data as { account_id: string; amount: string; direction: "in" | "out" }[]) {
-    const current = balances.get(row.account_id);
-    if (current === undefined) continue;
-    const value = fromNumeric(row.amount);
-    balances.set(row.account_id, current + (row.direction === "in" ? value : -value));
+    const pagina = data as { account_id: string; amount: string; direction: "in" | "out" }[];
+    for (const row of pagina) {
+      const current = balances.get(row.account_id);
+      if (current === undefined) continue;
+      const value = fromNumeric(row.amount);
+      balances.set(row.account_id, current + (row.direction === "in" ? value : -value));
+    }
+    if (pagina.length < PAGINA) break;
   }
 
   return balances;

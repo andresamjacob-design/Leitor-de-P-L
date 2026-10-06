@@ -121,31 +121,50 @@ export async function listCashEntries(filter: CashEntryFilter): Promise<CashEntr
   if (filter.entityIds.length === 0) return [];
 
   const supabase = await createClient();
-  let query = supabase.from("cash_entries").select(COLUMNS).in("entity_id", filter.entityIds);
+  // Uma consulta nova por página: o construtor do Supabase é mutável, e reaproveitá-lo
+  // acumularia `order` e `range` de uma página na outra.
+  const montar = () => {
+    let query = supabase.from("cash_entries").select(COLUMNS).in("entity_id", filter.entityIds);
 
-  if (filter.from) query = query.gte("occurred_on", filter.from);
-  if (filter.to) query = query.lte("occurred_on", filter.to);
-  if (filter.accountIds && filter.accountIds.length > 0) {
-    query = query.in("account_id", filter.accountIds);
-  }
-  if (filter.categoryId === "none") query = query.is("category_id", null);
-  else if (filter.categoryId) query = query.eq("category_id", filter.categoryId);
-  else if (filter.categoryIds && filter.categoryIds.length > 0) {
-    query = query.in("category_id", filter.categoryIds);
-  }
-  if (filter.direction) query = query.eq("direction", filter.direction);
-  if (filter.search) {
-    const term = filter.search.replace(/[%,]/g, " ").trim();
-    if (term) query = query.ilike("description", `%${term}%`);
-  }
+    if (filter.from) query = query.gte("occurred_on", filter.from);
+    if (filter.to) query = query.lte("occurred_on", filter.to);
+    if (filter.accountIds && filter.accountIds.length > 0) {
+      query = query.in("account_id", filter.accountIds);
+    }
+    if (filter.categoryId === "none") query = query.is("category_id", null);
+    else if (filter.categoryId) query = query.eq("category_id", filter.categoryId);
+    else if (filter.categoryIds && filter.categoryIds.length > 0) {
+      query = query.in("category_id", filter.categoryIds);
+    }
+    if (filter.direction) query = query.eq("direction", filter.direction);
+    if (filter.search) {
+      const term = filter.search.replace(/[%,]/g, " ").trim();
+      if (term) query = query.ilike("description", `%${term}%`);
+    }
+    return query;
+  };
 
-  const { data, error } = await query
-    .order("occurred_on", { ascending: false })
-    .order("created_at", { ascending: false })
-    .limit(filter.limit ?? 500);
+  // Paginado (D147): o PostgREST devolve no máximo mil linhas por pedido, e o `limit: 20000`
+  // do fluxo não passa por cima disso. Com a ordem decrescente, o que caía fora eram os
+  // lançamentos **mais antigos** — os que formam o saldo de abertura —, e o fluxo deixaria
+  // de bater com o banco sem aviso no dia em que a conta passasse de mil linhas. O `id` no
+  // fim da ordem é o que impede duas páginas de repetir ou pular linhas de mesma data.
+  const limite = filter.limit ?? 500;
+  const PAGINA = 1000;
+  const linhas: CashEntryRow[] = [];
+  for (let inicio = 0; inicio < limite; inicio += PAGINA) {
+    const { data, error } = await montar()
+      .order("occurred_on", { ascending: false })
+      .order("created_at", { ascending: false })
+      .order("id")
+      .range(inicio, Math.min(inicio + PAGINA, limite) - 1);
 
-  if (error) throw new Error(`não foi possível carregar os lançamentos: ${error.message}`);
-  return (data as CashEntryRow[]).map(toEntry);
+    if (error) throw new Error(`não foi possível carregar os lançamentos: ${error.message}`);
+    const pagina = data as CashEntryRow[];
+    linhas.push(...pagina);
+    if (pagina.length < Math.min(PAGINA, limite - inicio)) break;
+  }
+  return linhas.map(toEntry);
 }
 
 export async function getCashEntry(id: string): Promise<CashEntry | null> {
@@ -541,4 +560,22 @@ async function syncTransferCounterpart(
     throw new Error(`não foi possível parear a transferência: ${pairError.message}`);
   }
   return [];
+}
+
+/**
+ * O último dia com lançamento numa conta de caixa (D146): até onde os extratos enviados
+ * chegam. A aba Fluxo usa para dizer que o mês corrente está pela metade.
+ */
+export async function ultimoDiaComExtrato(entityIds: string[]): Promise<IsoDate | null> {
+  if (entityIds.length === 0) return null;
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("cash_entries")
+    .select("occurred_on, accounts!inner(type)")
+    .in("entity_id", entityIds)
+    .in("accounts.type", ["bank", "cash", "investment"])
+    .order("occurred_on", { ascending: false })
+    .limit(1);
+  if (error) throw new Error(`não foi possível ler o último dia do extrato: ${error.message}`);
+  return ((data ?? [])[0] as { occurred_on: IsoDate } | undefined)?.occurred_on ?? null;
 }
