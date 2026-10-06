@@ -239,7 +239,9 @@ planilha** até o último mês fechado e **calcula** só os meses seguintes, a p
   sempre; isso foi corrigido em `255a3b1`.
 
 Commits desta sessão, em ordem: `1719857`, `cea25bc`, `44948ff`, `3f64b7b`, `3b34026`,
-`1bf5993`, `0f8afe4`, `02db0ad`, `d947e41`, `255a3b1`. **Os 10 ainda não foram empurrados.**
+`1bf5993`, `0f8afe4`, `02db0ad`, `d947e41`, `255a3b1`, `f3d865b`, `37e7a8d` e, de 06/10,
+`750182d` (D147). **Todos empurrados em 06/10/2026** — `origin/worktree-auto-categorizacao`
+foi de `b6eab63` para `750182d`, conferido antes que nada de `docs/reference/` ou `.env` subia.
 
 ### A sessão de 01–22/09 (D126–D138)
 
