@@ -614,8 +614,8 @@ categorizadas, o custo cresce e o resultado cai, **sem o caixa mudar um centavo*
    "Outras entradas/saídas", e por isso setembro mostra R$ 180.957,93 em "Outras entradas".
    | Linha | Valor | Palpite, a confirmar com ele |
    |---|---|---|
-   | `FIN COMPRA C2026…` (03/09 e 24/09) | R$ 180.957,93 de entrada | câmbio da receita Salesforce, `3.03`? |
-   | `BUSINESS 7502-5964` (08/09 e 05/10) | R$ 49.555,84 de saída | fatura de um cartão final 5964 que o app não conhece: `99.02`, e cadastrar o cartão |
+   | `FIN COMPRA C2026…` (03/09 e 24/09) | R$ 180.957,93 de entrada | **não é** o padrão da Salesforce (essa entra como `OP REC EXT`); sem nome nem CNPJ no extrato — perguntar ao Andre |
+   | `BUSINESS 7502-5964` (08/09 e 05/10) | R$ 49.555,84 de saída | **`99.02`, conferido:** é o cartão Empresas 5780 com o código do Itaú trocado (antes `7502-5632`). 08/09 = fatura até 25/08 (R$ 50.233,55 − crédito de R$ 31.966,08 da fatura de julho, estornos Salesforce); 05/10 = fatura até ~23/09, **que falta enviar** |
    | `AMERICAN AIR*` | R$ 22.314,20 | passagem, `9.01`? |
    | `LOBBY TECNOLOGIA` | R$ 7.001,50 | brindes? |
    | `REVERSAO DE CREDITO` | R$ 1.394,43 | sem palpite |
