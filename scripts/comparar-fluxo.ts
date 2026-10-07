@@ -55,7 +55,7 @@ import { loadEnvLocal } from "./load-env.ts";
 import { contasDaLinha, normalizarRotulo as normalizar } from "@/lib/linhas-da-planilha";
 import { buildCashFlow, periodRange, type FlowEntry, type FlowCategory } from "@/lib/cash-flow";
 import { quebrarFaturas, type Fatura, type Pagamento } from "@/lib/card-bills";
-import { GROUP_OF_CODE, SOCIOS_LABEL } from "@/lib/data/cash-flow-report";
+import { BALANCE_ONLY_CODES, GROUP_OF_CODE, SOCIOS_LABEL } from "@/lib/data/cash-flow-report";
 import { readXlsx } from "@/lib/import/xlsx";
 import { formatBRL, fromNumeric, type Cents } from "@/lib/money";
 import type { CategoryKind } from "@/lib/ledger-types";
@@ -69,7 +69,9 @@ const BOLD = "\u001b[1m";
 const DIM = "\u001b[2m";
 const RESET = "\u001b[0m";
 
-const PLANILHA = "docs/reference/Fluxo de Caixa - 2026.xlsx";
+// A versão que as abas mostram (D141). Até 07/10 isto lia a de 24/08, e julho aparecia com
+// R$ 6.836,54 de entrada a mais na planilha — diferença do arquivo velho, não do app (D149).
+const PLANILHA = "docs/reference/Fluxo de Caixa - 2026 (24-09).xlsx";
 /** `Jan` é a coluna 5 da aba `Expenses`; daí em diante, um mês por coluna. */
 const PRIMEIRA_COLUNA = 5;
 /** `Jan` é a coluna 4 da aba `Summary`. */
@@ -223,6 +225,9 @@ try {
     // Convenção 2 (D108): a contrapartida da `99.02` ficou fora do relatório.
     oneLeggedTransferCategoryIds: new Set(
       categories.filter((c) => c.code === CARD_BILL_CODE).map((c) => c.id),
+    ),
+    balanceOnlyCategoryIds: new Set(
+      categories.filter((c) => BALANCE_ONLY_CODES.includes(c.code)).map((c) => c.id),
     ),
     // D112: pró-labore e distribuição viram uma linha só no caixa.
     mergedRows:

@@ -45,6 +45,13 @@ const SOCIOS_CODES = ["6.11", "99.04"];
 export const SOCIOS_LABEL = "Sócios — pró-labore e distribuição";
 
 /**
+ * Contas que mexem no saldo do fluxo sem entrar em Income nem em Expenses (D149): o
+ * rendimento que fica dentro do CDB. É como a planilha do Andre trata — em agosto ele somou
+ * o rendimento direto no saldo final. Na DRE continua sendo receita financeira.
+ */
+export const BALANCE_ONLY_CODES = ["11.04"];
+
+/**
  * Código de conta → grupo do fluxo, lido da coluna B da aba `Expenses` da
  * `Fluxo de Caixa - 2026.xlsx` do Andre, linha por linha. Isto não soma conta nenhuma —
  * é agrupamento visual, e o total de cada grupo é a soma das linhas que já existiam
@@ -264,6 +271,12 @@ export async function loadCashFlow({
       .map((category) => categoryKey.get(category.id) ?? category.id),
   );
 
+  const balanceOnlyCategoryIds = new Set(
+    categories
+      .filter((category) => BALANCE_ONLY_CODES.includes(category.code))
+      .map((category) => categoryKey.get(category.id) ?? category.id),
+  );
+
   const sociosIds = new Set(
     categories
       .filter((category) => SOCIOS_CODES.includes(category.code))
@@ -340,6 +353,7 @@ export async function loadCashFlow({
     entries: paraOFluxo,
     categories: flowCategories,
     oneLeggedTransferCategoryIds,
+    balanceOnlyCategoryIds,
     mergedRows,
   });
 

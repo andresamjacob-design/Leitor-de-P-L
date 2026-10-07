@@ -126,7 +126,7 @@ describe("preencherComORazao", () => {
   });
 
   it("sem transferência que sobre, não aparece linha de transferência", () => {
-    expect(achar("Transferências e saldo de abertura de conta")).toBeUndefined();
+    expect(achar("Transferências, rendimento e saldo de abertura")).toBeUndefined();
   });
 
   it("a abertura de conta no mês aparece antes do Ending balance (D147)", () => {
@@ -135,7 +135,7 @@ describe("preencherComORazao", () => {
       sections: [entradas, saidas, secao("transfer", [row(null, "Saldo de abertura — GSJ", 0n, 19_000_00n)])],
     };
     const x = preencherComORazao(planilha, comAbertura, [SET], SOCIOS);
-    const i = x.findIndex((y) => y.rotulo === "Transferências e saldo de abertura de conta");
+    const i = x.findIndex((y) => y.rotulo === "Transferências, rendimento e saldo de abertura");
     expect(x[i]?.valores[SET]).toBe("19000.00");
     expect(x[i]?.calculado[SET]).toBe(true);
     expect(x[i + 1]?.rotulo).toBe("Ending balance");

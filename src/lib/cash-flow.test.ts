@@ -235,6 +235,21 @@ describe("buildCashFlow", () => {
     expect(result.closing[1]).toBe(parseMoney("29.100,00"));
   });
 
+  it("conta só de saldo vai para Transferências e não infla as entradas (D149)", () => {
+    const CDB = { id: "yield", code: "11.04", name: "Rendimento de aplicação", kind: "revenue" as const, sortOrder: 50 };
+    const result = buildCashFlow({
+      periods: periodRange("2026-09-01", "2026-09-30"),
+      accounts: [BANK],
+      entries: [entry("2026-09-10", "1.000,00", "in", "rev"), entry("2026-09-30", "57,25", "in", "yield")],
+      categories: [...CATEGORIES, CDB],
+      balanceOnlyCategoryIds: new Set(["yield"]),
+    });
+
+    expect(result.sections[0]?.totals[0]).toBe(parseMoney("1.000,00"));
+    expect(result.sections[2]?.totals[0]).toBe(parseMoney("57,25"));
+    expect(result.closing[0]).toBe(parseMoney("11.057,25"));
+  });
+
   it("intervalo vazio devolve um relatório vazio, não um erro", () => {
     const result = buildCashFlow({
       periods: [],

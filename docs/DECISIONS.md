@@ -3791,3 +3791,34 @@ mostra os candidatos com o câmbio e só divide o recebimento apontado por `--la
 Ensaiado em 18/09: Medika R$ 70.000, Harpix e ITA Educacional R$ 35.000 cada, Artium
 R$ 17.500, saldo inalterado. **Gravado em 07/10**, depois de o Andre confirmar: *"a 125 é o OP
 REC EXT de 18/09"*. Banco, ponte, RLS e `comparar:fluxo` conferidos de novo, sem mudança.
+
+### D149 — Rendimento do CDB fica fora do Income, e o comparador lê a planilha de 24/09
+O Andre em 07/10: *"a income tá maior em aproximadamente 7k"* — setembro. Era a D148: o
+rendimento do CDB (R$ 5.725,04 + R$ 1.732,12 = **R$ 7.457,16**) tinha entrado em `Interest
+Earned`, e o Andre nunca lançou rendimento como entrada — em agosto ele o somou direto no
+saldo final. Ele escolheu seguir a convenção dele.
+
+→ `balanceOnlyCategoryIds` no `buildCashFlow`, o mesmo tipo de chave que a D108 criou para a
+fatura do cartão: a `11.04` vai para Transferências, não para Entradas, e o fluxo pronto
+mostra a linha `Transferências, rendimento e saldo de abertura` antes do `Ending balance`. Na
+DRE continua receita financeira. `Interest Earned` volta a ficar vazia. Setembro: Total Income
+R$ 967.595,09 → **R$ 960.137,93**; saldo final inalterado, igual ao banco.
+
+**O comparador lia o arquivo errado.** O `comparar:fluxo` lia a planilha de 24/08, mantida pela
+D141 para não mudar números sem pedido; as abas mostram a de 24/09. Em julho isso inventava
+R$ 6.836,54 de entrada a mais na planilha e −R$ 218,88 de saída. Lendo a de 24/09:
+
+| | antes (24/08, jan–jul) | agora (24/09) |
+|---|---|---|
+| saídas, jan–jul | R$ 387,88 | **R$ 169,00** (só o estorno de tarifa de março) |
+| entradas, jan–jul | R$ 7.127,41 | **R$ 329,46** |
+| agosto | fora — era projeção | **entra**: saídas −R$ 1.299,99, entradas R$ 19.018,40 |
+
+Linhas e grupos agora somam 8 meses (R$ 117.827,14 e R$ 7.713,38) e não se comparam com os
+números de 7 meses antes — agosto entrou na conta.
+
+**A entrada de agosto que falta é a Hogrefe.** R$ 19.018,40 = os R$ 19.000 que a D138 já dizia
+terem ido para a conta da GSJacob em agosto, mais R$ 18,40. No app esse dinheiro é o saldo de
+abertura da GSJacob em 07/09 (D147); na planilha é receita de agosto. Os dois saldos batem com o
+banco; o que diverge é **em que mês e como** o dinheiro aparece. Mudar isso exige a data em
+agosto — o extrato de agosto da GSJacob.

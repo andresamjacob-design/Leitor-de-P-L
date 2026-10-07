@@ -169,9 +169,9 @@ export function preencherComORazao(
     }
 
     if (secao === "resumo" && original.rotulo === "Ending balance") {
-      // `Net savings` é entradas menos saídas; o saldo também anda por transferência que não
-      // se cancela dentro do relatório — hoje, só a abertura de uma conta no meio do ano
-      // (D147). Sem esta linha, o `Ending balance` pularia mais do que a soma explica.
+      // `Net savings` é entradas menos saídas; o saldo também anda pelo que não é uma coisa
+      // nem outra: a abertura de uma conta no meio do ano (D147) e o rendimento que fica no
+      // CDB (D149), que o Andre soma no saldo e não no Income. Sem esta linha, o `Ending balance` pularia mais do que a soma explica.
       const transferencias = report.sections.find((s) => s.key === "transfer")?.totals;
       const valores: (string | null)[] = Array.from({ length: MESES }, () => null);
       const calculado = Array.from({ length: MESES }, () => false);
@@ -188,7 +188,7 @@ export function preencherComORazao(
           {
             ordem: 0,
             tipo: "total",
-            rotulo: "Transferências e saldo de abertura de conta",
+            rotulo: "Transferências, rendimento e saldo de abertura",
             detalhe: null,
             valores,
             total: null,

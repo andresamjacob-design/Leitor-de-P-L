@@ -13,7 +13,7 @@ import postgres from "postgres";
 import { loadEnvLocal } from "./load-env.ts";
 import { buildCashFlow, periodRange, type FlowCategory, type FlowEntry } from "@/lib/cash-flow";
 import { quebrarFaturas, type Fatura, type Pagamento } from "@/lib/card-bills";
-import { SOCIOS_LABEL } from "@/lib/data/cash-flow-report";
+import { BALANCE_ONLY_CODES, SOCIOS_LABEL } from "@/lib/data/cash-flow-report";
 import { preencherComORazao } from "@/lib/fluxo-da-planilha";
 import { formatBRL, fromNumeric } from "@/lib/money";
 import type { LinhaPlanilha, TipoLinha } from "@/lib/planilha";
@@ -96,6 +96,7 @@ try {
     entries,
     categories,
     oneLeggedTransferCategoryIds: fatura,
+    balanceOnlyCategoryIds: new Set(categories.filter((c) => BALANCE_ONLY_CODES.includes(c.code)).map((c) => c.id)),
     mergedRows: socios.size === 2 ? [{ label: SOCIOS_LABEL, categoryIds: socios }] : [],
   });
 

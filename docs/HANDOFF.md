@@ -4,7 +4,7 @@ Onde tudo está, o que foi feito, e o que falta. Escrito para quem chega sem con
 nenhum, inclusive eu mesmo numa conversa nova.
 
 Leia junto quando precisar do detalhe: `docs/PLAN.md` (o roteiro original),
-`docs/DECISIONS.md` (decisões numeradas D1–D148 e pendências Q2–Q18) e `README.md`.
+`docs/DECISIONS.md` (decisões numeradas D1–D149 e pendências Q2–Q18) e `README.md`.
 
 > **A prioridade, dita pelo Andre em 14/09 (D136), e ela reordena o resto:**
 > *"Não preciso de um sistema que categorize absolutamente todos os gastos sem nenhum erro,
@@ -179,9 +179,9 @@ npm run import:invoices     # faturas de cartão em massa
 - **As duas contas correntes batem com o extrato ao centavo** nos 34 fechamentos de 25/08 a
   02/10. `npm run conferir:banco -- <extratos.xlsx>` refaz isso a qualquer momento (D147).
 - **A DRE e o fluxo fecham nos 13 meses**, resíduo zero (`verify:reconcile`, 06/10).
-- **O fluxo contra a planilha** (`comparar:fluxo`, jan–jul, meses com projeção fora): totais
-  a **R$ 387,88**, linhas a R$ 7.419,23, grupos a R$ 6.056,77 (D139, D146). O número antigo de
-  R$ 2.468,99 incluía a coluna de agosto, que na planilha ainda era projeção.
+- **O fluxo contra a planilha** (`comparar:fluxo`, planilha de 24/09): jan–jul a R$ 169,00 nas
+  saídas e R$ 329,46 nas entradas; agosto entra a R$ 19.018,40, que é a Hogrefe (D149). Até
+  07/10 o comparador lia a planilha de 24/08, e os R$ 387,88 de antes vinham dela.
 - Receita reconhecida bate com a planilha mês a mês.
 - `verify:import` — 32 arquivos reais reconciliam contra si mesmos.
 - `verify:rls` — isolamento entre entidades, 7/7.
@@ -621,8 +621,10 @@ CDB com as pernas de setembro. O fluxo de setembro sai com `npm run fluxo:pronto
    (R$ 151.616,12 e R$ 29.341,81) continuam em `3.03` sem cliente até as invoices deles
    chegarem: `npm run salesforce:nf -- --arquivo <pdf>` mostra o par pelo câmbio.
 2. **Agosto ainda não emenda por R$ 20.299,99** — era R$ 34.205,15; o rendimento do CDB
-   explicou R$ 13.905,16 (D148). O que sobra é o `Net savings` de agosto: planilha
-   −R$ 28.817,62, app −R$ 49.117,61. Pergunta para o Andre.
+   explicou R$ 13.905,16 (D148). O resto é quase todo a **Hogrefe** (D149): R$ 19.000 pagos em
+   agosto na conta da GSJacob, que a planilha conta como receita de agosto e o app como
+   saldo de abertura em 07/09. Para virar receita de agosto no app, falta o extrato de agosto
+   da GSJacob (a data). Pergunta para o Andre.
 3. **A fatura do cartão até ~23/09** ainda não foi enviada. O pagamento de 05/10
    (R$ 31.288,37) e o de 08/09 (R$ 18.267,47, líquido de um crédito, por isso não casa com a
    fatura) aparecem em "Outras saídas" em vez das compras — inclusive os R$ 22 mil de

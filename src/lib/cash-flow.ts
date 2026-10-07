@@ -122,7 +122,10 @@ function sectionOf(
   entry: FlowEntry,
   categories: Map<string, FlowCategory>,
   oneLegged: ReadonlySet<string>,
+  balanceOnly: ReadonlySet<string> = new Set(),
 ): CashFlowSectionKey {
+  // Conta que move o saldo mas não é entrada nem saída da operação (D149).
+  if (entry.categoryId && balanceOnly.has(entry.categoryId)) return "transfer";
   const kind = entry.categoryId ? categories.get(entry.categoryId)?.kind : undefined;
   if (kind === "transfer" && !(entry.categoryId && oneLegged.has(entry.categoryId))) {
     return "transfer";
@@ -245,6 +248,15 @@ export type BuildCashFlowInput = {
    */
   oneLeggedTransferCategoryIds?: ReadonlySet<string>;
   /**
+   * Contas que **movem o saldo sem ser entrada nem saída** neste relatório (D149).
+   *
+   * O rendimento que fica dentro do CDB é receita na DRE, mas a planilha do Andre nunca o pôs
+   * em Income: em agosto ele somou o rendimento direto no saldo final. Para o Income do app
+   * bater com o dele, essas contas vão para Transferências — o saldo final continua o do
+   * banco. Quem escolhe é o carregador; vazio por omissão.
+   */
+  balanceOnlyCategoryIds?: ReadonlySet<string>;
+  /**
    * Contas que se apresentam como **uma linha só** neste relatório (D112).
    *
    * O caixa não distingue o que a DRE distingue. Pró-labore é despesa e distribuição de
@@ -265,6 +277,7 @@ export function buildCashFlow({
   entries,
   categories,
   oneLeggedTransferCategoryIds = new Set<string>(),
+  balanceOnlyCategoryIds = new Set<string>(),
   mergedRows = [],
 }: BuildCashFlowInput): CashFlowReport {
   if (periods.length === 0) {
@@ -386,7 +399,7 @@ export function buildCashFlow({
     const index = indexOfPeriod.get(periodOf(entry.occurredOn));
     if (index === undefined) continue; // before the range (already in opening) or after it
 
-    const section = sectionOf(entry, categoryById, oneLeggedTransferCategoryIds);
+    const section = sectionOf(entry, categoryById, oneLeggedTransferCategoryIds, balanceOnlyCategoryIds);
     if (entry.categoryId && oneLeggedTransferCategoryIds.has(entry.categoryId)) {
       oneLeggedSeen.add(entry.categoryId);
     }
