@@ -163,6 +163,15 @@ const CORRECOES: readonly {
     total: parseMoney("83,99"),
     porque: "os 83,99 são reembolso para ela — a planilha lança em Alimentação",
   },
+  {
+    // *"esses outros dois pix são reembolso para ela"* (07/10). Os de setembro.
+    nome: "MANUELLA CYPRIANO DE SOUSA",
+    de: "6.10",
+    para: "9.03",
+    quantas: 2,
+    total: parseMoney("88,32"),
+    porque: "62,85 (11/09) e 25,47 (25/09) também são reembolso",
+  },
 ];
 
 const url = process.env.DATABASE_URL;

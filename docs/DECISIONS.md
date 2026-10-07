@@ -3885,3 +3885,20 @@ R$ 1.300,00 do salário da Manuella, que saíram do banco em 05/08 e não estão
 de agosto da planilha. O razão fica com eles: o dinheiro saiu. O lançamento continua ligado à
 pessoa do Ricardo, porque é o CPF que recebeu; o `socios` (D110) só lê até julho, então hoje
 isso não mexe em pró-labore nem distribuição — mas mexeria se agosto entrasse nele.
+
+### D153 — O Ricardo repassa o salário da Manuella todo mês, e a planilha de agosto estava errada
+Respostas do Andre em 07/10, fechando a D152:
+
+- *"na planilha estava errado, eu arrumei depois"* — os R$ 1.300,00 de 05/08 deviam estar em
+  agosto. **O app estava certo**, e a diferença de agosto contra a cópia de 24/09 é erro da
+  cópia, não do razão. A cópia nas abas é de 24/09; a planilha corrigida não chegou ao app.
+- *"o Ricardo recebe 1300 todo mês que são pagamento do salário para a Manuella"* — nove PIX
+  de R$ 1.300,00 ao CPF do Ricardo, de fevereiro a outubro, **todos já em `6.10`**: nenhum caiu
+  em pró-labore ou distribuição dele (D110). Conferido antes de escrever isto. Fica a
+  armadilha para quando o `socios` passar de julho: o CPF do Ricardo recebe o salário dele **e**
+  o da Manuella, e o segundo não é retirada de sócio.
+- *"esses outros dois pix são reembolso para ela"* — R$ 62,85 (11/09) e R$ 25,47 (25/09) foram
+  de `6.10` para `9.03`, como o de agosto (`corrigir`, saldo e custo total intactos). E uma
+  **regra por documento** — CPF da Manuella, saída → `9.03` — para os próximos: o salário dela
+  chega pelo Ricardo, então o que vai para o CPF dela é reembolso. A regra vive no banco e não
+  no código, porque leva o CPF.
