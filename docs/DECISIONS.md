@@ -3789,4 +3789,5 @@ de 18/09, R$ 157.500,00 — câmbio exato de R$ 5,0000, seis dias depois do venc
 O `FIN COMPRA` de 03/09 daria R$ 4,8132, um dia depois da emissão. O script **não adivinha**:
 mostra os candidatos com o câmbio e só divide o recebimento apontado por `--lancamento`.
 Ensaiado em 18/09: Medika R$ 70.000, Harpix e ITA Educacional R$ 35.000 cada, Artium
-R$ 17.500, saldo inalterado. **Não gravado** — falta o Andre confirmar o par.
+R$ 17.500, saldo inalterado. **Gravado em 07/10**, depois de o Andre confirmar: *"a 125 é o OP
+REC EXT de 18/09"*. Banco, ponte, RLS e `comparar:fluxo` conferidos de novo, sem mudança.

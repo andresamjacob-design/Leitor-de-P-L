@@ -616,11 +616,10 @@ categorizadas, o custo cresce e o resultado cai, **sem o caixa mudar um centavo*
 Setembro está fechado (D147): as respostas de 06/10 aplicadas, a GSJacob abrindo em 07/09, e o
 CDB com as pernas de setembro. O fluxo de setembro sai com `npm run fluxo:pronto`.
 
-1. **A invoice 125 da Salesforce espera o par.** O leitor e a divisão existem (D148); o
-   câmbio exato de R$ 5,0000 aponta para o `OP REC EXT` de 18/09 (R$ 157.500,00), não para um
-   `FIN COMPRA`. Confirmado, é `npm run salesforce:nf -- --arquivo <pdf> --lancamento
-   2026-09-18 --aplicar`. Os dois `FIN COMPRA` continuam em `3.03` sem cliente até chegarem
-   as invoices deles.
+1. **As invoices dos dois `FIN COMPRA`.** A 125 era o `OP REC EXT` de 18/09 e já está
+   dividida entre Medika, Harpix, ITA Educacional e Artium (D148). Os dois `FIN COMPRA`
+   (R$ 151.616,12 e R$ 29.341,81) continuam em `3.03` sem cliente até as invoices deles
+   chegarem: `npm run salesforce:nf -- --arquivo <pdf>` mostra o par pelo câmbio.
 2. **Agosto ainda não emenda por R$ 20.299,99** — era R$ 34.205,15; o rendimento do CDB
    explicou R$ 13.905,16 (D148). O que sobra é o `Net savings` de agosto: planilha
    −R$ 28.817,62, app −R$ 49.117,61. Pergunta para o Andre.
