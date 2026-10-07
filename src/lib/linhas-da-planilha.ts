@@ -90,6 +90,9 @@ export const APELIDOS_DO_FLUXO: Record<string, string[]> = {
   "Receita Ongoing": ["3.01"],
   "Receita Projetos": ["3.02"],
   "Receita Salesforce": ["3.03", "3.04"],
+  // O rendimento que fica dentro do CDB (D148). A linha existe na planilha e nunca foi
+  // preenchida: em agosto o Andre somou o rendimento direto no `Ending balance`.
+  "Interest Earned": ["11.04"],
 };
 
 /** `- Clicksign (cartão de credito)` → `Clicksign`: o rótulo como a `DRE Geral` o escreve. */

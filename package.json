@@ -54,7 +54,9 @@
     "apagar:2025": "vite-node --config vitest.config.ts scripts/apagar-2025.ts",
     "conferir:banco": "vite-node --config vitest.config.ts scripts/conferir-banco.ts",
     "abrir:conta": "vite-node --config vitest.config.ts scripts/abrir-conta.ts",
-    "fluxo:pronto": "vite-node --config vitest.config.ts scripts/fluxo-pronto.ts"
+    "fluxo:pronto": "vite-node --config vitest.config.ts scripts/fluxo-pronto.ts",
+    "rendimento:cdb": "vite-node --config vitest.config.ts scripts/rendimento-cdb.ts",
+    "salesforce:nf": "vite-node --config vitest.config.ts scripts/salesforce-nf.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.4",

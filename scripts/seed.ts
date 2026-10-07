@@ -133,6 +133,9 @@ const CHART_OF_ACCOUNTS: CategorySeed[] = [
   { code: "11.01", name: "Tarifas bancárias", kind: "expense", dreGroup: "financeiras" },
   { code: "11.02", name: "IOF", kind: "expense", dreGroup: "financeiras" },
   { code: "11.03", name: "Multas e acordos", kind: "expense", dreGroup: "financeiras" },
+  // Rendimento que fica dentro do CDB (D148). O da aplicação automática é varrido para a
+  // conta corrente e continua em 99.03.
+  { code: "11.04", name: "Rendimento de aplicação", kind: "revenue", dreGroup: "financeiras" },
 
   // Transferências — never revenue, never expense. Keeps the card bill from
   // double-counting (SPEC §7, DECISIONS D-C).

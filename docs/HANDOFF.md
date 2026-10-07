@@ -4,7 +4,7 @@ Onde tudo está, o que foi feito, e o que falta. Escrito para quem chega sem con
 nenhum, inclusive eu mesmo numa conversa nova.
 
 Leia junto quando precisar do detalhe: `docs/PLAN.md` (o roteiro original),
-`docs/DECISIONS.md` (decisões numeradas D1–D147 e pendências Q2–Q18) e `README.md`.
+`docs/DECISIONS.md` (decisões numeradas D1–D148 e pendências Q2–Q18) e `README.md`.
 
 > **A prioridade, dita pelo Andre em 14/09 (D136), e ela reordena o resto:**
 > *"Não preciso de um sistema que categorize absolutamente todos os gastos sem nenhum erro,
@@ -137,6 +137,8 @@ npm run importar:planilhas  # copia DRE e Fluxo para as abas (--ate 2026-08 --ap
 npm run conferir:banco      # cada fechamento de dia dos extratos contra o razão (D147)
 npm run fluxo:pronto        # o fluxo da aba, nos meses que o app calcula (--mes 9)
 npm run abrir:conta         # saldo de abertura e a data dele (--ensaio / --aplicar)
+npm run rendimento:cdb      # rendimento dentro do CDB, pela posição do print do banco (D148)
+npm run salesforce:nf       # divide um recebimento da Salesforce pelos clientes da invoice (D148)
 
 npm run propose:rules       # regras de texto vindas da planilha
 npm run propose:parties     # casa nome da planilha ↔ contraparte do extrato
@@ -166,10 +168,10 @@ npm run import:invoices     # faturas de cartão em massa
 |---|---|---|---|
 | Itaú — conta corrente | banco | 760 | ✅ **= o extrato ao centavo nos 28 dias de set–05/10** |
 | Itau GSJACOB — 0099290-1 | banco | 30 | ✅ **= o extrato ao centavo** desde a abertura de R$ 19.000 em 07/09 (D147) |
-| Itau GSJACOB — CDB DI | aplicação | 2 | criada em 06/10: R$ 340.000 aplicados em setembro (D147) |
+| Itau GSJACOB — CDB DI | aplicação | 3 | ✅ **= o banco** na posição de 30/09: R$ 341.732,12 bruto (D147, D148) |
 | Itaucard Empresas — 5780 | cartão | 484 | |
 | Itaucard — 8299 | cartão | 62 | recebe também as faturas do cartão final 8384 (D143) |
-| Itaú — CDB DI | aplicação | 6 | R$ 520.000 de principal — nenhum extrato do CDB ainda |
+| Itaú — CDB DI | aplicação | 8 | ✅ **= o banco** na posição de 30/09: R$ 539.630,20 bruto (D148) |
 | Contabilizei | banco | 0 | inativa |
 
 ### As conferências que fecham
@@ -614,19 +616,20 @@ categorizadas, o custo cresce e o resultado cai, **sem o caixa mudar um centavo*
 Setembro está fechado (D147): as respostas de 06/10 aplicadas, a GSJacob abrindo em 07/09, e o
 CDB com as pernas de setembro. O fluxo de setembro sai com `npm run fluxo:pronto`.
 
-1. **Agosto não emenda com setembro** — pergunta para o Andre. A planilha dele declara
-   `Ending balance` de agosto R$ 697.003,87, mas julho (R$ 711.916,33) + o `Net savings` dela
-   (−R$ 28.817,62) dá R$ 683.098,71. O app fecha agosto em R$ 662.798,72 (`Net savings`
-   −R$ 49.117,61). Como os meses do app partem do razão, setembro está certo contra o banco;
-   o que não fecha é a emenda visual na aba.
-2. **O PDF da Salesforce com a divisão por cliente.** O Andre pediu um leitor; falta um
-   exemplo do arquivo em `docs/reference/`. Até lá o `FIN COMPRA` cai em `3.03` sem cliente.
+1. **A invoice 125 da Salesforce espera o par.** O leitor e a divisão existem (D148); o
+   câmbio exato de R$ 5,0000 aponta para o `OP REC EXT` de 18/09 (R$ 157.500,00), não para um
+   `FIN COMPRA`. Confirmado, é `npm run salesforce:nf -- --arquivo <pdf> --lancamento
+   2026-09-18 --aplicar`. Os dois `FIN COMPRA` continuam em `3.03` sem cliente até chegarem
+   as invoices deles.
+2. **Agosto ainda não emenda por R$ 20.299,99** — era R$ 34.205,15; o rendimento do CDB
+   explicou R$ 13.905,16 (D148). O que sobra é o `Net savings` de agosto: planilha
+   −R$ 28.817,62, app −R$ 49.117,61. Pergunta para o Andre.
 3. **A fatura do cartão até ~23/09** ainda não foi enviada. O pagamento de 05/10
    (R$ 31.288,37) e o de 08/09 (R$ 18.267,47, líquido de um crédito, por isso não casa com a
    fatura) aparecem em "Outras saídas" em vez das compras — inclusive os R$ 22 mil de
    passagens.
-4. **Nenhum extrato do CDB** — R$ 520.000 e R$ 340.000 são o principal; rendimento que tenha
-   ficado dentro não aparece.
+4. **O print do CDB vira rotina mensal** junto com os extratos; `rendimento:cdb` com a
+   posição nova no topo do arquivo.
 
 ### Depois
 

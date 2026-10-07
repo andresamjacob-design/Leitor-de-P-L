@@ -3754,3 +3754,39 @@ idênticos); `verify:rls` ok; 537 testes.
 **Aberto:** agosto não emenda. A planilha declara `Ending balance` R$ 697.003,87, mas julho
 (R$ 711.916,33) + o `Net savings` dela (−R$ 28.817,62) dá R$ 683.098,71; e o `Net savings` de
 agosto do app é −R$ 49.117,61. O app fecha agosto em R$ 662.798,72 sem os CDBs de setembro.
+
+### D148 — O rendimento dos CDBs vem do print do banco, e a invoice da Salesforce ganha leitor
+O Andre mandou em 06/10 a posição dos dois CDBs em 30/09 (tela "Acompanhamento de
+investimentos" do Itaú) e a invoice 125 da Salesforce.
+
+**CDB** (`npm run rendimento:cdb`). Aplicações e resgates vêm do extrato da conta corrente
+(D84, D147); o rendimento que fica dentro do CDB, nenhum extrato de conta corrente mostra. A
+diferença entre o **saldo bruto** do print e o saldo do app é rendimento: DD R$ 539.630,20 −
+R$ 520.000,00 = R$ 19.630,20; GSJacob R$ 341.732,12 − R$ 340.000,00 = R$ 1.732,12. O do mês
+entra em 30/09; o que sobra, no último dia do mês anterior. Bruto e não líquido: o IR só é
+retido no resgate. Trava: depois de gravar, cada CDB dá exatamente o bruto do banco.
+
+**Isto resolveu a emenda de agosto, pela metade.** O que sobra da DD depois de setembro é
+R$ 13.905,16 — o mesmo valor pelo qual o `Ending balance` de agosto da planilha "não fechava
+consigo mesma" (D147). Fechava: o Andre somou o rendimento acumulado do CDB direto no saldo
+de agosto, sem passar pelas entradas. Por isso o lançamento vai em **31/08**, e não espalhado
+por junho e julho, que batem com a planilha ao centavo. Medido: `comparar:fluxo` jan–jul sem
+custo; a emenda caiu de R$ 34.205,15 para **R$ 20.299,99**, que é só a diferença de `Net
+savings` de agosto entre a planilha (−R$ 28.817,62) e o app (−R$ 49.117,61).
+
+→ Conta nova `11.04 Rendimento de aplicação` (receita, grupo `financeiras`), ligada à linha
+`Interest Earned` da planilha, que existia e nunca foi preenchida. O seed ganhou a conta, mas
+**não pode ser re-rodado** neste banco: ele regrava as contas bancárias e desfaria as
+aberturas. O script cria a categoria.
+
+**Salesforce** (`npm run salesforce:nf`). O leitor (`lerInvoiceSalesforce`) lê a lista de
+clientes e o vencimento — **o cabeçalho da invoice é imagem**, sem número, data nem total em
+texto; o total é a soma da lista e o número vem do nome do arquivo. `dividirPorCliente`
+reparte o recebido na proporção do dólar, por maiores restos, e soma sempre o recebido.
+
+**A invoice 125 provavelmente não é um `FIN COMPRA`.** US$ 31.500,00 casa com o `OP REC EXT`
+de 18/09, R$ 157.500,00 — câmbio exato de R$ 5,0000, seis dias depois do vencimento (12/09).
+O `FIN COMPRA` de 03/09 daria R$ 4,8132, um dia depois da emissão. O script **não adivinha**:
+mostra os candidatos com o câmbio e só divide o recebimento apontado por `--lancamento`.
+Ensaiado em 18/09: Medika R$ 70.000, Harpix e ITA Educacional R$ 35.000 cada, Artium
+R$ 17.500, saldo inalterado. **Não gravado** — falta o Andre confirmar o par.
