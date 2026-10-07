@@ -57,7 +57,8 @@
     "fluxo:pronto": "vite-node --config vitest.config.ts scripts/fluxo-pronto.ts",
     "rendimento:cdb": "vite-node --config vitest.config.ts scripts/rendimento-cdb.ts",
     "salesforce:nf": "vite-node --config vitest.config.ts scripts/salesforce-nf.ts",
-    "rend:pago": "vite-node --config vitest.config.ts scripts/rend-pago.ts"
+    "rend:pago": "vite-node --config vitest.config.ts scripts/rend-pago.ts",
+    "hogrefe:agosto": "vite-node --config vitest.config.ts scripts/hogrefe-agosto.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.4",

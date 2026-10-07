@@ -3843,3 +3843,23 @@ leitor do extrato, que já documentava a linha como *"real income"* (D35).
 **Medido:** setembro R$ 960.151,56, igual ao dele. Entradas jan–jul: zero em seis meses,
 −R$ 0,01 em janeiro, −R$ 169,00 em março (o estorno de tarifa, D139). Agosto: **R$ 19.000,00**,
 que é só a Hogrefe (D149). Ponte 13/13; saldo final inalterado.
+
+### D151 — Os R$ 19.000 da GSJacob são a Hogrefe de agosto, não abertura de setembro
+O Andre em 07/10: *"os 19000 da hogrefe foram income de agosto que são a primeira coisa que
+entra na conta gsjacob"*. A D147 os tinha lançado como saldo de abertura em 07/09; o saldo
+batia com o banco, mas o dinheiro aparecia no mês e na forma errados.
+
+→ `npm run hogrefe:agosto`: a conta abre **zerada** em 15/08, e entram dois recebimentos da
+Hogrefe — R$ 9.000 (`3.01`, retainer) e R$ 10.000 (`3.02`, parcela), a divisão de todo mês desde
+julho. **A data, 16/08, é inferida**: a Hogrefe paga sempre no dia 16 (16/06, 16/07), e sem o
+extrato de agosto da GSJacob o dia não é medido — a descrição diz isso. As linhas levam o CNPJ
+dela, para o extrato de agosto, se vier, reconhecê-las pelo documento (D142). Trava: o saldo
+da GSJacob em 07/09 é o mesmo antes e depois.
+
+**Medido:** entradas de agosto R$ 282.656,40 dos dois lados, ao centavo; GSJacob = banco em
+todos os dias; ponte 13/13; RLS ok. A linha `Transferências, rendimento e saldo de abertura` de
+setembro ficou só com o rendimento do CDB (R$ 7.457,16).
+
+**O que sobra na emenda agosto→setembro: R$ 1.299,99**, de saída a mais no app em agosto. É o
+valor que o documento de ações já listava como "sobrando sem nome em agosto". Não localizado
+ainda: o `comparar:fluxo` soma as linhas nos oito meses e não isola o mês.

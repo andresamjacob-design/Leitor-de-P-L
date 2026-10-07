@@ -4,7 +4,7 @@ Onde tudo está, o que foi feito, e o que falta. Escrito para quem chega sem con
 nenhum, inclusive eu mesmo numa conversa nova.
 
 Leia junto quando precisar do detalhe: `docs/PLAN.md` (o roteiro original),
-`docs/DECISIONS.md` (decisões numeradas D1–D150 e pendências Q2–Q18) e `README.md`.
+`docs/DECISIONS.md` (decisões numeradas D1–D151 e pendências Q2–Q18) e `README.md`.
 
 > **A prioridade, dita pelo Andre em 14/09 (D136), e ela reordena o resto:**
 > *"Não preciso de um sistema que categorize absolutamente todos os gastos sem nenhum erro,
@@ -140,6 +140,7 @@ npm run abrir:conta         # saldo de abertura e a data dele (--ensaio / --apli
 npm run rendimento:cdb      # rendimento dentro do CDB, pela posição do print do banco (D148)
 npm run salesforce:nf       # divide um recebimento da Salesforce pelos clientes da invoice (D148)
 npm run rend:pago           # REND PAGO da conta corrente como entrada (D150)
+npm run hogrefe:agosto      # a Hogrefe de agosto como primeiro movimento da GSJacob (D151)
 
 npm run propose:rules       # regras de texto vindas da planilha
 npm run propose:parties     # casa nome da planilha ↔ contraparte do extrato
@@ -168,7 +169,7 @@ npm run import:invoices     # faturas de cartão em massa
 | Conta | Tipo | Lançamentos | Situação |
 |---|---|---|---|
 | Itaú — conta corrente | banco | 760 | ✅ **= o extrato ao centavo nos 28 dias de set–05/10** |
-| Itau GSJACOB — 0099290-1 | banco | 30 | ✅ **= o extrato ao centavo** desde a abertura de R$ 19.000 em 07/09 (D147) |
+| Itau GSJACOB — 0099290-1 | banco | 32 | ✅ **= o extrato ao centavo**; abre zerada, e o primeiro movimento é a Hogrefe de agosto (D151) |
 | Itau GSJACOB — CDB DI | aplicação | 3 | ✅ **= o banco** na posição de 30/09: R$ 341.732,12 bruto (D147, D148) |
 | Itaucard Empresas — 5780 | cartão | 484 | |
 | Itaucard — 8299 | cartão | 62 | recebe também as faturas do cartão final 8384 (D143) |
@@ -623,11 +624,9 @@ CDB com as pernas de setembro. O fluxo de setembro sai com `npm run fluxo:pronto
    dividida entre Medika, Harpix, ITA Educacional e Artium (D148). Os dois `FIN COMPRA`
    (R$ 151.616,12 e R$ 29.341,81) continuam em `3.03` sem cliente até as invoices deles
    chegarem: `npm run salesforce:nf -- --arquivo <pdf>` mostra o par pelo câmbio.
-2. **Agosto ainda não emenda por R$ 20.299,99** — era R$ 34.205,15; o rendimento do CDB
-   explicou R$ 13.905,16 (D148). O resto é a **Hogrefe**, ao centavo (D149, D150): R$ 19.000 pagos em
-   agosto na conta da GSJacob, que a planilha conta como receita de agosto e o app como
-   saldo de abertura em 07/09. Para virar receita de agosto no app, falta o extrato de agosto
-   da GSJacob (a data). Pergunta para o Andre.
+2. **Agosto emenda com setembro a menos de R$ 1.299,99** (D151). As entradas de agosto batem com
+   a planilha ao centavo depois que a Hogrefe virou receita de agosto na GSJacob (data 16/08
+   inferida). Sobra R$ 1.299,99 de saída a mais no app em agosto, ainda não localizado.
 3. **A fatura do cartão até ~23/09** ainda não foi enviada. O pagamento de 05/10
    (R$ 31.288,37) e o de 08/09 (R$ 18.267,47, líquido de um crédito, por isso não casa com a
    fatura) aparecem em "Outras saídas" em vez das compras — inclusive os R$ 22 mil de
