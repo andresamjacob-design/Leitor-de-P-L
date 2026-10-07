@@ -3863,3 +3863,25 @@ setembro ficou só com o rendimento do CDB (R$ 7.457,16).
 **O que sobra na emenda agosto→setembro: R$ 1.299,99**, de saída a mais no app em agosto. É o
 valor que o documento de ações já listava como "sobrando sem nome em agosto". Não localizado
 ainda: o `comparar:fluxo` soma as linhas nos oito meses e não isola o mês.
+
+### D152 — Os R$ 1.299,99 de agosto: três pagamentos de pessoal, e só um muda o total
+Isolando agosto (a coluna da planilha apagada, o app preenchendo pelo razão, como a D146 fez
+para janeiro–julho), a diferença de saídas de R$ 1.299,99 não era um lançamento: eram três
+pagamentos por PIX em `6.10`, pela regra do CPF de quem recebeu, mais R$ 0,01 de plano de
+saúde. Respostas do Andre em 07/10:
+
+| lançamento | resposta | no razão |
+|---|---|---|
+| R$ 200,00 · Gabriel Sampaio Jacob · 10/08 | *"os 200 são contabilidade"* | `6.10` → `8.01` |
+| R$ 83,99 · Manuella Cypriano de Sousa · 20/08 | *"reembolso para ela"* — a planilha lança em Alimentação | `6.10` → `9.03` |
+| R$ 1.300,00 · PIX ao CPF do Ricardo Custódio · 05/08 | *"pagamento de salário da Manuella"* | fica em `6.10` |
+
+→ O `corrigir` (D119) ganhou casar por **nome do destinatário, valor e data**: para pessoa
+física o CPF identificaria a linha, mas o arquivo vai para o git. Saldo e custo total
+inalterados; os dois espelhos de competência refeitos.
+
+**O que fica:** agosto ainda difere em R$ 1.299,99, agora inteiro no grupo `Pessoas` — os
+R$ 1.300,00 do salário da Manuella, que saíram do banco em 05/08 e não estão em nenhuma linha
+de agosto da planilha. O razão fica com eles: o dinheiro saiu. O lançamento continua ligado à
+pessoa do Ricardo, porque é o CPF que recebeu; o `socios` (D110) só lê até julho, então hoje
+isso não mexe em pró-labore nem distribuição — mas mexeria se agosto entrasse nele.

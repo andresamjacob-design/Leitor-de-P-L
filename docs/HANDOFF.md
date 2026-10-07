@@ -4,7 +4,7 @@ Onde tudo está, o que foi feito, e o que falta. Escrito para quem chega sem con
 nenhum, inclusive eu mesmo numa conversa nova.
 
 Leia junto quando precisar do detalhe: `docs/PLAN.md` (o roteiro original),
-`docs/DECISIONS.md` (decisões numeradas D1–D151 e pendências Q2–Q18) e `README.md`.
+`docs/DECISIONS.md` (decisões numeradas D1–D152 e pendências Q2–Q18) e `README.md`.
 
 > **A prioridade, dita pelo Andre em 14/09 (D136), e ela reordena o resto:**
 > *"Não preciso de um sistema que categorize absolutamente todos os gastos sem nenhum erro,
@@ -624,9 +624,9 @@ CDB com as pernas de setembro. O fluxo de setembro sai com `npm run fluxo:pronto
    dividida entre Medika, Harpix, ITA Educacional e Artium (D148). Os dois `FIN COMPRA`
    (R$ 151.616,12 e R$ 29.341,81) continuam em `3.03` sem cliente até as invoices deles
    chegarem: `npm run salesforce:nf -- --arquivo <pdf>` mostra o par pelo câmbio.
-2. **Agosto emenda com setembro a menos de R$ 1.299,99** (D151). As entradas de agosto batem com
-   a planilha ao centavo depois que a Hogrefe virou receita de agosto na GSJacob (data 16/08
-   inferida). Sobra R$ 1.299,99 de saída a mais no app em agosto, ainda não localizado.
+2. **Agosto emenda com setembro a menos de R$ 1.299,99** (D151, D152). Entradas ao centavo;
+   nas saídas sobra o salário da Manuella, R$ 1.300,00 pago por PIX ao CPF do Ricardo em 05/08,
+   que a planilha não conta em agosto. Pergunta para o Andre: onde ele entra na planilha?
 3. **A fatura do cartão até ~23/09** ainda não foi enviada. O pagamento de 05/10
    (R$ 31.288,37) e o de 08/09 (R$ 18.267,47, líquido de um crédito, por isso não casa com a
    fatura) aparecem em "Outras saídas" em vez das compras — inclusive os R$ 22 mil de

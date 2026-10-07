@@ -66,6 +66,12 @@ const CORRECOES: readonly {
    * qualquer escrita, que é para o que ela existe.
    */
   valor?: Cents;
+  /**
+   * Nome do destinatário, para pagamento a **pessoa física** (D152): o CPF identificaria a
+   * linha, mas este arquivo vai para o git. Nome, valor e data juntos, com as mesmas travas.
+   */
+  nome?: string;
+  data?: IsoDate;
   de: string;
   para: string;
   quantas: number;
@@ -135,6 +141,28 @@ const CORRECOES: readonly {
     total: parseMoney("999,91"),
     porque: "é a Vai de Promo; a Tarefy veio do histórico porque as duas pagam por PIX QR-Code",
   },
+  {
+    // Respostas do Andre em 07/10, achadas isolando agosto contra a planilha (D152). As duas
+    // estavam em 6.10 pela regra do CPF da pessoa, e a planilha dele as põe em outra linha.
+    nome: "GABRIEL SAMPAIO JACOB",
+    valor: parseMoney("200,00"),
+    data: "2026-08-10",
+    de: "6.10",
+    para: "8.01",
+    quantas: 1,
+    total: parseMoney("200,00"),
+    porque: "os 200 são contabilidade",
+  },
+  {
+    nome: "MANUELLA CYPRIANO DE SOUSA",
+    valor: parseMoney("83,99"),
+    data: "2026-08-20",
+    de: "6.10",
+    para: "9.03",
+    quantas: 1,
+    total: parseMoney("83,99"),
+    porque: "os 83,99 são reembolso para ela — a planilha lança em Alimentação",
+  },
 ];
 
 const url = process.env.DATABASE_URL;
@@ -156,8 +184,8 @@ type Linha = {
 type Conta = { id: string; code: string; kind: CategoryKind };
 
 /** Como a linha aparece no relatório: o documento mascarado, ou o trecho da descrição. */
-const rotulo = (c: { taxId?: string; descricao?: string }) =>
-  c.taxId ? mask(c.taxId) : `“${c.descricao}”`;
+const rotulo = (c: { taxId?: string; descricao?: string; nome?: string }) =>
+  c.taxId ? mask(c.taxId) : c.nome ? c.nome : `“${c.descricao}”`;
 
 try {
   const [entity] = await sql<{ id: string }[]>`select id from entities where slug = 'dd-group'`;
@@ -189,9 +217,12 @@ try {
          and ${
            c.taxId
              ? sql`counterparty_tax_id = ${c.taxId}`
-             : sql`description ilike ${"%" + (c.descricao ?? "") + "%"}`
+             : c.nome
+               ? sql`counterparty_name = ${c.nome}`
+               : sql`description ilike ${"%" + (c.descricao ?? "") + "%"}`
          }
          ${c.valor === undefined ? sql`` : sql`and amount = ${toNumeric(c.valor)}`}
+         ${c.data === undefined ? sql`` : sql`and occurred_on = ${c.data}`}
        order by occurred_on::text`;
 
     const soma = achadas.reduce((a, x) => a + fromNumeric(x.amount as string), 0n);
