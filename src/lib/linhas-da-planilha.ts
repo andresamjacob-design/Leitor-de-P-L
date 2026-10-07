@@ -90,6 +90,8 @@ export const APELIDOS_DO_FLUXO: Record<string, string[]> = {
   "Receita Ongoing": ["3.01"],
   "Receita Projetos": ["3.02"],
   "Receita Salesforce": ["3.03", "3.04"],
+  // `REND PAGO APLIC AUT`: o Andre conta no Income (D150). O rendimento que fica no CDB, não.
+  "Interest Earned": ["11.05"],
 };
 
 /** `- Clicksign (cartão de credito)` → `Clicksign`: o rótulo como a `DRE Geral` o escreve. */

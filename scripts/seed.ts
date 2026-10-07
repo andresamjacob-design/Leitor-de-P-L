@@ -136,6 +136,8 @@ const CHART_OF_ACCOUNTS: CategorySeed[] = [
   // Rendimento que fica dentro do CDB (D148). O da aplicação automática é varrido para a
   // conta corrente e continua em 99.03.
   { code: "11.04", name: "Rendimento de aplicação", kind: "revenue", dreGroup: "financeiras" },
+  // O rendimento que o banco paga na conta corrente (`REND PAGO APLIC AUT`) é entrada (D150).
+  { code: "11.05", name: "Rendimento da aplicação automática", kind: "revenue", dreGroup: "financeiras" },
 
   // Transferências — never revenue, never expense. Keeps the card bill from
   // double-counting (SPEC §7, DECISIONS D-C).

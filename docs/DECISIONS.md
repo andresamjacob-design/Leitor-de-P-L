@@ -3822,3 +3822,24 @@ terem ido para a conta da GSJacob em agosto, mais R$ 18,40. No app esse dinheiro
 abertura da GSJacob em 07/09 (D147); na planilha é receita de agosto. Os dois saldos batem com o
 banco; o que diverge é **em que mês e como** o dinheiro aparece. Mudar isso exige a data em
 agosto — o extrato de agosto da GSJacob.
+
+### D150 — O rendimento pago na conta corrente é entrada; o que fica no CDB vai para o saldo
+O Andre em 07/10: *"rendimento não é entrada, ele entra no final balance, o income de setembro
+é exatamente $960,151.56"*. O app dava R$ 960.137,93 depois da D149. A diferença, R$ 13,63, é a
+soma dos `REND PAGO APLIC AUT` de setembro — o rendimento da aplicação automática, que o banco
+credita **na conta corrente**.
+
+**A convenção dele tem duas metades, e o número dele é o que as separa.** Rendimento pago na
+conta corrente entra no Income; rendimento que fica dentro do CDB vai direto para o saldo
+final (D149). Medido contra a planilha de 24/09, a diferença de entradas era, mês a mês,
+exatamente a soma do `REND PAGO`: fevereiro R$ 65,51, abril R$ 23,28, julho R$ 38,59, agosto
+R$ 18,40, setembro R$ 13,63 — e março R$ 20,92 por baixo do estorno de tarifa.
+
+→ Conta `11.05 Rendimento da aplicação automática` (receita, `financeiras`), na linha `Interest
+Earned`. A regra `REND PAGO` passou de `99.03` para ela, e as 52 linhas do razão foram junto
+(`npm run rend:pago`, trava: nenhum saldo de conta muda). A regra antiga contradizia o próprio
+leitor do extrato, que já documentava a linha como *"real income"* (D35).
+
+**Medido:** setembro R$ 960.151,56, igual ao dele. Entradas jan–jul: zero em seis meses,
+−R$ 0,01 em janeiro, −R$ 169,00 em março (o estorno de tarifa, D139). Agosto: **R$ 19.000,00**,
+que é só a Hogrefe (D149). Ponte 13/13; saldo final inalterado.

@@ -4,7 +4,7 @@ Onde tudo está, o que foi feito, e o que falta. Escrito para quem chega sem con
 nenhum, inclusive eu mesmo numa conversa nova.
 
 Leia junto quando precisar do detalhe: `docs/PLAN.md` (o roteiro original),
-`docs/DECISIONS.md` (decisões numeradas D1–D149 e pendências Q2–Q18) e `README.md`.
+`docs/DECISIONS.md` (decisões numeradas D1–D150 e pendências Q2–Q18) e `README.md`.
 
 > **A prioridade, dita pelo Andre em 14/09 (D136), e ela reordena o resto:**
 > *"Não preciso de um sistema que categorize absolutamente todos os gastos sem nenhum erro,
@@ -139,6 +139,7 @@ npm run fluxo:pronto        # o fluxo da aba, nos meses que o app calcula (--mes
 npm run abrir:conta         # saldo de abertura e a data dele (--ensaio / --aplicar)
 npm run rendimento:cdb      # rendimento dentro do CDB, pela posição do print do banco (D148)
 npm run salesforce:nf       # divide um recebimento da Salesforce pelos clientes da invoice (D148)
+npm run rend:pago           # REND PAGO da conta corrente como entrada (D150)
 
 npm run propose:rules       # regras de texto vindas da planilha
 npm run propose:parties     # casa nome da planilha ↔ contraparte do extrato
@@ -180,8 +181,10 @@ npm run import:invoices     # faturas de cartão em massa
   02/10. `npm run conferir:banco -- <extratos.xlsx>` refaz isso a qualquer momento (D147).
 - **A DRE e o fluxo fecham nos 13 meses**, resíduo zero (`verify:reconcile`, 06/10).
 - **O fluxo contra a planilha** (`comparar:fluxo`, planilha de 24/09): jan–jul a R$ 169,00 nas
-  saídas e R$ 329,46 nas entradas; agosto entra a R$ 19.018,40, que é a Hogrefe (D149). Até
-  07/10 o comparador lia a planilha de 24/08, e os R$ 387,88 de antes vinham dela.
+  saídas e nas entradas (o estorno de tarifa de março, D139), os outros seis meses ao centavo;
+  agosto a R$ 19.000,00, que é a Hogrefe (D149). Setembro: Income R$ 960.151,56, igual ao do
+  Andre (D150). **Rendimento pago na conta corrente é entrada; o que fica no CDB vai para o
+  saldo final** — as duas metades da convenção dele.
 - Receita reconhecida bate com a planilha mês a mês.
 - `verify:import` — 32 arquivos reais reconciliam contra si mesmos.
 - `verify:rls` — isolamento entre entidades, 7/7.
@@ -621,7 +624,7 @@ CDB com as pernas de setembro. O fluxo de setembro sai com `npm run fluxo:pronto
    (R$ 151.616,12 e R$ 29.341,81) continuam em `3.03` sem cliente até as invoices deles
    chegarem: `npm run salesforce:nf -- --arquivo <pdf>` mostra o par pelo câmbio.
 2. **Agosto ainda não emenda por R$ 20.299,99** — era R$ 34.205,15; o rendimento do CDB
-   explicou R$ 13.905,16 (D148). O resto é quase todo a **Hogrefe** (D149): R$ 19.000 pagos em
+   explicou R$ 13.905,16 (D148). O resto é a **Hogrefe**, ao centavo (D149, D150): R$ 19.000 pagos em
    agosto na conta da GSJacob, que a planilha conta como receita de agosto e o app como
    saldo de abertura em 07/09. Para virar receita de agosto no app, falta o extrato de agosto
    da GSJacob (a data). Pergunta para o Andre.
