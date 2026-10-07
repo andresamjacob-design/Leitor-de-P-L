@@ -71,7 +71,7 @@ const RESET = "\u001b[0m";
 
 // A versão que as abas mostram (D141). Até 07/10 isto lia a de 24/08, e julho aparecia com
 // R$ 6.836,54 de entrada a mais na planilha — diferença do arquivo velho, não do app (D149).
-const PLANILHA = "docs/reference/Fluxo de Caixa - 2026 (24-09).xlsx";
+const PLANILHA = "docs/reference/Fluxo de Caixa - 2026 (07-10).xlsx";
 /** `Jan` é a coluna 5 da aba `Expenses`; daí em diante, um mês por coluna. */
 const PRIMEIRA_COLUNA = 5;
 /** `Jan` é a coluna 4 da aba `Summary`. */

@@ -3902,3 +3902,19 @@ Respostas do Andre em 07/10, fechando a D152:
   **regra por documento** — CPF da Manuella, saída → `9.03` — para os próximos: o salário dela
   chega pelo Ricardo, então o que vai para o CPF dela é reembolso. A regra vive no banco e não
   no código, porque leva o CPF.
+
+### D154 — A planilha de fluxo corrigida (07/10) entra nas abas, e agosto e setembro fecham
+O Andre mandou a `Fluxo de Caixa - 2026` corrigida em 07/10. Guardada como `Fluxo de Caixa -
+2026 (07-10).xlsx`, ao lado das outras versões (D141), sem tocar no arquivo dele.
+
+Mudou em relação à de 24/09: agosto com o salário da Manuella (saídas R$ 312.774,02, saldo
+R$ 695.703,87 — D153) e **setembro preenchido**. A cópia foi refeita com `--ate 2026-08`: as
+abas mostram a planilha até agosto e o app continua calculando setembro em diante, como o
+Andre pediu na D141 — e setembro passou a ser o teste.
+
+**Medido** (`comparar:fluxo` agora lê a de 07/10):
+- Janeiro a agosto ao centavo em entradas e saídas, menos o estorno de tarifa de março
+  (R$ 169,00, D139), R$ 0,01 em janeiro e R$ 0,01 em agosto (o plano de saúde).
+- Setembro, a planilha dele contra o app calculado pelo extrato: Income R$ 960.151,56 dos dois
+  lados, saídas R$ 363.484,50, Net savings R$ 596.667,06; saldo final R$ 1.299.828,09 contra
+  R$ 1.299.828,10.
