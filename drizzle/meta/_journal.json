@@ -64,6 +64,13 @@
       "when": 1792000000000,
       "tag": "0008_sessao_por_email",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1792001000000,
+      "tag": "0009_auditoria_so_por_gatilho",
+      "breakpoints": true
     }
   ]
 }

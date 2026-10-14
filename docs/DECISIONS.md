@@ -3973,7 +3973,9 @@ vendo os 1.352 lançamentos; `password` e sessão sem método veem zero.
 
 **`audit_log`:** era a tabela irmã que a 0007 não alcançou — qualquer vínculo, inclusive
 `viewer`, inseria registro de auditoria à mão. Agora só quem escreve; os gatilhos são SECURITY
-DEFINER e não passam pela política.
+DEFINER e não passam pela política. **Corrigido de novo na 0009:** restringir a quem escreve ainda
+deixava um `member` forjar registro com outro autor; a política de inserção foi removida, e só os
+gatilhos escrevem auditoria — o `verify:rls` prova que eles continuam registrando.
 
 **Redirecionamento aberto.** `/\outro.site` passava na checagem "uma barra só" e o navegador o
 lê como outro host; e a rota antiga `/auth/callback` montava `${origin}${redirect}`, em que

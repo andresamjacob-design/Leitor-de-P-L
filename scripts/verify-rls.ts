@@ -171,6 +171,14 @@ try {
 
     await como(memberId);
     check("member grava lançamento", !(await recusa((sp) => inserirLancamento(sp, "rls-member"))));
+    const auditado = await tx<{ n: number }[]>`
+      select count(*)::int as n from audit_log where table_name = 'cash_entries' and after_json ->> 'dedup_hash' = 'rls-member'`;
+    check("o gatilho registra a auditoria do lançamento do member", auditado[0]?.n === 1);
+    check(
+      "member não forja registro de auditoria",
+      await recusa((sp) => sp`insert into audit_log (entity_id, actor, action, table_name, row_id)
+        values (${alpha.id}, 'outra pessoa', 'delete', 'cash_entries', gen_random_uuid())`),
+    );
     check("member não lista acessos", await recusa((sp) => sp`select * from listar_acessos(${alpha.id})`));
     check(
       "member não libera ninguém",
