@@ -25,6 +25,16 @@ describe("destinoInterno", () => {
     expect(destinoInterno(malicioso, APP)).toBe("/");
   });
 
+  it.each(["/.//outro.site", "//localhost:3000//outro.site", "/%2e//outro.site"])(
+    "%s fica na mesma origem e nunca devolve caminho com duas barras",
+    (malicioso) => {
+      const destino = destinoInterno(malicioso, APP);
+      expect(destino.startsWith("//")).toBe(false);
+      expect(destino.startsWith("/\\")).toBe(false);
+      expect(new URL(destino, APP).origin).toBe(APP);
+    },
+  );
+
   it("@outro.site vira caminho do próprio app, nunca outro host", () => {
     expect(destinoInterno("@outro.site", APP)).toBe("/@outro.site");
   });

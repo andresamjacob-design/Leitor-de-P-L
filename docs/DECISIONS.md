@@ -3978,7 +3978,9 @@ DEFINER e não passam pela política.
 **Redirecionamento aberto.** `/\outro.site` passava na checagem "uma barra só" e o navegador o
 lê como outro host; e a rota antiga `/auth/callback` montava `${origin}${redirect}`, em que
 `@outro.site` vira credencial de outro host. `destinoInterno` resolve contra a origem e só
-aceita se ela não mudar; usado no login e no callback, com teste.
+aceita se ela não mudar; usado no login e no callback, com teste. Uma terceira revisão achou o caso
+que escapava: `/.//outro.site` resolve na própria origem com caminho `//outro.site`, que vira outro
+host quando usado como destino relativo. O caminho devolvido agora nunca começa com duas barras.
 
 `verify:rls`: 23/23 (sessão só com senha não vê, não lista, não grava; viewer não forja
 auditoria). `check`: 551.

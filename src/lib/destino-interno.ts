@@ -11,7 +11,10 @@ export function destinoInterno(redirect: string | null | undefined, origem: stri
   try {
     const url = new URL(redirect, origem);
     if (url.origin !== new URL(origem).origin) return "/";
-    return `${url.pathname}${url.search}${url.hash}`;
+    // `/.//outro.site` resolve na própria origem com caminho `//outro.site`, que usado como
+    // destino relativo vira outro host. O caminho devolvido nunca começa com duas barras.
+    const caminho = url.pathname.replace(/^[/\\]+/, "/");
+    return `${caminho}${url.search}${url.hash}`;
   } catch {
     return "/";
   }
