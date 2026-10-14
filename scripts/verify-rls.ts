@@ -31,6 +31,9 @@ function check(label: string, passed: boolean, detail = ""): void {
   console.log(`  ${passed ? GREEN + "OK   " : RED + "FALHA"}${RESET} ${label}${detail ? ` — ${detail}` : ""}`);
 }
 
+/** Como uma sessão aberta pelo código do e-mail aparece no JWT (D156). */
+const POR_CODIGO = [{ method: "otp", timestamp: 0 }];
+
 /** Thrown to undo everything the check inserted. */
 class Rollback extends Error {}
 
@@ -76,7 +79,7 @@ try {
 
     // From here on, the connection is an ordinary logged-in user.
     await tx`select set_config('role', 'authenticated', true)`;
-    await tx`select set_config('request.jwt.claims', ${JSON.stringify({ sub: userId, role: "authenticated" })}, true)`;
+    await tx`select set_config('request.jwt.claims', ${JSON.stringify({ sub: userId, role: "authenticated", amr: POR_CODIGO })}, true)`;
 
     const visibleEntities = await tx<{ slug: string }[]>`select slug from entities`;
     check(
@@ -138,9 +141,9 @@ try {
     await tx`insert into user_entities (user_id, entity_id, role) values
                (${viewerId}, ${alpha.id}, 'viewer'), (${memberId}, ${alpha.id}, 'member')`;
 
-    const como = async (id: string) => {
+    const como = async (id: string, amr = POR_CODIGO) => {
       await tx`select set_config('role', 'authenticated', true)`;
-      await tx`select set_config('request.jwt.claims', ${JSON.stringify({ sub: id, role: "authenticated" })}, true)`;
+      await tx`select set_config('request.jwt.claims', ${JSON.stringify({ sub: id, role: "authenticated", amr })}, true)`;
     };
     const recusa = async (fn: (sp: typeof tx) => Promise<unknown>) => {
       try {
@@ -183,6 +186,21 @@ try {
     const liberado = await tx<{ r: string }[]>`
       select definir_acesso(${alpha.id}, 'rls.teste@ddgroup.com.br', 'viewer') as r`;
     check("owner libera e-mail da empresa antes do primeiro login", liberado[0]?.r === "aguardando primeiro login");
+
+    // D156: o mesmo administrador, numa sessão aberta só com senha — o caminho de quem se
+    // cadastra com o e-mail de outra pessoa sem controlar a caixa postal.
+    await como(userId, [{ method: "password", timestamp: 0 }]);
+    const lidoSenha = await tx<{ n: number }[]>`select count(*)::int as n from cash_entries`;
+    check("sessão só com senha não vê lançamento nenhum", lidoSenha[0]?.n === 0, `${lidoSenha[0]?.n} lançamento(s)`);
+    check("sessão só com senha não lista acessos", await recusa((sp) => sp`select * from listar_acessos(${alpha.id})`));
+    check("sessão só com senha não grava", await recusa((sp) => inserirLancamento(sp, "rls-senha")));
+
+    await como(viewerId);
+    check(
+      "viewer não forja registro de auditoria",
+      await recusa((sp) => sp`insert into audit_log (entity_id, actor, action, table_name, row_id)
+        values (${alpha.id}, 'forjado', 'update', 'cash_entries', gen_random_uuid())`),
+    );
 
     await tx`reset role`;
     check(

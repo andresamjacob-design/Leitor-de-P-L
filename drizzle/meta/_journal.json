@@ -57,6 +57,13 @@
       "when": 1791990000000,
       "tag": "0007_acesso_por_dominio",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1792000000000,
+      "tag": "0008_sessao_por_email",
+      "breakpoints": true
     }
   ]
 }

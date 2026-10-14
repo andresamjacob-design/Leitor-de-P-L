@@ -4,7 +4,7 @@ Onde tudo está, o que foi feito, e o que falta. Escrito para quem chega sem con
 nenhum, inclusive eu mesmo numa conversa nova.
 
 Leia junto quando precisar do detalhe: `docs/PLAN.md` (o roteiro original),
-`docs/DECISIONS.md` (decisões numeradas D1–D155 e pendências Q2–Q18) e `README.md`.
+`docs/DECISIONS.md` (decisões numeradas D1–D156 e pendências Q2–Q18) e `README.md`.
 
 > **A prioridade, dita pelo Andre em 14/09 (D136), e ela reordena o resto:**
 > *"Não preciso de um sistema que categorize absolutamente todos os gastos sem nenhum erro,
@@ -638,7 +638,7 @@ CDB com as pernas de setembro. O fluxo de setembro sai com `npm run fluxo:pronto
 ### Login (D155)
 
 Login por código para qualquer @ddgroup.com.br; ver e editar dependem de liberação na tela
-**Acessos** (ou `npm run liberar`). O banco impõe o domínio e os papéis. **Pendente no painel do
+**Acessos** (ou `npm run liberar`). O banco impõe o domínio, os papéis e que a sessão tenha sido aberta pelo e-mail, nunca só por senha (D156). **Pendente no painel do
 Supabase:** o modelo de e-mail com `{{ .Token }}` e, para pessoas fora da organização do
 Supabase, um SMTP próprio.
 

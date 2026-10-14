@@ -3954,3 +3954,31 @@ conter `{{ .Token }}` — "Magic Link" para quem já tem conta e "Confirm signup
 nova. E o provedor de e-mail padrão do Supabase **só entrega para membros da organização** e
 tem limite baixo por hora: para qualquer pessoa da empresa receber o código, o projeto precisa
 de SMTP próprio (Google Workspace, Resend…).
+
+### D156 — Só sessão que provou o e-mail vê dados, e o redirecionamento do login fica no app
+Duas revisões de segurança automáticas apontaram problemas na D155; os dois procedem.
+
+**Tomada de conta pela liberação pendente.** A trava de domínio confere o *texto* do e-mail, não
+o controle da caixa postal. Com a chave pública, qualquer um chamaria o cadastro **com senha**
+usando `andre.jacob@ddgroup.com.br`, e a conta nasceria com o papel de administrador que estava
+pendente — na hora, se o projeto confirmar e-mail sozinho; ou depois que o dono confirmasse pelo
+código, com a senha do atacante ainda valendo.
+
+→ Migration `0008`: `has_entity_access`, `has_entity_write` e `is_entity_admin` exigem que o JWT
+diga que a sessão foi aberta por um método que passa pela caixa postal (`amr`: `otp`,
+`magiclink`, `email/signup`, `invite`, `recovery`) e recusam `password`. O `amr` vem de
+`auth.mfa_amr_claims`, gravado por sessão, e sobrevive à renovação do token. Medido antes: as
+duas contas Gmail **têm senha**, e a única sessão existente é `email/signup` — que continua
+vendo os 1.352 lançamentos; `password` e sessão sem método veem zero.
+
+**`audit_log`:** era a tabela irmã que a 0007 não alcançou — qualquer vínculo, inclusive
+`viewer`, inseria registro de auditoria à mão. Agora só quem escreve; os gatilhos são SECURITY
+DEFINER e não passam pela política.
+
+**Redirecionamento aberto.** `/\outro.site` passava na checagem "uma barra só" e o navegador o
+lê como outro host; e a rota antiga `/auth/callback` montava `${origin}${redirect}`, em que
+`@outro.site` vira credencial de outro host. `destinoInterno` resolve contra a origem e só
+aceita se ela não mudar; usado no login e no callback, com teste.
+
+`verify:rls`: 23/23 (sessão só com senha não vê, não lista, não grava; viewer não forja
+auditoria). `check`: 551.

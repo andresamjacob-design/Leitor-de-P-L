@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
+import { destinoInterno } from "@/lib/destino-interno";
 
 type Etapa =
   | { tipo: "email" }
@@ -81,8 +82,7 @@ export function LoginForm({ redirect }: { redirect: string }) {
         return;
       }
       // Navegação completa, para o servidor ler o cookie de sessão que acabou de nascer.
-      // Só caminho interno: `//outro.site` também começa com `/` e sairia do app.
-      window.location.assign(/^\/(?!\/)/.test(redirect) ? redirect : "/");
+      window.location.assign(destinoInterno(redirect, window.location.origin));
     } catch (error) {
       setErro(error instanceof Error ? traduzir(error.message) : "Erro desconhecido.");
       setEtapa({ tipo: "codigo" });
