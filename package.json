@@ -58,7 +58,8 @@
     "rendimento:cdb": "vite-node --config vitest.config.ts scripts/rendimento-cdb.ts",
     "salesforce:nf": "vite-node --config vitest.config.ts scripts/salesforce-nf.ts",
     "rend:pago": "vite-node --config vitest.config.ts scripts/rend-pago.ts",
-    "hogrefe:agosto": "vite-node --config vitest.config.ts scripts/hogrefe-agosto.ts"
+    "hogrefe:agosto": "vite-node --config vitest.config.ts scripts/hogrefe-agosto.ts",
+    "liberar": "vite-node --config vitest.config.ts scripts/liberar-acesso.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.4",

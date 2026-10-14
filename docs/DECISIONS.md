@@ -3918,3 +3918,39 @@ Andre pediu na D141 — e setembro passou a ser o teste.
 - Setembro, a planilha dele contra o app calculado pelo extrato: Income R$ 960.151,56 dos dois
   lados, saídas R$ 363.484,50, Net savings R$ 596.667,06; saldo final R$ 1.299.828,09 contra
   R$ 1.299.828,10.
+
+### D155 — Login por código para @ddgroup.com.br, e papéis que valem no banco
+**Revoga a D20** ("sem auto-cadastro, usuários convidados à mão") e a nota da D7 de que o
+papel não era usado. O Andre em 14/10: *"estou tentando fazer login usando meu email da
+empresa e não funciona… permitir que o login seja feito por contas @ddgroup.com.br mandando um
+código para o email"*. Não funcionava porque o formulário usava `shouldCreateUser: false` e só
+existiam duas contas, ambas @gmail.com.
+
+Perguntado sobre acesso, ele escolheu: **entrar não é ver** — *"quero criar uma lista de pessoas
+que podem liberar a pessoa a ver ou editar o app"* — e liberar só `andre.jacob@ddgroup.com.br`.
+
+→ Migration `0007_acesso_por_dominio`:
+- **Domínio no banco, não na tela.** Gatilho `BEFORE INSERT` em `auth.users` recusa conta nova
+  fora de @ddgroup.com.br. A chave pública permitiria chamar a API direto; o gatilho fecha isso.
+  As duas contas Gmail que já existem continuam entrando.
+- **Papéis que valem:** cada tabela de negócio troca a política única por duas — ler com
+  qualquer vínculo, escrever só `owner`/`member`. `viewer` (Ver), `member` (Ver e editar),
+  `owner` (Administrador: também libera pessoas).
+- **Liberação antes do primeiro login:** `acessos_pendentes` por e-mail; o gatilho `AFTER
+  INSERT` a transforma em `user_entities` quando a conta nasce.
+- **Administração sem chave de serviço (D16):** `listar_acessos` e `definir_acesso` são
+  SECURITY DEFINER e conferem lá dentro se quem chama é `owner`. `definir_acesso` recusa
+  e-mail de fora do domínio e recusa deixar a empresa sem administrador.
+
+Tela de login em dois passos (e-mail → código, `verifyOtp`), tela **Acessos** no menu, e
+`npm run liberar` para o primeiro administrador — que foi como o Andre ficou pré-liberado
+como `owner`. Quem entra sem acesso vê o que fazer, não o nome de uma tabela.
+
+**Conferido:** migration ensaiada numa transação revertida antes de aplicar; `verify:rls`
+ganhou 12 verificações de papel (19/19); `check` 543; Playwright 26/26.
+
+**Fora do código, e sem isso o código não chega:** o modelo de e-mail do Supabase precisa
+conter `{{ .Token }}` — "Magic Link" para quem já tem conta e "Confirm signup" para conta
+nova. E o provedor de e-mail padrão do Supabase **só entrega para membros da organização** e
+tem limite baixo por hora: para qualquer pessoa da empresa receber o código, o projeto precisa
+de SMTP próprio (Google Workspace, Resend…).

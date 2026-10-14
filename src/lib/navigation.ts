@@ -20,6 +20,7 @@ export const NAV_ITEMS = [
   { href: "/contas", label: "Contas", phase: null },
   { href: "/plano-de-contas", label: "Plano de contas", phase: null },
   { href: "/auditoria", label: "Auditoria", phase: null },
+  { href: "/acessos", label: "Acessos", phase: null },
 ] as const;
 
 export type NavItem = (typeof NAV_ITEMS)[number];

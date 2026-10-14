@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 
 /**
  * The Fase 1 happy path. It runs with or without a Supabase project configured: without
- * one, the login screen says so instead of pretending; with one, the magic-link form is
+ * one, the login screen says so instead of pretending; with one, the login-by-code form is
  * there. Either way, an anonymous visitor never reaches an entity screen.
  */
 
@@ -53,7 +53,7 @@ test("a tela de importações exige sessão", async ({ page }) => {
   await expect(page).toHaveURL(/\/login/);
 });
 
-for (const path of ["/dd-group/regras", "/dd-group/regras/nova", "/dd-group/assinaturas"]) {
+for (const path of ["/dd-group/regras", "/dd-group/regras/nova", "/dd-group/assinaturas", "/dd-group/acessos"]) {
   test(`${path} exige sessão`, async ({ page }) => {
     await page.goto(path);
     await expect(page).toHaveURL(/\/login/);

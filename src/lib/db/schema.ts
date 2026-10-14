@@ -123,11 +123,33 @@ export const userEntities = pgTable(
     entityId: uuid("entity_id")
       .notNull()
       .references(() => entities.id, { onDelete: "cascade" }),
-    /** Nothing is gated on this today (D7); it exists so it does not need a retrofit. */
+    /**
+     * Vale no banco desde a D155: `viewer` lê, `member` lê e escreve, `owner` também libera
+     * outras pessoas (`definir_acesso`).
+     */
     role: userRole("role").notNull().default("owner"),
     createdAt: createdAt(),
   },
   (table) => [primaryKey({ columns: [table.userId, table.entityId] })],
+).enableRLS();
+
+/**
+ * Liberação por e-mail antes do primeiro login (D155). Vira `user_entities` quando a conta
+ * nasce, pelo gatilho `aplicar_acessos_pendentes`. Sem política: só as funções de
+ * administração a tocam.
+ */
+export const acessosPendentes = pgTable(
+  "acessos_pendentes",
+  {
+    email: text("email").notNull(),
+    entityId: uuid("entity_id")
+      .notNull()
+      .references(() => entities.id, { onDelete: "cascade" }),
+    role: userRole("role").notNull(),
+    createdBy: uuid("created_by"),
+    createdAt: createdAt(),
+  },
+  (table) => [primaryKey({ columns: [table.email, table.entityId] })],
 ).enableRLS();
 
 // ---------------------------------------------------------------------------
