@@ -3986,3 +3986,19 @@ host quando usado como destino relativo. O caminho devolvido agora nunca começa
 
 `verify:rls`: 23/23 (sessão só com senha não vê, não lista, não grava; viewer não forja
 auditoria). `check`: 551.
+
+### D157 — Login pelo link do e-mail padrão do Supabase, sem código
+O Andre em 14/10: *"o negócio de código não vai funcionar, vai ter que ser o email de
+confirmação normal do supabase grátis"*. O código exigiria mudar os modelos de e-mail no
+painel do Supabase; o link já vem nos modelos padrão.
+
+→ O formulário volta a pedir o **link** (`signInWithOtp` com `emailRedirectTo` para
+`/auth/callback`, que já existia e troca o código pela sessão). Conta nova recebe o e-mail de
+confirmação de cadastro; conta existente, o de acesso. O resto da D155 e da D156 não muda: só
+@ddgroup.com.br cria conta, os dados dependem da tela Acessos, e a sessão aberta pelo link
+(`otp`/`magiclink`/`email/signup`) é das que o banco aceita.
+
+**O link só funciona no navegador em que foi pedido** — o Supabase guarda a outra metade da
+troca num cookie (PKCE). A tela avisa isso, e o login passou a mostrar o motivo quando o link
+volta com erro (outro navegador, vencido, incompleto); antes, o `?error=` era ignorado e a
+pessoa via o login de novo sem explicação.

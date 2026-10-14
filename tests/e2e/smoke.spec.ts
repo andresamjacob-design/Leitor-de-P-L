@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 
 /**
  * The Fase 1 happy path. It runs with or without a Supabase project configured: without
- * one, the login screen says so instead of pretending; with one, the login-by-code form is
+ * one, the login screen says so instead of pretending; with one, the login form is
  * there. Either way, an anonymous visitor never reaches an entity screen.
  */
 
