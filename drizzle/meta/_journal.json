@@ -71,6 +71,13 @@
       "when": 1792001000000,
       "tag": "0009_auditoria_so_por_gatilho",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1792070000000,
+      "tag": "0010_folha_cadastro",
+      "breakpoints": true
     }
   ]
 }

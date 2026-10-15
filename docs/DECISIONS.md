@@ -4056,3 +4056,42 @@ ESTATICO` R$ 34,00 (GSJacob), `AEROMIX` R$ 32,00, `SEMPREPARK` R$ 30,00, `PG *VE
 exatamente as oito). Resultado acumulado −R$ 1.922,99; ponte 13/13; `comparar:fluxo` jan–ago sem
 mudança. **1.438 de 1.438 lançamentos com conta**, 15 em `Outros` (R$ 4.224,15) — a política da
 D135: dúvida com endereço, à vista no `pendencias`.
+
+### D161 — A folha passa a ser cadastrada no app, e a planilha deixa de ser lida
+Decisão do Andre em 15/10, fechando a pendência aberta desde a D120 (*"ajustamos os próximos
+meses juntos"*): *"no DRE a folha é predefinida no começo do ano e só muda se algum salário se
+alterar, então podemos fazer um sistema que escrevemos o salário da pessoa no começo e já
+aplica para os outros meses, e podemos alterar em caso de um aumento"*. Para entrada ou saída
+no meio do mês: *"eu digito o valor do mês"*. Ponto de partida: a `Colaboradores`, janeiro a
+dezembro.
+
+**O HANDOFF estava desatualizado:** dizia que a `Colaboradores` "só vai até julho". A versão de
+24/09 tem agosto a dezembro, e a linha `Salários` da DRE dele é exatamente o total dela em todos
+os meses — medido antes de decidir.
+
+→ Migration `0010`: `folha_linhas` (uma linha da folha como na planilha: pessoa + cliente +
+squad; 67 linhas, 66 pessoas) e `folha_valores` (histórico: `vigente` vale daquele mês até o
+próximo; `so_no_mes` vale só naquele mês). `regerar_folha(empresa, mês)` escreve a competência
+do mês e tira o espelho de caixa dos pagamentos de folha daquele mês (D120) — uma função só,
+SECURITY INVOKER, usada pelo script e pela tela; RLS e papel decidem quem pode.
+
+**Importação (`folha:importar`):** o histórico de cada linha é o menor que reproduz os 12 meses
+(valor que continua → vigente; que não se repete → só do mês). Travas: cada célula reproduzida,
+e a soma batendo com a linha de total da aba nos 12 meses, também calculada pelo banco. 91
+vigentes, 54 valores só do mês.
+
+**Geração (`folha:gerar`, jan–out):** janeiro a julho **idênticos** ao que a D120 tinha gravado
+— a prova de que a fonte nova é a mesma folha. Agosto a outubro: R$ 241.763,42, R$ 252.753,84 e
+R$ 253.475,20 entram no lugar dos espelhos de pagamento (R$ 222.154,64, R$ 225.600,98,
+R$ 174.758,50). Agosto passa a ser exatamente a linha `Salários` da DRE dele. Nenhum saldo
+mudou; ponte 13/13.
+
+**Tela:** a página Folha virou a grade da `Colaboradores` (o que havia ali — custo por pessoa —
+ficava vazio, porque a folha em competência nunca foi ligada ao cadastro de Pessoas). Cada linha
+tem histórico e os dois formulários; mudar regera a folha do mês mudado até o mês atual.
+`verify:rls`: viewer não muda salário nem regera (27/27). Conferido como administrador logado,
+numa transação revertida.
+
+**O que isto não faz ainda:** a aba DRE do app continua mostrando a planilha copiada até agosto;
+preencher setembro em diante pelo razão (como o fluxo faz desde a D146) é o próximo passo, e a
+folha era o que travava.

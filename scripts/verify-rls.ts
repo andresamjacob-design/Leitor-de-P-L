@@ -168,6 +168,11 @@ try {
     const alterados = await tx`update accounts set name = name where entity_id = ${alpha.id}`;
     check("viewer não altera nada", alterados.count === 0, `${alterados.count} linha(s)`);
     check("viewer não lista acessos", await recusa((sp) => sp`select * from listar_acessos(${alpha.id})`));
+    check(
+      "viewer não muda salário",
+      (await tx`update folha_valores set valor = valor + 1 where entity_id = ${alpha.id}`).count === 0,
+    );
+    check("viewer não regera a folha", await recusa((sp) => sp`select regerar_folha(${alpha.id}, '2026-09-01')`));
 
     await como(memberId);
     check("member grava lançamento", !(await recusa((sp) => inserirLancamento(sp, "rls-member"))));

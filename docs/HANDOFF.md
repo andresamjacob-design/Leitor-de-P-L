@@ -4,7 +4,7 @@ Onde tudo está, o que foi feito, e o que falta. Escrito para quem chega sem con
 nenhum, inclusive eu mesmo numa conversa nova.
 
 Leia junto quando precisar do detalhe: `docs/PLAN.md` (o roteiro original),
-`docs/DECISIONS.md` (decisões numeradas D1–D160 e pendências Q2–Q18) e `README.md`.
+`docs/DECISIONS.md` (decisões numeradas D1–D161 e pendências Q2–Q18) e `README.md`.
 
 > **A prioridade, dita pelo Andre em 14/09 (D136), e ela reordena o resto:**
 > *"Não preciso de um sistema que categorize absolutamente todos os gastos sem nenhum erro,
@@ -141,6 +141,8 @@ npm run rendimento:cdb      # rendimento dentro do CDB, pela posição do print 
 npm run salesforce:nf       # divide um recebimento da Salesforce pelos clientes da invoice (D148)
 npm run rend:pago           # REND PAGO da conta corrente como entrada (D150)
 npm run hogrefe:agosto      # a Hogrefe de agosto como primeiro movimento da GSJacob (D151)
+npm run folha:importar      # a Colaboradores para o cadastro de folha, uma vez (D161)
+npm run folha:gerar         # competência de folha pelo cadastro (--de AAAA-MM --ate AAAA-MM)
 npm run liberar             # libera um e-mail: --email x@ddgroup.com.br --papel viewer|member|owner (D155)
 
 npm run propose:rules       # regras de texto vindas da planilha
@@ -681,7 +683,7 @@ rodar `npm run dev`. Nenhuma melhoria de upload conserta isso.
 
 | | |
 |---|---|
-| **A folha de agosto em diante** | A competência está lida da `Colaboradores` só até julho. Ele disse *"ajustamos os próximos meses juntos"* — é a única coisa do desenho que segue aberta. |
+| ~~A folha de agosto em diante~~ | Decidida em 15/10 (D161): cadastrada no app, tela Folha. |
 | **As notas fiscais** | Zero cadastradas, e existe uma fase inteira que concilia NF contra caixa. Ou elas entram, ou aquela parte é peso morto. |
 | ~~**A segunda empresa**~~ | Resolvido em 05/10: é uma empresa só (D144). |
 | **As metas** | Receita de R$ 7 milhões e OPBB de 36% entram na tela? (Q4) |
