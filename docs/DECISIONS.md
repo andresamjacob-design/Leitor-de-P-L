@@ -4026,3 +4026,24 @@ Gravado: 03/09 → Kiosk Brand 18.952,02 · Hospcom 75.808,06 · Audens 18.952,0
 · Âncora 18.952,01; 24/09 → Indigo (novo) 15.089,67 · Danke 12.001,45 · Salesforce 2.250,69.
 Saldo das contas inalterado; banco ao centavo; ponte 13/13; Receita Salesforce de setembro a
 mesma. **Toda a Receita Salesforce de setembro agora tem cliente.**
+
+### D159 — A fatura paga em 05/10 conferida, e a viagem aos EUA categorizada
+O Andre enviou pelo app, em 15/10, a fatura do cartão Empresas 5780 que faltava
+(`Itaucard_4460_fatura_042026 (3).pdf`). Conferido:
+
+- **Conta certa** (5780), 80 lançamentos, todos aprovados.
+- **O líquido da fatura é R$ 31.288,37 — exatamente o pagamento `BUSINESS 7502-5964` de 05/10.**
+  Por isso a quebra da fatura (D116) passou a trocar o pagamento pelas compras no fluxo de
+  outubro: `Outras saídas` foi de R$ 31.322,37 para R$ 8.500,88 antes da categorização.
+- **Nenhuma compra repetida** de faturas anteriores (mesma conta, data, valor, sentido e
+  descrição). Dentro da própria fatura, a anuidade de R$ 83,25 aparece cobrada duas vezes e
+  estornada duas vezes — dois cartões, soma zero.
+- Compras desde 18/05 são parcelas de compras antigas, lançadas na data original.
+
+**26 compras sem conta, R$ 8.466,88 — a viagem aos EUA de setembro.** Sugeri por loja e o
+Andre aprovou (*"sim, aplica assim"*): Alimentação 13 (R$ 3.425,80), Transporte 7
+(R$ 2.258,55), Hotel 1 (R$ 615,38), Passagem 1 (R$ 546,00); as quatro sem palpite — Wal-Mart,
+Dream Store, RegistroBR, WDW Outdoor (R$ 1.621,15) — *"todas em Outros"*. Viraram 23 regras
+(`respostas`), conferidas antes de gravar: alcançavam exatamente as 26 linhas. Resultado
+acumulado −R$ 8.466,88; total de saídas e saldo de outubro inalterados; `Outras saídas` de
+outubro ficou em R$ 34,00 (a tarifa PIX da GSJacob). Ponte 13/13.

@@ -175,7 +175,31 @@ const RESPOSTAS: Resposta[] = [
   { pattern: "AMERICAN AIR", direction: "out", code: "9.01", disse: "Passagens" },
   { pattern: "LOBBY TECNOL", direction: "out", code: "10.02", disse: "Brindes" },
   // A regra `TIM*` existe só para saída; os estornos são entrada e passavam por baixo dela.
-  { pattern: "TIM*", direction: "in", code: "10.01", disse: "TIM estornos → Claro e TIM" },
+  { pattern: "TIM*", direction: "in", code: "10.01", disse: "TIM estornos → Claro e TIM" },  // A viagem aos EUA de setembro, na fatura paga em 05/10 (D159). O Andre aprovou as
+  // sugestões por loja — "sim, aplica assim" — e as quatro sem palpite foram para Outros.
+  { pattern: "THE MELT", direction: "out", code: "9.03", disse: "sim, aplica assim (viagem EUA, set/2026)" },
+  { pattern: "DENNY'S", direction: "out", code: "9.03", disse: "sim, aplica assim (viagem EUA, set/2026)" },
+  { pattern: "THE SCOOP", direction: "out", code: "9.03", disse: "sim, aplica assim (viagem EUA, set/2026)" },
+  { pattern: "COCA COLA BE", direction: "out", code: "9.03", disse: "sim, aplica assim (viagem EUA, set/2026)" },
+  { pattern: "PLK SFO", direction: "out", code: "9.03", disse: "sim, aplica assim (viagem EUA, set/2026)" },
+  { pattern: "IN-N-OUT", direction: "out", code: "9.03", disse: "sim, aplica assim (viagem EUA, set/2026)" },
+  { pattern: "CITY WINE", direction: "out", code: "9.03", disse: "sim, aplica assim (viagem EUA, set/2026)" },
+  { pattern: "PIER MARKET", direction: "out", code: "9.03", disse: "sim, aplica assim (viagem EUA, set/2026)" },
+  { pattern: "365 VEND", direction: "out", code: "9.03", disse: "sim, aplica assim (viagem EUA, set/2026)" },
+  { pattern: "IHOP", direction: "out", code: "9.03", disse: "sim, aplica assim (viagem EUA, set/2026)" },
+  { pattern: "RAGLAN", direction: "out", code: "9.03", disse: "sim, aplica assim (viagem EUA, set/2026)" },
+  { pattern: "KOLACHE", direction: "out", code: "9.03", disse: "sim, aplica assim (viagem EUA, set/2026)" },
+  { pattern: "RENTCARS", direction: "out", code: "9.04", disse: "sim, aplica assim (viagem EUA, set/2026)" },
+  { pattern: "PARKWHIZ", direction: "out", code: "9.04", disse: "sim, aplica assim (viagem EUA, set/2026)" },
+  { pattern: "BOS AIRP", direction: "out", code: "9.04", disse: "sim, aplica assim (viagem EUA, set/2026)" },
+  { pattern: "CHEVRON", direction: "out", code: "9.04", disse: "sim, aplica assim (viagem EUA, set/2026)" },
+  { pattern: "LAZ P", direction: "out", code: "9.04", disse: "sim, aplica assim (viagem EUA, set/2026)" },
+  { pattern: "INTERCONTINE", direction: "out", code: "9.02", disse: "sim, aplica assim (viagem EUA, set/2026)" },
+  { pattern: "DELTA0", direction: "out", code: "9.01", disse: "sim, aplica assim (viagem EUA, set/2026)" },
+  { pattern: "WAL-MART", direction: "out", code: "10.05", disse: "todas em Outros" },
+  { pattern: "DREAM STORE", direction: "out", code: "10.05", disse: "todas em Outros" },
+  { pattern: "REGISTROBR", direction: "out", code: "10.05", disse: "todas em Outros" },
+  { pattern: "WDW OUTDOOR", direction: "out", code: "10.05", disse: "todas em Outros" },
 ];
 
 /**

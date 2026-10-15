@@ -4,7 +4,7 @@ Onde tudo está, o que foi feito, e o que falta. Escrito para quem chega sem con
 nenhum, inclusive eu mesmo numa conversa nova.
 
 Leia junto quando precisar do detalhe: `docs/PLAN.md` (o roteiro original),
-`docs/DECISIONS.md` (decisões numeradas D1–D158 e pendências Q2–Q18) e `README.md`.
+`docs/DECISIONS.md` (decisões numeradas D1–D159 e pendências Q2–Q18) e `README.md`.
 
 > **A prioridade, dita pelo Andre em 14/09 (D136), e ela reordena o resto:**
 > *"Não preciso de um sistema que categorize absolutamente todos os gastos sem nenhum erro,
@@ -628,10 +628,8 @@ CDB com as pernas de setembro. O fluxo de setembro sai com `npm run fluxo:pronto
    `--cadastrar` quando o nome não bate com o cadastro.
 2. ~~A cópia da planilha de fluxo desatualizada em agosto~~ — refeita com a versão de 07/10
    (D154). Agosto fecha a R$ 0,01; setembro, preenchido pelo Andre, bate com o app.
-3. **A fatura do cartão até ~23/09** ainda não foi enviada. O pagamento de 05/10
-   (R$ 31.288,37) e o de 08/09 (R$ 18.267,47, líquido de um crédito, por isso não casa com a
-   fatura) aparecem em "Outras saídas" em vez das compras — inclusive os R$ 22 mil de
-   passagens.
+3. ~~A fatura do cartão até ~23/09~~ — enviada em 15/10 e conferida (D159): líquido = pagamento de
+   05/10 ao centavo, nenhuma compra repetida, viagem aos EUA categorizada.
 4. **O print do CDB vira rotina mensal** junto com os extratos; `rendimento:cdb` com a
    posição nova no topo do arquivo.
 
