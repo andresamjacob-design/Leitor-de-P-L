@@ -192,7 +192,7 @@ npm run import:invoices     # faturas de cartão em massa
 - `verify:import` — 32 arquivos reais reconciliam contra si mesmos.
 - `verify:rls` — isolamento entre entidades, 7/7.
 
-> **100% não quer dizer que tudo se sabe.** Três lançamentos estão em `Outros`, que é
+> **100% não quer dizer que tudo se sabe.** Quinze lançamentos (R$ 4.224,15) estão em `Outros`, que é
 > ignorância declarada, e o `pendencias` os mostra logo abaixo do número de propósito — para
 > o número não virar autoelogio (D135).
 
