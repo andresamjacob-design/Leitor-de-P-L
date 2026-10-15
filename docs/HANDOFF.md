@@ -4,7 +4,7 @@ Onde tudo está, o que foi feito, e o que falta. Escrito para quem chega sem con
 nenhum, inclusive eu mesmo numa conversa nova.
 
 Leia junto quando precisar do detalhe: `docs/PLAN.md` (o roteiro original),
-`docs/DECISIONS.md` (decisões numeradas D1–D159 e pendências Q2–Q18) e `README.md`.
+`docs/DECISIONS.md` (decisões numeradas D1–D160 e pendências Q2–Q18) e `README.md`.
 
 > **A prioridade, dita pelo Andre em 14/09 (D136), e ela reordena o resto:**
 > *"Não preciso de um sistema que categorize absolutamente todos os gastos sem nenhum erro,
@@ -157,8 +157,8 @@ npm run import:invoices     # faturas de cartão em massa
 
 | | |
 |---|---|
-| Razão de caixa | **1.344 lançamentos**, 06/08/2025 a **05/10/2026** |
-| Categorizados | **1.336 — 99,4%** · faltam 8, R$ 1.922,99, todas abaixo de R$ 1.400 |
+| Razão de caixa | **1.438 lançamentos**, 06/08/2025 a **05/10/2026** |
+| Categorizados | **1.438 de 1.438 — 100%** · 15 em `Outros`, R$ 4.224,15 (D160) |
 | Competência | 1.097 lançamentos |
 | Receita reconhecida | **R$ 3.556.736,91** (2026) |
 | Contratos | 80 · Clientes 68 (**21 sem CNPJ**) · Pessoas 40 |

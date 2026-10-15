@@ -200,6 +200,15 @@ const RESPOSTAS: Resposta[] = [
   { pattern: "DREAM STORE", direction: "out", code: "10.05", disse: "todas em Outros" },
   { pattern: "REGISTROBR", direction: "out", code: "10.05", disse: "todas em Outros" },
   { pattern: "WDW OUTDOOR", direction: "out", code: "10.05", disse: "todas em Outros" },
+  // As oito linhas pequenas que sobravam sem conta (D160): "coloque essas linhas em outros".
+  { pattern: "REVERSAO DE CREDITO", direction: "out", code: "10.05", disse: "coloque essas linhas em outros" },
+  { pattern: "EBN *BOOKING", direction: "out", code: "10.05", disse: "coloque essas linhas em outros" },
+  { pattern: "OPENROUTER", direction: "out", code: "10.05", disse: "coloque essas linhas em outros" },
+  { pattern: "TAR PIX QR LIQ", direction: "out", code: "10.05", disse: "coloque essas linhas em outros" },
+  { pattern: "AEROMIX", direction: "out", code: "10.05", disse: "coloque essas linhas em outros" },
+  { pattern: "SEMPREPARK", direction: "out", code: "10.05", disse: "coloque essas linhas em outros" },
+  { pattern: "PG *VERTEX", direction: "out", code: "10.05", disse: "coloque essas linhas em outros" },
+  { pattern: "BANCA FUNCHA", direction: "out", code: "10.05", disse: "coloque essas linhas em outros" },
 ];
 
 /**

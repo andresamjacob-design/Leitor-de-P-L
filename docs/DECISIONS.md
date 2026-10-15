@@ -4047,3 +4047,12 @@ Dream Store, RegistroBR, WDW Outdoor (R$ 1.621,15) — *"todas em Outros"*. Vira
 (`respostas`), conferidas antes de gravar: alcançavam exatamente as 26 linhas. Resultado
 acumulado −R$ 8.466,88; total de saídas e saldo de outubro inalterados; `Outras saídas` de
 outubro ficou em R$ 34,00 (a tarifa PIX da GSJacob). Ponte 13/13.
+
+### D160 — As oito linhas que sobravam vão para Outros, e o razão fica 100% categorizado
+O Andre em 15/10: *"coloque essas linhas em outros"*. As oito (R$ 1.922,99): `REVERSAO DE
+CREDITO` R$ 1.394,43, `EBN *BOOKING COM` R$ 272,18, `OPENROUTER` R$ 117,39, `TAR PIX QR LIQ
+ESTATICO` R$ 34,00 (GSJacob), `AEROMIX` R$ 32,00, `SEMPREPARK` R$ 30,00, `PG *VERTEX` R$ 24,99,
+`BANCA FUNCHA` R$ 18,00. Viraram oito regras para `10.05`, conferidas antes de gravar (alcançavam
+exatamente as oito). Resultado acumulado −R$ 1.922,99; ponte 13/13; `comparar:fluxo` jan–ago sem
+mudança. **1.438 de 1.438 lançamentos com conta**, 15 em `Outros` (R$ 4.224,15) — a política da
+D135: dúvida com endereço, à vista no `pendencias`.
