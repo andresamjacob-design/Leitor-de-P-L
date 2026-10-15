@@ -24,8 +24,36 @@ export type InvoiceSalesforce = {
   totalUsd: Cents;
 };
 
-const LINHA_CLIENTE = /^[●•\-*]\s*(.+?)\s+-\s+\$\s*([\d,]+\.\d{2})\s*$/;
+// `● SFA Medika - $14,000.00` (125) e `● Touti: $3,500` (129): traço ou dois-pontos, com ou
+// sem centavos. O nome é preguiçoso, então `SLK - Grupo Podpah: $3,500` fica inteiro — o
+// separador só vale quando o `$` vem logo depois.
+const LINHA_CLIENTE = /^[●•\-*]\s*(.+?)\s*(?:-|:)\s*\$\s*([\d,]+(?:\.\d{2})?)\s*$/;
 const VENCIMENTO = /payment due by\s+(\d{1,2})[-/](\d{1,2})[-/](\d{4})/i;
+
+/** `14,000.00` → 1400000; `3,500` → 350000. */
+export function centavosDeDolar(texto: string): Cents {
+  const [inteiro, centavos = "00"] = texto.replace(/,/g, "").split(".");
+  return BigInt(inteiro!) * 100n + BigInt(centavos.padEnd(2, "0").slice(0, 2));
+}
+
+/**
+ * A divisão escrita à mão, para invoice em que ela só existe na imagem da tabela (135, 136):
+ * `"Indigo=2990.60"` ou `"Danke=2378.55;Auddas=446.06"`. Quem a escreve leu a imagem e o Andre
+ * confirmou — o script não adivinha.
+ */
+export function lerClientesManuais(texto: string): { nome: string; usd: Cents }[] {
+  return texto
+    .split(";")
+    .map((par) => par.trim())
+    .filter(Boolean)
+    .map((par) => {
+      const [nome, valor] = par.split("=");
+      if (!nome?.trim() || !valor || !/^[\d,]+(\.\d{1,2})?$/.test(valor.trim())) {
+        throw new Error(`cliente manual mal escrito: "${par}" — use Nome=1234.56`);
+      }
+      return { nome: nome.trim(), usd: centavosDeDolar(valor.trim()) };
+    });
+}
 
 export function lerInvoiceSalesforce(linhas: readonly string[], arquivo?: string): InvoiceSalesforce {
   const clientes: InvoiceSalesforce["clientes"] = [];
@@ -34,7 +62,7 @@ export function lerInvoiceSalesforce(linhas: readonly string[], arquivo?: string
     const linha = bruta.trim();
     const c = LINHA_CLIENTE.exec(linha);
     if (c) {
-      clientes.push({ nome: c[1]!.trim(), usd: BigInt(c[2]!.replace(/[,.]/g, "")) });
+      clientes.push({ nome: c[1]!.trim(), usd: centavosDeDolar(c[2]!) });
       continue;
     }
     const v = VENCIMENTO.exec(linha);

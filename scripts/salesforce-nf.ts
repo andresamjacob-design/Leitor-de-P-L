@@ -20,6 +20,10 @@
  *   npm run salesforce:nf -- --arquivo "docs/reference/Invoice - SF - 125.pdf"
  *   ... --lancamento 2026-09-18 --ensaio
  *   ... --lancamento 2026-09-18 --aplicar
+ *
+ * Um recebimento pode pagar **mais de uma invoice** (o FIN COMPRA de 24/09 pagou a 135 e a
+ * 136): repita `--arquivo`. Quando a divisão só existe na imagem da tabela, ela entra por
+ * `--clientes "Indigo=2990.60;Danke=2378.55"`, lida da imagem e confirmada pelo Andre.
  */
 
 import { readFileSync } from "node:fs";
@@ -28,7 +32,7 @@ import postgres from "postgres";
 import { loadEnvLocal } from "./load-env.ts";
 import { readPdfPages } from "@/lib/import/pdf";
 import { toDocumentLines } from "@/lib/import/layout";
-import { dividirPorCliente, lerInvoiceSalesforce } from "@/lib/import/salesforce-invoice";
+import { dividirPorCliente, lerClientesManuais, lerInvoiceSalesforce } from "@/lib/import/salesforce-invoice";
 import { dedupHash, normalizeDescription } from "@/lib/dedup";
 import { formatBRL, fromNumeric, toNumeric } from "@/lib/money";
 
@@ -40,9 +44,10 @@ const arg = (nome: string) => {
 };
 const APPLY = process.argv.includes("--aplicar");
 const REHEARSE = process.argv.includes("--ensaio");
-const arquivo = arg("--arquivo");
+const arquivos = process.argv.flatMap((a, i) => (a === "--arquivo" && process.argv[i + 1] ? [process.argv[i + 1]!] : []));
 const lancamento = arg("--lancamento");
-if (!arquivo) throw new Error('uso: --arquivo "<invoice.pdf>" [--lancamento AAAA-MM-DD --ensaio|--aplicar]');
+const manuais = arg("--clientes");
+if (arquivos.length === 0) throw new Error('uso: --arquivo "<invoice.pdf>" [--arquivo …] [--clientes "Nome=1234.56;…"] [--lancamento AAAA-MM-DD --ensaio|--aplicar]');
 
 const usd = (c: bigint) => `US$ ${(Number(c) / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
 const somaDias = (data: string, dias: number) =>
@@ -52,11 +57,26 @@ class Rollback extends Error {}
 const sql = postgres(process.env.DATABASE_URL as string, { max: 1, connect_timeout: 20 });
 
 try {
-  const inv = lerInvoiceSalesforce(
-    toDocumentLines(await readPdfPages(new Uint8Array(readFileSync(arquivo)))).map((l) => l.text),
-    basename(arquivo),
+  const lidas = await Promise.all(
+    arquivos.map(async (arquivo) =>
+      lerInvoiceSalesforce(
+        toDocumentLines(await readPdfPages(new Uint8Array(readFileSync(arquivo)))).map((l) => l.text),
+        basename(arquivo),
+      ),
+    ),
   );
-  if (inv.clientes.length === 0) throw new Error("nenhum cliente lido na invoice — o formato mudou?");
+  const extras = manuais ? lerClientesManuais(manuais) : [];
+  const semLista = lidas.filter((i) => i.clientes.length === 0).map((i) => i.numero ?? "?");
+  if (semLista.length > 0 && extras.length === 0) {
+    throw new Error(`a divisão da invoice ${semLista.join(", ")} não está no texto do PDF — passe-a com --clientes`);
+  }
+  const clientesLidos = [...lidas.flatMap((i) => i.clientes), ...extras];
+  const inv = {
+    numero: lidas.map((i) => i.numero ?? "?").join("+"),
+    vencimento: lidas.map((i) => i.vencimento).filter((v): v is string => v !== null).sort().at(-1) ?? null,
+    clientes: clientesLidos,
+    totalUsd: clientesLidos.reduce((a, c) => a + c.usd, 0n),
+  };
 
   const [entity] = await sql<{ id: string }[]>`select id from entities where slug = 'dd-group'`;
   const clientes = await sql<{ id: string; name: string }[]>`select id, name from clients where entity_id = ${entity!.id}`;

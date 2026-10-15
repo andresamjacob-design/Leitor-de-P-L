@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dividirPorCliente, lerInvoiceSalesforce } from "@/lib/import/salesforce-invoice";
+import { dividirPorCliente, lerClientesManuais, lerInvoiceSalesforce } from "@/lib/import/salesforce-invoice";
 import { parseMoney } from "@/lib/money";
 
 // O texto como o leitor de PDF do projeto devolve a invoice 125 — só o que importa aqui.
@@ -32,6 +32,36 @@ describe("lerInvoiceSalesforce", () => {
   it("vencimento no formato estranho dele, e número pelo nome do arquivo", () => {
     expect(inv.vencimento).toBe("2026-09-12");
     expect(inv.numero).toBe("125");
+  });
+});
+
+describe("o formato da invoice 129", () => {
+  const inv = lerInvoiceSalesforce([
+    "● Touti: $3,500",
+    "● Hospcom: $14,000",
+    "● Audens Group: $3,500",
+    "● SLK - Grupo Podpah: $3,500",
+    "● Ancora - $3,500",
+    "Payment Due By 22-08/2026",
+  ]);
+
+  it("dois-pontos ou traço, sem centavos, e o nome com traço dentro fica inteiro", () => {
+    expect(inv.clientes.map((c) => c.nome)).toEqual(["Touti", "Hospcom", "Audens Group", "SLK - Grupo Podpah", "Ancora"]);
+    expect(inv.totalUsd).toBe(2_800_000n);
+    expect(inv.vencimento).toBe("2026-08-22");
+  });
+});
+
+describe("lerClientesManuais", () => {
+  it("lê a divisão escrita à mão, para invoice em que ela só está na imagem", () => {
+    expect(lerClientesManuais("Danke=2378.55; Auddas=446.06")).toEqual([
+      { nome: "Danke", usd: 237_855n },
+      { nome: "Auddas", usd: 44_606n },
+    ]);
+  });
+
+  it("recusa o que não entende", () => {
+    expect(() => lerClientesManuais("Danke 2378")).toThrow();
   });
 });
 
