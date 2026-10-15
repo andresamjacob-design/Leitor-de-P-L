@@ -4095,3 +4095,11 @@ numa transação revertida.
 **O que isto não faz ainda:** a aba DRE do app continua mostrando a planilha copiada até agosto;
 preencher setembro em diante pelo razão (como o fluxo faz desde a D146) é o próximo passo, e a
 folha era o que travava.
+
+**Revisões de segurança da D161, corrigidas no mesmo dia.** (1) O RLS conferia o `entity_id` do
+valor, não o da linha para onde ele aponta: quem edita a empresa A gravaria salário numa linha
+de B. Migration `0011`: chave estrangeira composta (linha + empresa), `valor_da_folha` só lê
+valores da empresa da linha, e o app confere a linha antes de gravar; o `verify:rls` prova
+(28/28). (2) O mês vinha do formulário sem limite — `0001-01` faria o app regerar a folha mês a
+mês por dois mil anos. O mês tem de estar entre o ano passado e o próximo, o "apagar" lê mês e
+tipo do próprio registro, e a regeração nunca começa antes de janeiro do ano passado.

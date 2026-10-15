@@ -42,6 +42,10 @@ export async function listarFolha(entityId: string): Promise<LinhaFolha[]> {
 /** Grava (ou troca) o valor de uma linha num mês. */
 export async function salvarValor(entityId: string, linhaId: string, mes: string, valor: Cents, tipo: TipoFolha) {
   const supabase = await createClient();
+  // O banco também recusa (chave composta, 0011); aqui a mensagem sai clara.
+  const { data: linha } = await supabase.from("folha_linhas").select("id")
+    .eq("id", linhaId).eq("entity_id", entityId).maybeSingle();
+  if (!linha) throw new Error("Essa linha não é da folha desta empresa.");
   const { error } = await supabase.from("folha_valores").upsert(
     { entity_id: entityId, linha_id: linhaId, mes, valor: toNumeric(valor), tipo },
     { onConflict: "linha_id,mes,tipo" },
@@ -49,10 +53,16 @@ export async function salvarValor(entityId: string, linhaId: string, mes: string
   if (error) throw new Error(mensagem(error.message));
 }
 
-export async function removerValor(entityId: string, valorId: string) {
+/** Apaga e devolve o mês e o tipo do que foi apagado — `null` se não havia o que apagar. */
+export async function removerValor(
+  entityId: string,
+  valorId: string,
+): Promise<{ mes: string; tipo: TipoFolha } | null> {
   const supabase = await createClient();
-  const { error } = await supabase.from("folha_valores").delete().eq("id", valorId).eq("entity_id", entityId);
+  const { data, error } = await supabase.from("folha_valores").delete()
+    .eq("id", valorId).eq("entity_id", entityId).select("mes, tipo").maybeSingle();
   if (error) throw new Error(mensagem(error.message));
+  return (data as { mes: string; tipo: TipoFolha } | null) ?? null;
 }
 
 export async function criarLinha(

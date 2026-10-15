@@ -174,8 +174,18 @@ try {
     );
     check("viewer não regera a folha", await recusa((sp) => sp`select regerar_folha(${alpha.id}, '2026-09-01')`));
 
+    // Uma linha de folha da outra empresa, para provar que valor de A não entra em linha de B.
+    await tx`reset role`;
+    const linhaB = await tx<{ id: string }[]>`
+      insert into folha_linhas (entity_id, nome, conta, ordem) values (${beta.id}, 'RLS outra empresa', '6.10', 9999) returning id`;
+
     await como(memberId);
     check("member grava lançamento", !(await recusa((sp) => inserirLancamento(sp, "rls-member"))));
+    check(
+      "member não grava salário em linha de folha de outra empresa",
+      await recusa((sp) => sp`insert into folha_valores (entity_id, linha_id, mes, valor, tipo)
+        values (${alpha.id}, ${linhaB[0]!.id}, '2026-10-01', 1, 'vigente')`),
+    );
     const auditado = await tx<{ n: number }[]>`
       select count(*)::int as n from audit_log where table_name = 'cash_entries' and after_json ->> 'dedup_hash' = 'rls-member'`;
     check("o gatilho registra a auditoria do lançamento do member", auditado[0]?.n === 1);

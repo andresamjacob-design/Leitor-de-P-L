@@ -60,8 +60,6 @@ export default async function LinhaDaFolhaPage({ params }: { params: Promise<{ e
                   <form action={removerSalarioAction}>
                     <input type="hidden" name="slug" value={slug} />
                     <input type="hidden" name="valor" value={h.id} />
-                    <input type="hidden" name="mes" value={h.mes} />
-                    <input type="hidden" name="tipo" value={h.tipo} />
                     <button type="submit" className="text-xs text-muted underline">
                       apagar
                     </button>

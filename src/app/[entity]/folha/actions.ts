@@ -12,6 +12,10 @@ import { parseMoney } from "@/lib/money";
 function mesesAte(mes: string, tipo: "vigente" | "so_no_mes"): string[] {
   const atual = `${todayInSaoPaulo().slice(0, 7)}-01`;
   if (mes > atual) return [];
+  // Teto de trabalho, qualquer que seja a origem do mês (formulário ou registro gravado pela
+  // API): nunca antes de janeiro do ano passado — no máximo 24 meses regerados.
+  const piso = `${Number(atual.slice(0, 4)) - 1}-01-01`;
+  if (mes < piso) mes = piso;
   if (tipo === "so_no_mes") return [mes];
   const meses: string[] = [];
   for (let m = mes; m <= atual; ) {
@@ -22,9 +26,17 @@ function mesesAte(mes: string, tipo: "vigente" | "so_no_mes"): string[] {
   return meses;
 }
 
+/**
+ * O mês vem do formulário, e qualquer um escreve qualquer coisa nele. Fora do ano passado ao
+ * próximo é recusado: `0001-01` faria `mesesAte` recalcular a folha mês a mês por dois mil anos.
+ */
 function lerMes(data: FormData): string {
   const mes = readText(data, "mes", "O mês");
-  if (!/^\d{4}-\d{2}$/.test(mes)) throw new FormError("O mês não é válido.");
+  const ano = Number(todayInSaoPaulo().slice(0, 4));
+  const m = /^(\d{4})-(0[1-9]|1[0-2])$/.exec(mes);
+  if (!m || Number(m[1]) < ano - 1 || Number(m[1]) > ano + 1) {
+    throw new FormError(`O mês precisa estar entre ${ano - 1} e ${ano + 1}.`);
+  }
   return `${mes}-01`;
 }
 
@@ -56,11 +68,10 @@ export async function salvarSalarioAction(_previous: FormState, data: FormData):
 export async function removerSalarioAction(data: FormData): Promise<void> {
   const slug = String(data.get("slug") ?? "");
   const valorId = String(data.get("valor") ?? "");
-  const mes = String(data.get("mes") ?? "");
-  const tipo = data.get("tipo") === "so_no_mes" ? "so_no_mes" : "vigente";
   const { entity } = await requireWriteContext(slug);
-  await removerValor(entity.id, valorId);
-  await regerarFolha(entity.id, mesesAte(mes, tipo));
+  // Mês e tipo vêm do registro apagado, não do formulário.
+  const apagado = await removerValor(entity.id, valorId);
+  if (apagado) await regerarFolha(entity.id, mesesAte(apagado.mes, apagado.tipo));
   revalidatePath(`/${slug}/folha`);
 }
 

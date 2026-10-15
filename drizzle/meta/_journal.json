@@ -78,6 +78,13 @@
       "when": 1792070000000,
       "tag": "0010_folha_cadastro",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1792071000000,
+      "tag": "0011_folha_mesma_empresa",
+      "breakpoints": true
     }
   ]
 }
