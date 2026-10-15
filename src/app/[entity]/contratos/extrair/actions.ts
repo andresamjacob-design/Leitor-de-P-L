@@ -6,6 +6,7 @@ import {
   buildContractPrompt,
   CONTRACT_SYSTEM_PROMPT,
   parseContractDraft,
+  RESPONSE_SCHEMA,
   type ContractDraft,
 } from "@/lib/ai/contract";
 import { readPdfPages } from "@/lib/import/pdf";
@@ -79,7 +80,7 @@ export async function extractContractAction(
       system: CONTRACT_SYSTEM_PROMPT,
       prompt: buildContractPrompt(text),
       maxTokens: 4000,
-      prefill: "{",
+      responseSchema: RESPONSE_SCHEMA,
     });
 
     return { draft: parseContractDraft(response.text), filename: file.name };

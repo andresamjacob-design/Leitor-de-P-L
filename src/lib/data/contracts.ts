@@ -22,6 +22,13 @@ import {
 export type Contract = RecognitionContract & {
   entityId: string;
   name: string;
+  /**
+   * The account the contract names for itself, or null when it leaves that to the type.
+   *
+   * `categoryId` above is already resolved and cannot tell the two apart; the form needs
+   * to, or editing a contract would silently freeze today's default into the row.
+   */
+  categoryOverrideId: string | null;
   billingTerms: string | null;
   paymentTerms: string | null;
   parentContractId: string | null;
@@ -29,7 +36,7 @@ export type Contract = RecognitionContract & {
   supersededAt: string | null;
 };
 
-const COLUMNS = `id, entity_id, client_id, name, type, status, total_value, monthly_value,
+const COLUMNS = `id, entity_id, client_id, name, type, status, category_id, total_value, monthly_value,
   start_date, end_date, billing_terms, payment_terms, recognition_method,
   prorate_first_last_month, parent_contract_id, version, superseded_at, is_intercompany`;
 
@@ -40,6 +47,7 @@ type ContractRow = {
   name: string;
   type: ContractType;
   status: ContractStatus;
+  category_id: string | null;
   total_value: string | null;
   monthly_value: string | null;
   start_date: string | null;
@@ -55,23 +63,40 @@ type ContractRow = {
 };
 
 /**
- * Which chart-of-accounts line a contract's revenue lands on.
+ * Which chart-of-accounts line a contract's revenue lands on, when the contract does not
+ * say for itself: `3.01` for a retainer, `3.02` for a project, both seeded from the
+ * `DRE Geral` sheet.
  *
- * `contracts` has no category column, and adding one is a migration for a value that is
- * the same for every contract of a type today. Resolved by code instead: `3.01` for a
- * retainer, `3.02` for a project — both seeded from the `DRE Geral` sheet.
+ * This used to be the whole story, on the grounds that the account was the same for every
+ * contract of a type. It stopped being: the same sheet carries a referral commission and a
+ * partner share, which belong in `3.03` and `3.04`, and a type with two values cannot
+ * reach four accounts. A contract may now name its own account, and `contracts.category_id`
+ * wins whenever it is set.
  */
 export const REVENUE_CODE: Record<ContractType, string> = {
   retainer: "3.01",
   project: "3.02",
 };
 
-function toContract(row: ContractRow, categoryId: string): Contract {
+/**
+ * The revenue account a contract recognises into.
+ *
+ * The contract's own account wins whenever it has one; otherwise the type decides. Kept as
+ * a named function rather than a `??` at the call site because it is a rule about money,
+ * and because the fallback can legitimately be empty — an entity whose chart is missing
+ * the account gets `""`, and `applyRecognition` refuses to write anything and says so.
+ */
+export function revenueAccountOf(own: string | null, byType: string): string {
+  return own ?? byType;
+}
+
+function toContract(row: ContractRow, byType: string): Contract {
   return {
     id: row.id,
     entityId: row.entity_id,
     clientId: row.client_id,
-    categoryId,
+    categoryId: revenueAccountOf(row.category_id, byType),
+    categoryOverrideId: row.category_id,
     name: row.name,
     type: row.type,
     status: row.status,
@@ -141,6 +166,8 @@ export type ContractInput = {
   name: string;
   type: ContractType;
   status: ContractStatus;
+  /** Null leaves the account to the type. */
+  categoryId: string | null;
   totalValue: Cents | null;
   monthlyValue: Cents | null;
   startDate: IsoDate | null;
@@ -158,6 +185,7 @@ function contractRow(input: ContractInput) {
     name: input.name,
     type: input.type,
     status: input.status,
+    category_id: input.categoryId,
     total_value: input.totalValue === null ? null : toNumeric(input.totalValue),
     monthly_value: input.monthlyValue === null ? null : toNumeric(input.monthlyValue),
     start_date: input.startDate,

@@ -4,7 +4,7 @@ import { ConsolidatedNotice } from "@/components/consolidated-notice";
 import { EmptyState } from "@/components/empty-state";
 import { PageHeader } from "@/components/page-header";
 import { Table, TableScroll, Td, Th } from "@/components/ui/table";
-import { UploadForm } from "./upload-form";
+import { EnviarArquivos } from "./enviar-arquivos";
 import { listAccounts } from "@/lib/data/accounts";
 import { listImports } from "@/lib/data/imports";
 import { resolveScope } from "@/lib/entities";
@@ -49,7 +49,7 @@ export default async function ImportsPage({
     <>
       <PageHeader
         title="Importações"
-        description="Extrato do Itaú em xlsx/csv e fatura do cartão em pdf. Nada entra no ledger sem aprovação."
+        description="Coloque aqui o extrato do Itaú (xlsx) e as faturas do cartão (pdf) do mês. O que fecha com o saldo do banco entra sozinho no razão."
       />
 
       {accounts.length === 0 ? (
@@ -58,7 +58,7 @@ export default async function ImportsPage({
         </EmptyState>
       ) : (
         <div className="mb-8">
-          <UploadForm slug={slug} accounts={accounts} />
+          <EnviarArquivos slug={slug} />
         </div>
       )}
 

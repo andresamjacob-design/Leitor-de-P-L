@@ -4,6 +4,7 @@ import { EmptyState } from "@/components/empty-state";
 import { PageHeader } from "@/components/page-header";
 import { ContractForm } from "../contract-form";
 import { listClients } from "@/lib/data/clients";
+import { listCategories } from "@/lib/data/categories";
 import { resolveScope } from "@/lib/entities";
 
 const PREFILLABLE = [
@@ -40,7 +41,11 @@ export default async function NewContractPage({
     );
   }
 
-  const clients = await listClients([scope.entity.id]);
+  const [clients, categories] = await Promise.all([
+    listClients([scope.entity.id]),
+    listCategories([scope.entity.id]),
+  ]);
+  const revenueCategories = categories.filter((category) => category.kind === "revenue");
 
   // Whatever the extraction proposed arrives as plain text and is validated on submit,
   // exactly like a value typed by hand (SPEC §9).
@@ -76,6 +81,7 @@ export default async function NewContractPage({
         slug={slug}
         contract={null}
         clients={clients}
+        revenueCategories={revenueCategories}
         defaults={defaults}
         clientNameHint={query.clientName}
       />

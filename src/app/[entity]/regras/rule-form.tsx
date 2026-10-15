@@ -95,6 +95,18 @@ export function RuleForm({
           />
         </Field>
 
+        <Field
+          label="Sentido"
+          htmlFor="direction"
+          hint="Uma regra de despesa que também vale para entradas transforma receita em custo."
+        >
+          <Select id="direction" name="direction" defaultValue={kept("direction", rule?.direction ?? "")}>
+            <option value="">Qualquer</option>
+            <option value="out">Só saídas</option>
+            <option value="in">Só entradas</option>
+          </Select>
+        </Field>
+
         <Field label="Valor mínimo" htmlFor="amountMin" hint="Opcional.">
           <Input
             id="amountMin"

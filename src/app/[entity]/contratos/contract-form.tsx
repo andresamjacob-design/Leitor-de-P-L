@@ -21,6 +21,7 @@ export function ContractForm({
   slug,
   contract,
   clients,
+  revenueCategories,
   amend = false,
   defaults,
   clientNameHint,
@@ -28,6 +29,8 @@ export function ContractForm({
   slug: string;
   contract: Contract | null;
   clients: Client[];
+  /** The revenue lines of the chart, for a contract that does not fit its type. */
+  revenueCategories: { id: string; code: string; name: string }[];
   amend?: boolean;
   /** Values proposed by the contract extraction (SPEC §9). Still validated on submit. */
   defaults?: Record<string, string>;
@@ -94,6 +97,26 @@ export function ContractForm({
             <option value="active">Ativo</option>
             <option value="completed">Concluído</option>
             <option value="cancelled">Cancelado</option>
+          </Select>
+        </Field>
+
+        <Field
+          label="Conta de receita"
+          htmlFor="categoryId"
+          hint="Em branco, sai do tipo: 3.01 para contínuo, 3.02 para projeto."
+          className="sm:col-span-2"
+        >
+          <Select
+            id="categoryId"
+            name="categoryId"
+            defaultValue={kept("categoryId", contract?.categoryOverrideId ?? "")}
+          >
+            <option value="">— pelo tipo do contrato —</option>
+            {revenueCategories.map((category) => (
+              <option key={category.id} value={category.id}>
+                {category.code} · {category.name}
+              </option>
+            ))}
           </Select>
         </Field>
 

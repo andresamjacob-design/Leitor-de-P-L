@@ -64,6 +64,19 @@ const CHART_OF_ACCOUNTS: CategorySeed[] = [
   // Pró-labore is payroll, not a draw: the `DRE Geral` sheet carries it inside Pessoal,
   // above the line. `owner_draw` is reserved for profit distribution, which is below it.
   { code: "6.11", name: "Pró-labore", kind: "expense", dreGroup: "pessoal", parent: "6.01" },
+  /**
+   * Freelancer que é **empresa**, e que o Andre lança em linha separada do time nos dois
+   * arquivos: `- Freelancers (Outras empresas)` na DRE e `Freelancer (outras empresas)` na
+   * aba `Expenses`, esta última fora do bloco `Pessoas`. Sem uma conta própria, Santa Monica
+   * e WCommerce cairiam em 6.10 e a linha dele nunca teria correspondente (D117).
+   */
+  {
+    code: "6.12",
+    name: "Freelancers (outras empresas)",
+    kind: "expense",
+    dreGroup: "pessoal",
+    parent: "6.01",
+  },
 
   // Ferramentas e assinaturas — one line per tool, as the spreadsheet keeps them.
   { code: "7.00", name: "Ferramentas e assinaturas", kind: "expense", dreGroup: "ferramentas" },
@@ -120,6 +133,11 @@ const CHART_OF_ACCOUNTS: CategorySeed[] = [
   { code: "11.01", name: "Tarifas bancárias", kind: "expense", dreGroup: "financeiras" },
   { code: "11.02", name: "IOF", kind: "expense", dreGroup: "financeiras" },
   { code: "11.03", name: "Multas e acordos", kind: "expense", dreGroup: "financeiras" },
+  // Rendimento que fica dentro do CDB (D148). O da aplicação automática é varrido para a
+  // conta corrente e continua em 99.03.
+  { code: "11.04", name: "Rendimento de aplicação", kind: "revenue", dreGroup: "financeiras" },
+  // O rendimento que o banco paga na conta corrente (`REND PAGO APLIC AUT`) é entrada (D150).
+  { code: "11.05", name: "Rendimento da aplicação automática", kind: "revenue", dreGroup: "financeiras" },
 
   // Transferências — never revenue, never expense. Keeps the card bill from
   // double-counting (SPEC §7, DECISIONS D-C).

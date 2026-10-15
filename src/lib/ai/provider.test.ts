@@ -17,7 +17,7 @@ describe("configuração", () => {
     vi.stubEnv("ANTHROPIC_MODEL", "");
     const provider = getAiProvider();
     expect(provider?.name).toBe("anthropic");
-    expect(provider?.model).toBe("claude-sonnet-5");
+    expect(provider?.model).toBe("claude-opus-5");
   });
 
   it("o modelo é trocável por variável de ambiente", () => {
