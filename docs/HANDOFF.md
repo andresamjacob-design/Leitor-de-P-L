@@ -638,7 +638,8 @@ CDB com as pernas de setembro. O fluxo de setembro sai com `npm run fluxo:pronto
 ### Login (D155)
 
 Login pelo link do e-mail padrão do Supabase (D157) para qualquer @ddgroup.com.br; ver e editar
-dependem de liberação na tela **Acessos** (ou `npm run liberar`). O banco impõe o domínio, os papéis e que a sessão tenha sido aberta pelo e-mail, nunca só por senha (D156). O link só funciona no navegador em
+dependem de liberação na tela **Acessos** (ou `npm run liberar`). O banco impõe o domínio, os papéis e que a sessão tenha sido aberta pelo e-mail, nunca só por senha (D156). O Andre entrou com `andre.jacob@ddgroup.com.br` em 15/10, como
+`owner` (sessão `magiclink`). O link só funciona no navegador em
 que foi pedido. O e-mail padrão do Supabase grátis entrega pouco por hora.
 
 ### Depois
