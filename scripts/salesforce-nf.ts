@@ -24,6 +24,10 @@
  * Um recebimento pode pagar **mais de uma invoice** (o FIN COMPRA de 24/09 pagou a 135 e a
  * 136): repita `--arquivo`. Quando a divisão só existe na imagem da tabela, ela entra por
  * `--clientes "Indigo=2990.60;Danke=2378.55"`, lida da imagem e confirmada pelo Andre.
+ *
+ * Nome da invoice que não bate com o cadastro: `--apelido "Touti=Kiosk Brand"` (a resposta do
+ * Andre, nunca um palpite). Cliente novo só com `--cadastrar "Indigo"`, criado na mesma
+ * transação — sem a palavra dele o script recusa, como sempre (D87).
  */
 
 import { readFileSync } from "node:fs";
@@ -47,6 +51,16 @@ const REHEARSE = process.argv.includes("--ensaio");
 const arquivos = process.argv.flatMap((a, i) => (a === "--arquivo" && process.argv[i + 1] ? [process.argv[i + 1]!] : []));
 const lancamento = arg("--lancamento");
 const manuais = arg("--clientes");
+const pares = (texto: string | undefined) =>
+  new Map(
+    (texto ?? "")
+      .split(";")
+      .map((p) => p.split("=").map((x) => x.trim()))
+      .filter((p): p is [string, string] => p.length === 2 && p[0] !== "" && p[1] !== "")
+      .map(([de, para]) => [normalizeDescription(de), para]),
+  );
+const apelidos = pares(arg("--apelido"));
+const cadastrar = new Set((arg("--cadastrar") ?? "").split(";").map((n) => n.trim()).filter(Boolean));
 if (arquivos.length === 0) throw new Error('uso: --arquivo "<invoice.pdf>" [--arquivo …] [--clientes "Nome=1234.56;…"] [--lancamento AAAA-MM-DD --ensaio|--aplicar]');
 
 const usd = (c: bigint) => `US$ ${(Number(c) / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
@@ -80,16 +94,29 @@ try {
 
   const [entity] = await sql<{ id: string }[]>`select id from entities where slug = 'dd-group'`;
   const clientes = await sql<{ id: string; name: string }[]>`select id, name from clients where entity_id = ${entity!.id}`;
-  // "SFA Medika" → Medika: o nome cadastrado tem de estar contido no da invoice, e um só.
+  // "SFA Medika" → Medika: o nome cadastrado tem de estar contido no da invoice, e um só. Um
+  // apelido dito pelo Andre manda no lugar disso; `--cadastrar` marca o cliente a criar.
+  type Alvo = { id: string | null; name: string };
   const casados = inv.clientes.map((c) => {
     const alvo = normalizeDescription(c.nome);
+    const apelido = apelidos.get(alvo);
+    if (apelido) {
+      const achados = clientes.filter((k) => normalizeDescription(k.name) === normalizeDescription(apelido));
+      return { ...c, cliente: (achados.length === 1 ? achados[0]! : null) as Alvo | null, achados: achados.length };
+    }
+    if (cadastrar.has(c.nome)) {
+      if (clientes.some((k) => normalizeDescription(k.name) === alvo)) throw new Error(`${c.nome} já está cadastrado`);
+      return { ...c, cliente: { id: null, name: c.nome } as Alvo | null, achados: 0 };
+    }
     const achados = clientes.filter((k) => alvo.includes(normalizeDescription(k.name)));
-    return { ...c, cliente: achados.length === 1 ? achados[0]! : null, achados: achados.length };
+    return { ...c, cliente: (achados.length === 1 ? achados[0]! : null) as Alvo | null, achados: achados.length };
   });
 
   console.log(`\nInvoice ${inv.numero ?? "?"} · vencimento ${inv.vencimento ?? "?"} · total ${usd(inv.totalUsd)}`);
   for (const c of casados) {
-    console.log(`  ${usd(c.usd).padStart(14)}  ${c.nome.padEnd(28)} → ${c.cliente?.name ?? `?? (${c.achados} cadastros casam)`}`);
+    console.log(
+      `  ${usd(c.usd).padStart(14)}  ${c.nome.padEnd(28)} → ${c.cliente ? `${c.cliente.name}${c.cliente.id === null ? " (novo)" : ""}` : `?? (${c.achados} cadastros casam)`}`,
+    );
   }
   const semCliente = casados.filter((c) => !c.cliente);
 
@@ -127,8 +154,16 @@ try {
     const antes = await saldo(sql);
 
     const write = async (db: postgres.TransactionSql) => {
+      for (const c of casados) {
+        if (c.cliente && c.cliente.id === null) {
+          const [novo] = await db<{ id: string }[]>`
+            insert into clients (entity_id, name) values (${entity!.id}, ${c.cliente.name}) returning id`;
+          c.cliente.id = novo!.id;
+          console.log(`  cliente novo: ${c.cliente.name}`);
+        }
+      }
       for (const [i, p] of partes.entries()) {
-        const cliente = casados[i]!.cliente!;
+        const cliente = casados[i]!.cliente as { id: string; name: string };
         const descricao = `${mae.description} · invoice ${inv.numero ?? "?"}`;
         if (i === 0) {
           await db`update cash_entries set amount = ${toNumeric(p.valor)}, client_id = ${cliente.id},

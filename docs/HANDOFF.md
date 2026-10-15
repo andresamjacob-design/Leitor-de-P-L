@@ -4,7 +4,7 @@ Onde tudo está, o que foi feito, e o que falta. Escrito para quem chega sem con
 nenhum, inclusive eu mesmo numa conversa nova.
 
 Leia junto quando precisar do detalhe: `docs/PLAN.md` (o roteiro original),
-`docs/DECISIONS.md` (decisões numeradas D1–D157 e pendências Q2–Q18) e `README.md`.
+`docs/DECISIONS.md` (decisões numeradas D1–D158 e pendências Q2–Q18) e `README.md`.
 
 > **A prioridade, dita pelo Andre em 14/09 (D136), e ela reordena o resto:**
 > *"Não preciso de um sistema que categorize absolutamente todos os gastos sem nenhum erro,
@@ -622,10 +622,10 @@ categorizadas, o custo cresce e o resultado cai, **sem o caixa mudar um centavo*
 Setembro está fechado (D147): as respostas de 06/10 aplicadas, a GSJacob abrindo em 07/09, e o
 CDB com as pernas de setembro. O fluxo de setembro sai com `npm run fluxo:pronto`.
 
-1. **As invoices dos dois `FIN COMPRA`.** A 125 era o `OP REC EXT` de 18/09 e já está
-   dividida entre Medika, Harpix, ITA Educacional e Artium (D148). Os dois `FIN COMPRA`
-   (R$ 151.616,12 e R$ 29.341,81) continuam em `3.03` sem cliente até as invoices deles
-   chegarem: `npm run salesforce:nf -- --arquivo <pdf>` mostra o par pelo câmbio.
+1. ~~As invoices dos dois `FIN COMPRA`~~ — divididos (D158). Toda a Receita Salesforce de
+   setembro tem cliente. Para os próximos meses: `npm run salesforce:nf -- --arquivo <pdf>`
+   mostra o par pelo câmbio; `--clientes` quando a divisão só está na imagem, `--apelido` e
+   `--cadastrar` quando o nome não bate com o cadastro.
 2. ~~A cópia da planilha de fluxo desatualizada em agosto~~ — refeita com a versão de 07/10
    (D154). Agosto fecha a R$ 0,01; setembro, preenchido pelo Andre, bate com o app.
 3. **A fatura do cartão até ~23/09** ainda não foi enviada. O pagamento de 05/10

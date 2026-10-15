@@ -4002,3 +4002,27 @@ confirmação de cadastro; conta existente, o de acesso. O resto da D155 e da D1
 troca num cookie (PKCE). A tela avisa isso, e o login passou a mostrar o motivo quando o link
 volta com erro (outro navegador, vencido, incompleto); antes, o `?error=` era ignorado e a
 pessoa via o login de novo sem explicação.
+
+### D158 — Os dois FIN COMPRA de setembro divididos por cliente (invoices 129, 135 e 136)
+O Andre mandou em 15/10 as invoices 129, 135 e 136. Nenhuma tinha o formato da 125, e o
+leitor recusou as três em vez de inventar divisão — que era o comportamento certo:
+
+- **129** lista os clientes como `● Touti: $3,500` (dois-pontos, sem centavos). O leitor passou
+  a aceitar traço ou dois-pontos, com ou sem centavos, e mantém `SLK - Grupo Podpah` inteiro.
+- **135 e 136** têm a divisão **só na imagem da tabela** (como o cabeçalho, D148). Ela entra por
+  `--clientes`, lida da imagem: 135 = Indigo US$ 2.990,60; 136 = Danke 573,79 + 902,38 + 902,38 =
+  US$ 2.378,55 e SLK - Auddas US$ 446,06 — os dois somam os totais das invoices.
+- **Um recebimento, duas invoices:** o FIN COMPRA de 24/09 pagou a 135 e a 136 (as duas vencem
+  em 24/09); `--arquivo` pode repetir.
+
+Pares confirmados pelo Andre: **129 → FIN COMPRA de 03/09** (R$ 151.616,12, câmbio R$ 5,4149 —
+estranhamente acima dos R$ 5,00 e R$ 5,05 das outras, e ele confirmou mesmo assim) e **135 + 136
+→ FIN COMPRA de 24/09** (R$ 29.341,81, câmbio R$ 5,0457). Nomes, nas palavras dele: *"touti é
+kioskbrands, indigo é um novo cliente, cadastre ele e auddas fica na linha de salesforce em
+clientes"* — `--apelido` liga nome de invoice a cadastro, `--cadastrar` cria o cliente na mesma
+transação; sem os dois o script continua recusando (D87).
+
+Gravado: 03/09 → Kiosk Brand 18.952,02 · Hospcom 75.808,06 · Audens 18.952,02 · Podpah 18.952,01
+· Âncora 18.952,01; 24/09 → Indigo (novo) 15.089,67 · Danke 12.001,45 · Salesforce 2.250,69.
+Saldo das contas inalterado; banco ao centavo; ponte 13/13; Receita Salesforce de setembro a
+mesma. **Toda a Receita Salesforce de setembro agora tem cliente.**
