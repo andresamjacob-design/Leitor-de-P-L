@@ -1,5 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { EntitySwitcher } from "@/components/entity-switcher";
+import { Marca } from "@/components/marca";
 import { SideNav } from "@/components/side-nav";
 import { listUserEntities, resolveScope, scopeLabel } from "@/lib/entities";
 import { getUser } from "@/lib/supabase/server";
@@ -26,8 +27,9 @@ export default async function EntityLayout({
   return (
     <div className="min-h-screen">
       <header className="flex items-center justify-between gap-4 border-b border-border px-6 py-3">
-        <div className="flex items-baseline gap-3">
-          <span className="text-sm font-semibold">Financeiro</span>
+        <div className="flex items-center gap-3">
+          <Marca className="h-8" />
+          <span className="border-l border-border pl-3 text-sm font-semibold">Financeiro</span>
           <span className="text-xs text-muted">{scopeLabel(scope)}</span>
         </div>
         <div className="flex items-center gap-4">

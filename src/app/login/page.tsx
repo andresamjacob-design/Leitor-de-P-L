@@ -1,5 +1,6 @@
 import { EmptyState } from "@/components/empty-state";
 import { LoginForm } from "@/app/login/login-form";
+import { Marca } from "@/components/marca";
 import { readSupabaseConfig } from "@/lib/env";
 
 /** O link do e-mail voltou com erro (`/auth/callback`): diz o motivo em português. */
@@ -25,6 +26,7 @@ export default async function LoginPage({
 
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center p-8">
+      <Marca className="mb-6 h-14" />
       <h1 className="text-lg font-semibold">Financeiro</h1>
       <p className="mt-1 mb-6 text-sm text-muted">
         Entre com o seu e-mail @ddgroup.com.br. Enviamos um link de acesso.
