@@ -246,6 +246,35 @@ const CORRECOES: readonly {
     total: parseMoney("5.500,00"),
     porque: "DAMF: o Andre não sabe o que é, vai para Outros",
   },
+  // D166, aprendido da DRE de 22/10. O IOF dele é o do app sem o IOF CAMBIO em 8 de 9 meses, e
+  // a planilha de fluxo também nunca o põe em IOF; a tarifa de câmbio também fica fora das
+  // Tarifas dele (fevereiro, junho e setembro). O câmbio ganha conta própria.
+  {
+    descricao: "IOF CAMBIO",
+    de: "11.02",
+    para: "11.06",
+    quantas: 5,
+    total: parseMoney("1.295,76"),
+    porque: "IOF de câmbio não é a linha IOF da DRE dele",
+  },
+  {
+    descricao: "TAR CAMB",
+    de: "11.01",
+    para: "11.06",
+    quantas: 8,
+    total: parseMoney("1.080,00"),
+    porque: "tarifa de câmbio não é a linha Bank Charges da DRE dele",
+  },
+  // Em setembro ele lançou o reembolso da Manuella em `Reembolsos Comercial`, e a linha
+  // Alimentação dele é exatamente a do app sem os reembolsos. A D152 tinha posto em 9.03.
+  {
+    nome: "MANUELLA CYPRIANO DE SOUSA",
+    de: "9.03",
+    para: "10.04",
+    quantas: 3,
+    total: parseMoney("172,31"),
+    porque: "reembolso para ela é Reembolsos Comercial, como na DRE de setembro dele",
+  },
 ];
 
 const url = process.env.DATABASE_URL;

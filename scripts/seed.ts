@@ -140,6 +140,9 @@ const CHART_OF_ACCOUNTS: CategorySeed[] = [
   { code: "11.04", name: "Rendimento de aplicação", kind: "revenue", dreGroup: "financeiras" },
   // O rendimento que o banco paga na conta corrente (`REND PAGO APLIC AUT`) é entrada (D150).
   { code: "11.05", name: "Rendimento da aplicação automática", kind: "revenue", dreGroup: "financeiras" },
+  // O custo de receber de fora (IOF CAMBIO, TAR CAMBIO): o Andre nunca o põe em IOF nem em
+  // Tarifas — as duas planilhas dele, 8 de 9 meses (D166).
+  { code: "11.06", name: "Câmbio (IOF e tarifa)", kind: "expense", dreGroup: "financeiras" },
 
   // Transferências — never revenue, never expense. Keeps the card bill from
   // double-counting (SPEC §7, DECISIONS D-C).

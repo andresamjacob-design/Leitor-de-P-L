@@ -57,10 +57,16 @@ export const CONTAS_DA_DRE: Record<string, string[]> = {
   "Freelancers (Outras empresas)": ["6.12"],
   "Agência Ciclo": ["8.03"],
   Impostos: ["4.01"],
+  // D166: a `Bank Charges` dele é o custo de câmbio (IOF CAMBIO e TAR CAMBIO), e não as
+  // tarifas da `11.01` — que são anuidade do cartão cobrada e estornada na fatura seguinte, e
+  // que ele não lança. Janeiro (R$ 347,56) e maio (R$ 753,68) são o câmbio pago no mês seguinte.
+  "Bank Charges": ["11.06"],
 };
 
 /** As linhas que a planilha lança pelo que foi pago no mês seguinte (D101, medido na D163). */
-export const DESLOCADAS = new Set(["Impostos", "Contabilidade", "Tarefy", "Escola.i", "Agência Ciclo", "Juridico"]);
+export const DESLOCADAS = new Set([
+  "Impostos", "Contabilidade", "Tarefy", "Escola.i", "Agência Ciclo", "Juridico", "Bank Charges",
+]);
 
 export function contasDaLinhaDaDre(rotulo: string): string[] | null {
   const limpo = normalizarRotulo(rotulo);

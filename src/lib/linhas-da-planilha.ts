@@ -93,6 +93,9 @@ export const APELIDOS_DO_FLUXO: Record<string, string[]> = {
   "Receita Salesforce": ["3.03", "3.04"],
   // `REND PAGO APLIC AUT`: o Andre conta no Income (D150). O rendimento que fica no CDB, não.
   "Interest Earned": ["11.05"],
+  // D166: na planilha de fluxo a `Bank Charges` é o câmbio do próprio mês (janeiro R$ 159,52,
+  // fevereiro R$ 347,56, junho R$ 753,68) mais as tarifas; o IOF de câmbio saiu da `IOF`.
+  "Bank Charges": ["11.06", "11.01"],
 };
 
 /** `- Clicksign (cartão de credito)` → `Clicksign`: o rótulo como a `DRE Geral` o escreve. */

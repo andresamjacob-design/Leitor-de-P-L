@@ -4191,3 +4191,33 @@ Ponte 13/13; saldo R$ 1.060.697,06 inalterado.
 `Freelancers (Outras empresas)` (app R$ 28.677,76 — Santa Monica e Vision —, ele zero, pergunta
 aberta), as compras de cartão de agosto que ele lança em setembro (Claude R$ 3.611,97, Passagem
 R$ 3.970,21, ChatGPT R$ 557,61 — o app usa a data da compra), e Tarefy/Escola.i (deslocadas).
+
+### D166 — Aprendido da DRE de 22/10: câmbio, anuidade e reembolso
+
+Pedido: *"aprenda com a minha planilha de dre e aplique qualquer coisa nova que nao esta no app"*.
+Testado contra janeiro a setembro da planilha de 22/10, cada hipótese medida antes de aplicar.
+
+**Aplicado:**
+- **Câmbio tem conta própria (`11.06 Câmbio (IOF e tarifa)`).** O IOF dele é o do app sem o
+  IOF CAMBIO em 8 de 9 meses, e a linha IOF da planilha de fluxo também nunca o inclui. O câmbio
+  está na `Bank Charges` dele, **pelo pagamento do mês seguinte** na DRE (janeiro R$ 347,56 e maio
+  R$ 753,68 são o câmbio de fevereiro e de junho) e do próprio mês no fluxo. 5 IOF CAMBIO e 8 TAR
+  CAMB movidos; regra `IOF CAMBIO` (prioridade 40, antes da `IOF`) e a `TAR CAMB` apontam para
+  11.06. Na DRE pronta, `Bank Charges` = 11.06 deslocada; no fluxo, 11.06 + 11.01.
+- **Anuidade do cartão fica fora das linhas dele.** É cobrada e estornada na fatura seguinte
+  (líquido perto de zero) e ele não lança nenhuma das duas: a 11.01 ficou sem linha na DRE e
+  aparece em `Outros custos (sem linha na planilha)`.
+- **Reembolso da Manuella é `Reembolsos Comercial` (10.04)**, não Alimentação: em setembro ele
+  lançou R$ 62,85 lá, e a Alimentação dele é exatamente a do app sem os reembolsos. Os três
+  (83,99, 62,85 e 25,47) movidos. Corrige a D152.
+
+`simular:dre` (jan–ago): 400 → 406 células. Setembro contra o dele: 59 de 77 linhas. Saldo e
+ponte intactos.
+
+**Medido e não aplicado:**
+- **Cartão pela fatura.** As compras de 25 a 30/08 (Claude, ChatGPT, Passagem) ele lançou em
+  setembro, que é o mês da fatura. Mas no ano a data da compra fecha 88 meses-linha e o mês da
+  fatura 64; só setembro favorece a fatura (9 contra 7). Pergunta aberta: mudou o jeito?
+- **O resto de setembro** que não fecha é falta de dado, não regra: compras de 24 a 30/09
+  (a fatura que as traz ainda não foi enviada), Impostos/Tarefy/Escola.i (esperam outubro) e
+  Freelancers (Outras empresas) — Santa Monica e Vision, pergunta aberta.
