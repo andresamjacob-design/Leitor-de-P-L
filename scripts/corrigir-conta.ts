@@ -212,6 +212,23 @@ const CORRECOES: readonly {
     total: parseMoney("4.500,00"),
     porque: "Matheus Chagas está na folha (Projetos · Funcional)",
   },
+  // D164, respostas de 22/10: *"vision é freelancer empresa, hostgator é hospedagem do site"*.
+  {
+    taxId: "54029422000119",
+    de: "4.01",
+    para: "6.12",
+    quantas: 3,
+    total: parseMoney("18.911,00"),
+    porque: "Vision Consultoria é freelancer empresa (04/09 2× e 05/10)",
+  },
+  {
+    taxId: "15754475000140",
+    de: "4.01",
+    para: "7.21",
+    quantas: 1,
+    total: parseMoney("662,92"),
+    porque: "Hostgator é a hospedagem do site",
+  },
 ];
 
 const url = process.env.DATABASE_URL;

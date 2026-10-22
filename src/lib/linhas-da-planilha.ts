@@ -37,6 +37,7 @@ export const TO_CODE: Record<string, string> = {
   Tactic: "7.18",
   "Railway Corporation": "7.19",
   Linkedin: "7.20",
+  Hostgator: "7.21",
   Contabilidade: "8.01",
   Juridico: "8.02",
   "Agência Ciclo": "8.03",

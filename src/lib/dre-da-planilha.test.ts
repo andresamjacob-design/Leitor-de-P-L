@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { montarDadosDaDre, preencherDreComApp, type LinhaDeCompetencia } from "@/lib/dre-da-planilha";
+import { montarDadosDaDre, preencherDreComApp, type LinhaDaDre, type LinhaDeCompetencia } from "@/lib/dre-da-planilha";
 import type { LinhaPlanilha } from "@/lib/planilha";
 
 const AGO = 7;
@@ -54,7 +54,7 @@ const competencia = [
   c(SET + 1, "cost", 120, "8.01"), // contabilidade paga em outubro
 ];
 const dados = montarDadosDaDre(competencia);
-const achar = (linhas: LinhaPlanilha[], rotulo: string) => linhas.find((x) => x.rotulo === rotulo)!;
+const achar = (linhas: LinhaDaDre[], rotulo: string) => linhas.find((x) => x.rotulo === rotulo)!;
 
 describe("preencherDreComApp", () => {
   it("preenche setembro quando outubro já fechou, nas mesmas linhas", () => {

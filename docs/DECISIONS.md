@@ -4152,3 +4152,12 @@ Damasceno, Matheus Chagas, R$ 15.000) foram para `6.10` pelo `corrigir` e a folh
 regerada — estavam contados duas vezes, no imposto e na folha. Saldo e ponte intactos. Os outros
 quatro (Vision Consultoria, Stephany JFS, DAMF, Hostgator — R$ 33.548) esperam o Andre dizer o que
 são; enquanto isso, setembro teria R$ 21.586,92 a mais em Impostos quando outubro fechar.
+
+### D164 — Vision é freelancer empresa, Hostgator é hospedagem do site
+
+Respostas de 22/10 à pergunta da D163: *"vision é freelancer empresa, hostgator é hospedagem do
+site"*. Vision Consultoria (04/09 2× e 05/10, R$ 18.911,00) sai de `4.01` para `6.12`; Hostgator
+(05/10, R$ 662,92) para a conta nova `7.21 Hostgator`, criada nas duas entidades e no seed. Pelo
+`corrigir`: saldo R$ 1.060.697,06 antes e depois, ponte 13/13. Sobram em `4.01` dois que o Andre
+não respondeu: Stephany JFS (R$ 8.624,00) e DAMF (R$ 5.500,00), os dois de 05/10. A Hostgator não
+tem linha na DRE dele: aparece em `Outros custos (sem linha na planilha)`.

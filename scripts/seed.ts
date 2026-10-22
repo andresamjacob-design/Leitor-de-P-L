@@ -101,6 +101,8 @@ const CHART_OF_ACCOUNTS: CategorySeed[] = [
     "Tactic",
     "Railway",
     "LinkedIn",
+    // D164: hospedagem do site, paga em 05/10 por PIX.
+    "Hostgator",
   ].map<CategorySeed>((name, index) => ({
     code: `7.${String(index + 1).padStart(2, "0")}`,
     name,
