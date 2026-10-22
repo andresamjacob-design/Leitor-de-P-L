@@ -4161,3 +4161,33 @@ site"*. Vision Consultoria (04/09 2× e 05/10, R$ 18.911,00) sai de `4.01` para 
 `corrigir`: saldo R$ 1.060.697,06 antes e depois, ponte 13/13. Sobram em `4.01` dois que o Andre
 não respondeu: Stephany JFS (R$ 8.624,00) e DAMF (R$ 5.500,00), os dois de 05/10. A Hostgator não
 tem linha na DRE dele: aparece em `Outros custos (sem linha na planilha)`.
+
+### D165 — A planilha de 22/10: Sonda revisada em agosto, folha de setembro e outubro, contratos novos
+
+*"OPBR do app ta 10k acima da minha planilha"* — em agosto. A cópia na aba DRE era a de 24/09, e
+na de 22/10 o Andre baixou a Sonda de agosto de R$ 91.111,11 para R$ 82.000,00: OPBB de agosto
+R$ 164.079,67 → R$ 154.968,56 (−R$ 9.111,11). Nada mais muda em agosto.
+
+**O que foi feito:**
+- `importar:planilhas` com a DRE de 22/10 (`--ate 2026-08`, fluxo segue o de 07/10). A trava da
+  junção DD+GSJ passou a conferir só os meses copiados: a planilha nova tem outubro a dezembro
+  com R$ 12.666,66/mês a mais nos clientes que na `Receita` declarada — Dynamox (R$ 8.333,33) mais
+  Bettiati (R$ 4.333,33), linhas novas que a fórmula da soma dele parece não pegar.
+- Contratos de setembro em diante pela planilha nova: aditivos Sonda (R$ 82.000/mês) e Âncora
+  projeto, meses de Hogrefe e Pink Cheeks, contratos novos Gardo, Dynamox e Bettiati (outubro a
+  dezembro). A Sonda de agosto já reconhecida fica (passado), mas a tela mostra a planilha.
+- Folha: a `Colaboradores` mudou em setembro (Julio Gabriel, Anna Pasolini, Anderson Teixeira
+  novo: +R$ 5.451) e outubro (Julio, e Reginaldo Junior, Ricardo Vicente e Johnatan Siqueira
+  novos: +R$ 5.360). Ninguém tinha mudado salário pela tela, então `folha:importar --substituir`
+  trocou o cadastro pelo da aba nova, na mesma transação, com as travas de sempre (cada célula
+  reproduzida, total da aba nos 12 meses); janeiro a agosto idênticos. Folha regerada set–out.
+- Stephany JFS (R$ 8.624) e DAMF (R$ 5.500) para `10.05 Outros`: *"nao sei o que sao, qualquer
+  coisa coloque em outros"*.
+
+Ponte 13/13; saldo R$ 1.060.697,06 inalterado.
+
+**Setembro do app contra o setembro dele (planilha de 22/10):** receita e salários iguais; 57 de
+76 linhas fecham. Não fecham: `Impostos` (espera outubro; ele tem R$ 64.723,91),
+`Freelancers (Outras empresas)` (app R$ 28.677,76 — Santa Monica e Vision —, ele zero, pergunta
+aberta), as compras de cartão de agosto que ele lança em setembro (Claude R$ 3.611,97, Passagem
+R$ 3.970,21, ChatGPT R$ 557,61 — o app usa a data da compra), e Tarefy/Escola.i (deslocadas).

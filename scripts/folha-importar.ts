@@ -8,9 +8,13 @@
  * Travas, as duas obrigatórias para gravar:
  *   - o histórico de cada linha reproduz **cada célula** dos 12 meses;
  *   - a soma das linhas bate, mês a mês, com a linha de total da própria aba (como na D120).
- * E recusa se o cadastro já tiver linhas — importar duas vezes dobraria a folha.
+ * E recusa se o cadastro já tiver linhas — importar duas vezes dobraria a folha —, a não ser
+ * com `--substituir` (D165): apaga o cadastro e grava o da aba, na mesma transação. Só serve
+ * enquanto ninguém mudou salário pela tela; o script recusa se houver valor gravado depois da
+ * última importação.
  *
  *   npm run folha:importar              # mostra
+ *   npm run folha:importar -- --planilha <DRE.xlsx> --substituir --ensaio
  *   npm run folha:importar -- --ensaio  # grava numa transação revertida
  *   npm run folha:importar -- --aplicar
  */
@@ -26,7 +30,11 @@ loadEnvLocal();
 
 const APPLY = process.argv.includes("--aplicar");
 const REHEARSE = process.argv.includes("--ensaio");
-const PLANILHA = "docs/reference/DRE - Dynamics Data 2026 (24-09).xlsx";
+const SUBSTITUIR = process.argv.includes("--substituir");
+const PLANILHA = (() => {
+  const i = process.argv.indexOf("--planilha");
+  return i === -1 ? "docs/reference/DRE - Dynamics Data 2026 (24-09).xlsx" : (process.argv[i + 1] as string);
+})();
 const PRIMEIRA_COLUNA = 7;
 const LINHA_TOTAIS = 3;
 const PRIMEIRA_PESSOA = 5;
@@ -93,9 +101,23 @@ const sql = postgres(process.env.DATABASE_URL as string, { max: 1, connect_timeo
 try {
   const [entity] = await sql<{ id: string }[]>`select id from entities where slug = 'dd-group'`;
   const [ja] = await sql<{ n: number }[]>`select count(*)::int as n from folha_linhas where entity_id = ${entity!.id}`;
-  if ((ja?.n ?? 0) > 0) throw new Error(`o cadastro já tem ${ja!.n} linha(s) — importar de novo dobraria a folha`);
+  if ((ja?.n ?? 0) > 0 && !SUBSTITUIR) {
+    throw new Error(`o cadastro já tem ${ja!.n} linha(s) — importar de novo dobraria a folha (--substituir troca)`);
+  }
+  if (SUBSTITUIR) {
+    // Salário mudado pela tela depois da importação seria apagado sem aviso: recusa.
+    const [editado] = await sql<{ n: number }[]>`
+      select count(*)::int as n from folha_valores v
+       where v.entity_id = ${entity!.id}
+         and v.created_at > (select min(created_at) + interval '1 hour' from folha_linhas where entity_id = ${entity!.id})`;
+    if ((editado?.n ?? 0) > 0) throw new Error(`${editado!.n} valor(es) foram gravados pela tela depois da importação — nada foi trocado`);
+  }
 
   const write = async (db: postgres.TransactionSql) => {
+    if (SUBSTITUIR) {
+      await db`delete from folha_valores where entity_id = ${entity!.id}`;
+      await db`delete from folha_linhas where entity_id = ${entity!.id}`;
+    }
     for (const [ordem, l] of linhas.entries()) {
       const [nova] = await db<{ id: string }[]>`
         insert into folha_linhas (entity_id, nome, cliente, squad, cargo, vinculo, conta, ordem)

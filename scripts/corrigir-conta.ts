@@ -229,6 +229,23 @@ const CORRECOES: readonly {
     total: parseMoney("662,92"),
     porque: "Hostgator é a hospedagem do site",
   },
+  // *"nao sei o que sao, qualquer coisa coloque em outros"* (22/10).
+  {
+    taxId: "69089941000140",
+    de: "4.01",
+    para: "10.05",
+    quantas: 1,
+    total: parseMoney("8.624,00"),
+    porque: "Stephany JFS: o Andre não sabe o que é, vai para Outros",
+  },
+  {
+    taxId: "43132002000147",
+    de: "4.01",
+    para: "10.05",
+    quantas: 1,
+    total: parseMoney("5.500,00"),
+    porque: "DAMF: o Andre não sabe o que é, vai para Outros",
+  },
 ];
 
 const url = process.env.DATABASE_URL;

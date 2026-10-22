@@ -68,7 +68,10 @@ const fluxoAbas = readXlsx(readFileSync(FLUXO));
  * a própria planilha declara, mês a mês — junção que não fecha é junção errada.
  */
 const dreLida = lerDre(aba(dreAbas, "DRE Geral", DRE));
-const unificada = unificarEmpresas(dreLida.linhas);
+// Corta antes de juntar: a conferência da junção vale para os meses que vão ser copiados. A
+// planilha de 22/10 tem outubro a dezembro (projeção) com R$ 12.666,66 a mais nos clientes do
+// que na Receita declarada, e isso barrava uma cópia que nem chega lá.
+const unificada = unificarEmpresas(cortarDepoisDe(dreLida.linhas, ULTIMO_MES));
 if (unificada.receitaFecha < unificada.receitaMeses) {
   throw new Error(
     `ao juntar DD Group e GSJacob, os clientes somam a Receita da planilha em só ` +
