@@ -4221,3 +4221,11 @@ ponte intactos.
 - **O resto de setembro** que não fecha é falta de dado, não regra: compras de 24 a 30/09
   (a fatura que as traz ainda não foi enviada), Impostos/Tarefy/Escola.i (esperam outubro) e
   Freelancers (Outras empresas) — Santa Monica e Vision, pergunta aberta.
+
+### D167 — Cartão pela data da compra; Santa Monica e Vision ficam em Freelancers (outras empresas)
+
+Respostas de 22/10 às duas perguntas da D166: *"continua pela data da compra, santa monica e
+vision ficam"*. Nada muda no razão. O cartão segue no mês da compra, também de setembro em
+diante; as compras de 25 a 30/08 que a planilha de setembro traz (R$ 8.139,79) ficam em agosto
+no app. Santa Monica (R$ 16.566,76) e Vision (R$ 12.111) seguem em `6.12` em setembro: o app conta
+R$ 28.677,76 que a DRE dele não tem nessa linha, e a diferença fica explicada, não corrigida.
