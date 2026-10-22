@@ -36,17 +36,28 @@ export async function listRecognition(
   if (entityIds.length === 0) return [];
   const supabase = await createClient();
 
-  const { data, error } = await supabase
-    .from("recognition_entries")
-    .select(
-      "id, entity_id, period, category_id, client_id, person_id, contract_id, amount, kind, source, is_intercompany, manually_edited",
-    )
-    .in("entity_id", entityIds)
-    .gte("period", from)
-    .lte("period", to)
-    .limit(20000);
+  // Paginado (D163): o PostgREST devolve no máximo mil linhas por pedido, e o `limit(20000)`
+  // não passava por cima disso. Com a folha por pessoa (D161) o ano passou de mil linhas de
+  // competência, e a DRE pelo razão perdia as que sobravam sem aviso. O `id` na ordem é o
+  // que impede duas páginas de repetir ou pular linhas.
+  const PAGINA = 1000;
+  const data: unknown[] = [];
+  for (let inicio = 0; ; inicio += PAGINA) {
+    const { data: pagina, error } = await supabase
+      .from("recognition_entries")
+      .select(
+        "id, entity_id, period, category_id, client_id, person_id, contract_id, amount, kind, source, is_intercompany, manually_edited",
+      )
+      .in("entity_id", entityIds)
+      .gte("period", from)
+      .lte("period", to)
+      .order("id")
+      .range(inicio, inicio + PAGINA - 1);
 
-  if (error) throw new Error(`não foi possível carregar a competência: ${error.message}`);
+    if (error) throw new Error(`não foi possível carregar a competência: ${error.message}`);
+    data.push(...(pagina ?? []));
+    if ((pagina ?? []).length < PAGINA) break;
+  }
 
   return (
     data as {

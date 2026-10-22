@@ -172,6 +172,46 @@ const CORRECOES: readonly {
     total: parseMoney("88,32"),
     porque: "62,85 (11/09) e 25,47 (25/09) também são reembolso",
   },
+  // D163. Em agosto o banco trocou `PAGAMENTOS TRIB COD BARRAS` por `PAGAMENTOS` puro, e o
+  // histórico — que aprendeu "PAGAMENTOS → Impostos" com as guias — passou a mandar para 4.01
+  // os PIX da folha de 05/10. Os quatro abaixo estão na folha cadastrada (D161), em 6.10: com
+  // eles em Impostos, a DRE de setembro contaria R$ 15.000 duas vezes, na folha e no imposto.
+  {
+    taxId: "50261193000102",
+    de: "4.01",
+    para: "6.10",
+    quantas: 1,
+    total: parseMoney("1.000,00"),
+    porque: "Kathleen Yasmin está na folha (Projetos · Tech Core)",
+  },
+  {
+    taxId: "63962588000184",
+    de: "4.01",
+    para: "6.10",
+    quantas: 1,
+    total: parseMoney("6.500,00"),
+    porque: "Lucas Adamo está na folha (PMI · CRM Business)",
+  },
+  {
+    nome: "GABRIEL SILVA DAMASCENO",
+    valor: parseMoney("3.000,00"),
+    data: "2026-10-05",
+    de: "4.01",
+    para: "6.10",
+    quantas: 1,
+    total: parseMoney("3.000,00"),
+    porque: "Gabriel Damasceno está na folha (PMI · CRO Tech)",
+  },
+  {
+    nome: "MATHEUS SOUZA DAS CHAGAS",
+    valor: parseMoney("4.500,00"),
+    data: "2026-10-05",
+    de: "4.01",
+    para: "6.10",
+    quantas: 1,
+    total: parseMoney("4.500,00"),
+    porque: "Matheus Chagas está na folha (Projetos · Funcional)",
+  },
 ];
 
 const url = process.env.DATABASE_URL;

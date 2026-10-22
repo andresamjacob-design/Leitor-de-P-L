@@ -4103,3 +4103,52 @@ valores da empresa da linha, e o app confere a linha antes de gravar; o `verify:
 (28/28). (2) O mês vinha do formulário sem limite — `0001-01` faria o app regerar a folha mês a
 mês por dois mil anos. O mês tem de estar entre o ano passado e o próximo, o "apagar" lê mês e
 tipo do próprio registro, e a regeração nunca começa antes de janeiro do ano passado.
+
+### D162 — A receita da DRE nasce dos contratos no app, sincronizados com a planilha de 24/09
+
+Pedido em 15/10, *"pode seguir com a DRE"*, com a escolha **contratos no app** para a receita.
+Os contratos tinham vindo da planilha em agosto e estavam velhos: o app não tinha receita em
+setembro e outubro.
+
+**O que mudou:** `propose:contracts -- --planilha` lê a de 24/09 (bloco GSJACOB incluso) e criou
+9 contratos e 6 clientes. `contratos:sincronizar --desde 2026-09` põe os existentes em dia **do
+corte em diante**, nunca para trás: contrato `manual` tem os meses reescritos; de valor fixo que
+mudou ganha aditivo (D13) — Afubra, Windlog, Carflix, Hogrefe projeto, GM Promo (encerrado), ITA
+Educacional, Harpix valor cliente —, e Fast Escova projeto é contrato novo. Eskala e Audens (valor
+cliente) saíram da planilha e o Andre confirmou: *"saíram, encerra os dois"*. `reconhecer --ate
+2026-10` reconhece os de valor fixo (o mesmo que o botão da tela), e o `recognize:manual` passou a
+ignorar versões substituídas.
+
+**Medido:** setembro R$ 620.605,26, **igual à `Receita (dd+gsj)` da planilha ao centavo**;
+outubro R$ 520.712,73. Agosto subiu R$ 4.112,50 (Jusbrasil, contrato novo que bate com a
+planilha). Ponte 13/13. As diferenças antes de setembro (Windlog, Carflix, Hogrefe projeto, ITA,
+Vasco, Afubra e Harpix em agosto, Eskala e Audens em agosto) ficam: são passado já reconhecido.
+
+### D163 — A DRE pronta: setembro em diante preenchido pelo app, nas linhas da planilha
+
+O que a D146 fez no fluxo, do lado da competência. A aba DRE mostra a cópia da planilha até
+agosto; os meses seguintes, até o último com extrato completo, vêm de `preencherDreComApp`
+(`src/lib/dre-da-planilha.ts`): cliente pela receita dos contratos de mesmo nome e tipo, custo
+pela competência da conta, o que não tem linha em `Outras receitas` / `Outros custos`.
+
+**Linhas deslocadas.** Medido contra janeiro a agosto: `Impostos`, `Contabilidade`, `Tarefy`,
+`Escola.i`, `Agência Ciclo` e `Juridico` a planilha lança pelo que foi pago **no mês seguinte**
+(Impostos de agosto = guias de 18 e 21/09, R$ 70.797,88 ao centavo; Tarefy e Escola.i 8 de 8).
+O mês só preenche essas linhas quando o extrato do mês seguinte está completo; antes disso elas
+e os totais abaixo da receita ficam vazios, com aviso. Setembro espera outubro.
+
+**Custo, contra a planilha (`npm run simular:dre`, jan–ago apagados e refeitos):** 400 de 519
+células fecham. O que não fecha, por tamanho: `Freelancers (Outras empresas)` (a planilha põe a
+média R$ 20.134,72 todo mês; o app, o pago), receita antes do corte (acima), `Impostos` de agosto
+(+R$ 12.111 — ver abaixo), cartão de agosto em linhas diferentes (Entertainment, Claude,
+Passagem) e a troca Salesforce jun/jul de R$ 37.296,61.
+
+**Dois defeitos achados no caminho.** (1) `listRecognition` parava em mil linhas (o PostgREST
+ignora o `limit(20000)`); com a folha por pessoa o ano tem 1.446, e a DRE pelo razão perdia o
+resto sem aviso. Paginado. (2) Em agosto o banco trocou `PAGAMENTOS TRIB COD BARRAS` por
+`PAGAMENTOS`, e o histórico passou a mandar PIX de folha e fornecedor para `4.01`: R$ 48.548 entre
+04/09 e 05/10. Os quatro que estão na folha cadastrada (Kathleen Yasmin, Lucas Adamo, Gabriel
+Damasceno, Matheus Chagas, R$ 15.000) foram para `6.10` pelo `corrigir` e a folha de outubro foi
+regerada — estavam contados duas vezes, no imposto e na folha. Saldo e ponte intactos. Os outros
+quatro (Vision Consultoria, Stephany JFS, DAMF, Hostgator — R$ 33.548) esperam o Andre dizer o que
+são; enquanto isso, setembro teria R$ 21.586,92 a mais em Impostos quando outubro fechar.

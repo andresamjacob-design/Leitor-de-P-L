@@ -4,7 +4,7 @@ Onde tudo está, o que foi feito, e o que falta. Escrito para quem chega sem con
 nenhum, inclusive eu mesmo numa conversa nova.
 
 Leia junto quando precisar do detalhe: `docs/PLAN.md` (o roteiro original),
-`docs/DECISIONS.md` (decisões numeradas D1–D161 e pendências Q2–Q18) e `README.md`.
+`docs/DECISIONS.md` (decisões numeradas D1–D163 e pendências Q2–Q18) e `README.md`.
 
 > **A prioridade, dita pelo Andre em 14/09 (D136), e ela reordena o resto:**
 > *"Não preciso de um sistema que categorize absolutamente todos os gastos sem nenhum erro,
@@ -144,6 +144,9 @@ npm run hogrefe:agosto      # a Hogrefe de agosto como primeiro movimento da GSJ
 npm run folha:importar      # a Colaboradores para o cadastro de folha, uma vez (D161)
 npm run folha:gerar         # competência de folha pelo cadastro (--de AAAA-MM --ate AAAA-MM)
 npm run liberar             # libera um e-mail: --email x@ddgroup.com.br --papel viewer|member|owner (D155)
+npm run contratos:sincronizar  # contratos em dia com a DRE: --planilha <xlsx> --desde AAAA-MM [--encerrar "A;B"] (D162)
+npm run reconhecer          # receita dos contratos de valor fixo até --ate AAAA-MM (D162)
+npm run simular:dre         # a DRE pronta contra a planilha, linha a linha (D163)
 
 npm run propose:rules       # regras de texto vindas da planilha
 npm run propose:parties     # casa nome da planilha ↔ contraparte do extrato
@@ -650,8 +653,12 @@ que foi pedido. O e-mail padrão do Supabase grátis entrega pouco por hora.
 - **A visão "Calculado pelo razão" da DRE ainda erra agosto em R$ 10.578,79**: a folha de
   julho foi paga em 05/08, e o pró-labore está em Freelancers. Só importa quando o app passar
   a gerar a DRE sozinho.
-- **A DRE de setembro em diante** ainda não é preenchida pelo app; só o Fluxo é. Fazer isso
-  depende de a folha entrar em competência (a `Colaboradores` só vai até julho).
+- ~~**A DRE de setembro em diante**~~ — preenchida pelo app desde 22/10 (D163), até o último mês
+  com extrato completo. Setembro fecha quando o extrato de outubro estiver completo (Impostos e
+  as outras cinco linhas deslocadas). `npm run simular:dre` mede contra a planilha.
+- **Quatro pagamentos em Impostos que não são imposto** (D163): Vision Consultoria (04/09 e
+  05/10), Stephany JFS, DAMF e Hostgator, R$ 33.548. Esperam o Andre dizer o que são; depois,
+  uma entrada no `corrigir` cada. E uma regra que impeça `PAGAMENTOS` puro de virar 4.01.
 - **Os avisos amarelos** (item 4 da lista antiga) ainda não foram feitos.
 
 ### Onde o app vai morar

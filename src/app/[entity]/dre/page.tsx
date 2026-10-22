@@ -9,6 +9,9 @@ import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
 import { Amount, Table, TableScroll, Td, Th } from "@/components/ui/table";
 import { loadPlanilha } from "@/lib/data/planilha";
+import { loadDreDoApp } from "@/lib/data/dre-do-app";
+import { ultimoDiaComExtrato } from "@/lib/data/cash-entries";
+import { preencherDreComApp } from "@/lib/dre-da-planilha";
 import { compareLedgers, loadPl } from "@/lib/data/pl-report";
 import { ELIMINATION_KEY, TOTAL_KEY, type PlLine } from "@/lib/pl";
 import { resolveScope } from "@/lib/entities";
@@ -41,7 +44,32 @@ export default async function PlPage({
     scope.kind === "consolidated" ? null : await loadPlanilha(scope.entity.id, "dre");
   const temPlanilha = planilha !== null && planilha.linhas.length > 0;
 
-  if (planilha && temPlanilha && search.fonte !== "razao") {
+  if (planilha && temPlanilha && search.fonte !== "razao" && scope.kind !== "consolidated") {
+    // A DRE pronta (D163): os meses depois do último que a planilha tem, até o último com
+    // extrato completo, vêm da competência do app, nas mesmas linhas.
+    const ultimoCopiado = Math.max(
+      -1,
+      ...planilha.linhas.flatMap((linha) =>
+        linha.valores.flatMap((valor, i) => (valor === null ? [] : [i])),
+      ),
+    );
+    const ultimoDia = await ultimoDiaComExtrato([scope.entity.id]);
+    let ultimoFechado = -1;
+    if (ultimoDia && ultimoDia.startsWith(year)) {
+      const mes = Number(ultimoDia.slice(5, 7)) - 1;
+      const fim = new Date(Date.UTC(Number(year), mes + 1, 0)).toISOString().slice(0, 10);
+      ultimoFechado = ultimoDia >= fim ? mes : mes - 1;
+    }
+    const mesesDoApp = Array.from(
+      { length: Math.max(0, ultimoFechado - ultimoCopiado) },
+      (_, k) => ultimoCopiado + 1 + k,
+    );
+    const pronta =
+      mesesDoApp.length > 0
+        ? preencherDreComApp(planilha.linhas, await loadDreDoApp(scope.entity.id, year), mesesDoApp, ultimoFechado)
+        : null;
+    const nomeDoMes = (m: number) => formatPeriodShort(`${year}-${String(m + 1).padStart(2, "0")}-01`);
+
     return (
       <>
         <PageHeader
@@ -57,7 +85,28 @@ export default async function PlPage({
           é a sua planilha, sem recálculo. Quando ela mudar, rode{" "}
           <code>npm run importar:planilhas -- --aplicar</code> de novo.
         </p>
-        <PlanilhaTable linhas={planilha.linhas} ano={year} />
+        {pronta ? (
+          <div className="mb-4 space-y-2 text-xs text-muted">
+            <p>
+              <span className="text-accent">Os meses marcados “· app”</span> não estão na sua
+              planilha: a receita vem dos contratos no app (o reconhecido de cada mês), o custo
+              vem da competência de cada conta, nas mesmas linhas. O que não tem linha na sua
+              planilha aparece em “Outras receitas” ou “Outros custos”.
+            </p>
+            {[...pronta.aguardando].map(([mes, quais]) => (
+              <p key={mes}>
+                {nomeDoMes(mes)} ainda não fecha: {quais.join(", ")} entram pelo que é pago em{" "}
+                {nomeDoMes(mes + 1)}, como na sua planilha, e o extrato de {nomeDoMes(mes + 1)} ainda
+                não está completo. Até lá, essas linhas e os totais abaixo da receita ficam vazios.
+              </p>
+            ))}
+          </div>
+        ) : null}
+        <PlanilhaTable
+          linhas={pronta ? pronta.linhas : planilha.linhas}
+          ano={year}
+          mesesCalculados={mesesDoApp}
+        />
       </>
     );
   }

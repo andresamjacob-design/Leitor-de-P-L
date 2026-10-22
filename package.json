@@ -61,7 +61,10 @@
     "hogrefe:agosto": "vite-node --config vitest.config.ts scripts/hogrefe-agosto.ts",
     "liberar": "vite-node --config vitest.config.ts scripts/liberar-acesso.ts",
     "folha:importar": "vite-node --config vitest.config.ts scripts/folha-importar.ts",
-    "folha:gerar": "vite-node --config vitest.config.ts scripts/folha-gerar.ts"
+    "folha:gerar": "vite-node --config vitest.config.ts scripts/folha-gerar.ts",
+    "contratos:sincronizar": "vite-node --config vitest.config.ts scripts/contratos-sincronizar.ts",
+    "reconhecer": "vite-node --config vitest.config.ts scripts/reconhecer.ts",
+    "simular:dre": "vite-node --config vitest.config.ts scripts/simular-dre.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.4",

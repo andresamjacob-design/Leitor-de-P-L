@@ -98,6 +98,8 @@ try {
     where c.entity_id = ${entityId}
       and c.recognition_method = 'manual'
       and c.status in ('active', 'completed')
+      -- Versão substituída por aditivo não reconhece mais nada (D13, D162).
+      and c.superseded_at is null
     order by c.name, i.description`;
 
   type Line = { contractId: string; clientId: string; categoryId: string; period: string; amount: bigint };
