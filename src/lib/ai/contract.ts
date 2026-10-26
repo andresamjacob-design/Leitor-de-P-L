@@ -56,6 +56,34 @@ export const FIELD_LABEL: Record<ContractFieldName, string> = {
 
 const FIELDS = Object.keys(FIELD_LABEL) as ContractFieldName[];
 
+/**
+ * `output_config.format` — troca o `prefill: "{"` que costumava forçar o objeto. Cada
+ * campo é `null` quando o contrato não o menciona: `additionalProperties: false` exige
+ * toda chave em `required`, então "omitir" vira "value null" — `parseContractDraft` já
+ * trata os dois do mesmo jeito.
+ */
+const FIELD_SCHEMA = {
+  anyOf: [
+    {
+      type: "object",
+      properties: {
+        value: { type: "string" },
+        snippet: { anyOf: [{ type: "string" }, { type: "null" }] },
+      },
+      required: ["value", "snippet"],
+      additionalProperties: false,
+    },
+    { type: "null" },
+  ],
+};
+
+export const RESPONSE_SCHEMA: Record<string, unknown> = {
+  type: "object",
+  properties: Object.fromEntries(FIELDS.map((field) => [field, FIELD_SCHEMA])),
+  required: FIELDS,
+  additionalProperties: false,
+};
+
 export const CONTRACT_SYSTEM_PROMPT = `Você lê contratos de prestação de serviço brasileiros e extrai os dados principais.
 
 Regras:

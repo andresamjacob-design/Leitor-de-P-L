@@ -30,6 +30,15 @@ function optionalMoney(data: FormData, name: string, label: string): Cents | nul
   }
 }
 
+/**
+ * The direction the rule is restricted to, if any. Without it an expense rule fires on
+ * money coming in — `CICLO` is both a client that pays and an agency that is paid.
+ */
+function readDirection(data: FormData): "in" | "out" | null {
+  const raw = String(data.get("direction") ?? "").trim();
+  return raw === "in" || raw === "out" ? raw : null;
+}
+
 function readRule(data: FormData): RuleInput {
   const matchType = readChoice(data, "matchType", MATCH_TYPES, "O tipo de comparação");
   const taxId = readOptionalText(data, "counterpartyTaxId");
@@ -55,6 +64,7 @@ function readRule(data: FormData): RuleInput {
     matchType,
     pattern: pattern === "" ? "*" : pattern,
     counterpartyTaxId: taxId,
+    direction: readDirection(data),
     amountMin,
     amountMax,
     accountId: readOptionalId(data, "accountId"),

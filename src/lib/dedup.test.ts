@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dedupHash, normalizeDescription } from "@/lib/dedup";
+import { dedupHash, normalizeDescription, duplicatasPorDocumento } from "@/lib/dedup";
 import { parseMoney } from "@/lib/money";
 
 const base = {
@@ -102,5 +102,60 @@ describe("ocorrência dentro do mesmo arquivo", () => {
     const primeira = hashesDe(arquivo);
     expect(hashesDe(arquivo)).toEqual(primeira);
     expect(new Set(primeira).size).toBe(3);
+  });
+});
+
+describe("duplicatasPorDocumento", () => {
+  const mov = (dia: string, reais: bigint, doc: string | null, direction: "in" | "out" = "out") => ({
+    occurredOn: `2026-08-${dia}`,
+    amount: reais * 100n,
+    direction,
+    counterpartyTaxId: doc,
+  });
+  const noRazao = (m: ReturnType<typeof mov>, hash: string) => ({ ...m, dedupHash: hash });
+
+  it("reconhece o mesmo movimento escrito com outra descrição, pelo documento", () => {
+    // `SAÍDA BOLETO  PAGO PRUDENTIAL` no arquivo, `BOLETO PAGO PRUDENTIAL` no razão.
+    const razao = [noRazao(mov("25", 50n, "21.986.074/0001-19"), "h1")];
+    expect(duplicatasPorDocumento([mov("25", 50n, "21986074000119")], [false], razao, new Set())).toEqual([
+      true,
+    ]);
+  });
+
+  it("casa um para um: duas iguais no arquivo e uma no razão, uma entra", () => {
+    const razao = [noRazao(mov("25", 388n, "44649812000138"), "h1")];
+    const novos = [mov("25", 388n, "44649812000138"), mov("25", 388n, "44649812000138")];
+    expect(duplicatasPorDocumento(novos, [false, false], razao, new Set())).toEqual([true, false]);
+  });
+
+  it("linha sem documento não é reconhecida por esta camada", () => {
+    const razao = [noRazao(mov("15", 8300n, null, "in"), "h1")];
+    expect(duplicatasPorDocumento([mov("15", 8300n, null, "in")], [false], razao, new Set())).toEqual([
+      false,
+    ]);
+  });
+
+  it("a linha do razão que o hash já reconheceu não absolve uma segunda", () => {
+    const razao = [noRazao(mov("05", 5000n, "49946368854"), "h1")];
+    const novos = [mov("05", 5000n, "49946368854"), mov("05", 5000n, "49946368854")];
+    // A primeira já casou pelo hash com `h1`; a segunda é outro pagamento.
+    expect(duplicatasPorDocumento(novos, [true, false], razao, new Set(["h1"]))).toEqual([true, false]);
+  });
+
+  it("valor, data, sentido e documento precisam bater os quatro", () => {
+    const razao = [noRazao(mov("25", 50n, "21986074000119"), "h1")];
+    expect(
+      duplicatasPorDocumento(
+        [
+          mov("25", 51n, "21986074000119"),
+          mov("24", 50n, "21986074000119"),
+          mov("25", 50n, "21986074000119", "in"),
+          mov("25", 50n, "11111111000111"),
+        ],
+        [false, false, false, false],
+        razao,
+        new Set(),
+      ),
+    ).toEqual([false, false, false, false]);
   });
 });

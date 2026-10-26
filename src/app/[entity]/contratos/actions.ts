@@ -76,6 +76,8 @@ function readContract(data: FormData): ContractInput {
     name: readText(data, "name", "O nome do contrato"),
     type,
     status: readChoice(data, "status", STATUSES, "A situação"),
+    // Empty means "decide from the type", which is what almost every contract wants.
+    categoryId: readOptionalText(data, "categoryId"),
     totalValue,
     monthlyValue,
     startDate,

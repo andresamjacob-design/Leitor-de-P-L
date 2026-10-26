@@ -13,9 +13,14 @@ export default async function HomePage() {
   if (!first) {
     return (
       <main className="mx-auto max-w-lg p-10">
-        <EmptyState title="Sua conta não está ligada a nenhuma entidade">
-          Peça para alguém criar a sua linha em <code className="font-mono">user_entities</code>.
-          Não há auto-cadastro (DECISIONS D20).
+        <EmptyState title="Você entrou, mas ainda não tem acesso aos dados">
+          Peça a um administrador para liberar o seu e-mail ({user.email}) na tela Acessos.
+          Depois disso, é só recarregar esta página.
+          <form action="/auth/sign-out" method="post" className="mt-3">
+            <button type="submit" className="underline">
+              Sair
+            </button>
+          </form>
         </EmptyState>
       </main>
     );

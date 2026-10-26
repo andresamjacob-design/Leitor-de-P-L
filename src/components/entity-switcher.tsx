@@ -22,6 +22,10 @@ export function EntitySwitcher({
     router.push(`/${slug}${rest ? `/${rest}` : ""}`);
   }
 
+  // Com uma empresa só não há o que escolher (D144: DD Group e GSJacob viraram uma). O nome
+  // dela já aparece ao lado de "Financeiro", no topo.
+  if (entities.length <= 1) return null;
+
   return (
     <label className="flex items-center gap-2 text-sm">
       <span className="sr-only">Entidade</span>

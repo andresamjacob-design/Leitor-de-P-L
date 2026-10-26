@@ -21,8 +21,12 @@ export type AiRequest = {
   system: string;
   prompt: string;
   maxTokens?: number;
-  /** Forces the reply to start with this, which is how JSON-only output is obtained. */
-  prefill?: string;
+  /**
+   * Constrains the reply to this JSON Schema, via `output_config.format`. Replaces the
+   * `prefill: "["` trick that used to fake JSON-only output — assistant-turn prefill
+   * returns 400 on Sonnet 5, Opus 5, and the whole 4.6+ family.
+   */
+  responseSchema?: Record<string, unknown>;
 };
 
 export type AiResponse = {
@@ -43,7 +47,7 @@ export class AiUnavailableError extends Error {
   }
 }
 
-const DEFAULT_MODEL = "claude-sonnet-5";
+const DEFAULT_MODEL = "claude-opus-5";
 const ENDPOINT = "https://api.anthropic.com/v1/messages";
 const API_VERSION = "2023-06-01";
 const TIMEOUT_MS = 120_000;
@@ -52,7 +56,7 @@ function anthropicProvider(apiKey: string, model: string): AiProvider {
   return {
     name: "anthropic",
     model,
-    async complete({ system, prompt, maxTokens = 4096, prefill }) {
+    async complete({ system, prompt, maxTokens = 4096, responseSchema }) {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
@@ -69,10 +73,10 @@ function anthropicProvider(apiKey: string, model: string): AiProvider {
             model,
             max_tokens: maxTokens,
             system,
-            messages: [
-              { role: "user", content: prompt },
-              ...(prefill ? [{ role: "assistant", content: prefill }] : []),
-            ],
+            messages: [{ role: "user", content: prompt }],
+            ...(responseSchema
+              ? { output_config: { format: { type: "json_schema", schema: responseSchema } } }
+              : {}),
           }),
         });
 
@@ -93,8 +97,7 @@ function anthropicProvider(apiKey: string, model: string): AiProvider {
           .map((block) => block.text ?? "")
           .join("");
 
-        // A prefill is not echoed back, so it has to be put back for the parser.
-        return { text: `${prefill ?? ""}${text}`, model: body.model ?? model };
+        return { text, model: body.model ?? model };
       } catch (cause) {
         if (cause instanceof AiUnavailableError) throw cause;
         if (cause instanceof Error && cause.name === "AbortError") {

@@ -2,10 +2,16 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { EmptyState } from "@/components/empty-state";
 import { ExportLinks } from "@/components/export-links";
+import { FonteToggle } from "@/components/fonte-toggle";
+import { PlanilhaTable } from "@/components/planilha-table";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
 import { Amount, Table, TableScroll, Td, Th } from "@/components/ui/table";
+import { loadPlanilha } from "@/lib/data/planilha";
+import { loadDreDoApp } from "@/lib/data/dre-do-app";
+import { ultimoDiaComExtrato } from "@/lib/data/cash-entries";
+import { preencherDreComApp } from "@/lib/dre-da-planilha";
 import { compareLedgers, loadPl } from "@/lib/data/pl-report";
 import { ELIMINATION_KEY, TOTAL_KEY, type PlLine } from "@/lib/pl";
 import { resolveScope } from "@/lib/entities";
@@ -13,7 +19,7 @@ import { formatPeriodShort, todayInSaoPaulo } from "@/lib/dates";
 import { formatMoney } from "@/lib/money";
 import { cn } from "@/lib/utils";
 
-type Search = { de?: string; ate?: string };
+type Search = { de?: string; ate?: string; fonte?: string };
 
 export default async function PlPage({
   params,
@@ -30,6 +36,80 @@ export default async function PlPage({
   const entities = scope.kind === "consolidated" ? scope.entities : [scope.entity];
   const consolidated = scope.kind === "consolidated";
   const year = todayInSaoPaulo().slice(0, 4);
+
+  // A aba mostra a planilha do Andre por padrão (D141): ele pediu a DRE dele, copiada, na
+  // ordem dele. O cálculo pelo razão continua a um clique, porque é ele que prova o banco.
+  // Consolidado não tem planilha — ela é da DD Group —, então lá só existe o cálculo.
+  const planilha =
+    scope.kind === "consolidated" ? null : await loadPlanilha(scope.entity.id, "dre");
+  const temPlanilha = planilha !== null && planilha.linhas.length > 0;
+
+  if (planilha && temPlanilha && search.fonte !== "razao" && scope.kind !== "consolidated") {
+    // A DRE pronta (D163): os meses depois do último que a planilha tem, até o último com
+    // extrato completo, vêm da competência do app, nas mesmas linhas.
+    const ultimoCopiado = Math.max(
+      -1,
+      ...planilha.linhas.flatMap((linha) =>
+        linha.valores.flatMap((valor, i) => (valor === null ? [] : [i])),
+      ),
+    );
+    const ultimoDia = await ultimoDiaComExtrato([scope.entity.id]);
+    let ultimoFechado = -1;
+    if (ultimoDia && ultimoDia.startsWith(year)) {
+      const mes = Number(ultimoDia.slice(5, 7)) - 1;
+      const fim = new Date(Date.UTC(Number(year), mes + 1, 0)).toISOString().slice(0, 10);
+      ultimoFechado = ultimoDia >= fim ? mes : mes - 1;
+    }
+    const mesesDoApp = Array.from(
+      { length: Math.max(0, ultimoFechado - ultimoCopiado) },
+      (_, k) => ultimoCopiado + 1 + k,
+    );
+    const pronta =
+      mesesDoApp.length > 0
+        ? preencherDreComApp(planilha.linhas, await loadDreDoApp(scope.entity.id, year), mesesDoApp, ultimoFechado)
+        : null;
+    const nomeDoMes = (m: number) => formatPeriodShort(`${year}-${String(m + 1).padStart(2, "0")}-01`);
+
+    return (
+      <>
+        <PageHeader
+          title="DRE gerencial"
+          description="A sua planilha de DRE, copiada linha a linha e na mesma ordem."
+        />
+        <FonteToggle slug={slug} pagina="dre" atual="planilha" />
+        <p className="mb-4 text-xs text-muted">
+          Cópia de <span className="font-medium">{planilha.arquivo}</span>, aba DRE Geral, feita
+          em {planilha.copiadaEm?.slice(0, 10).split("-").reverse().join("/")}. DD Group e GSJacob
+          aparecem como uma empresa só: a Receita é a linha (dd+gsj) da sua planilha, cliente
+          que está nos dois blocos vira uma linha somada, e Impostos é a soma dos dois. O resto
+          é a sua planilha, sem recálculo. Quando ela mudar, rode{" "}
+          <code>npm run importar:planilhas -- --aplicar</code> de novo.
+        </p>
+        {pronta ? (
+          <div className="mb-4 space-y-2 text-xs text-muted">
+            <p>
+              <span className="text-accent">Os meses marcados “· app”</span> não estão na sua
+              planilha: a receita vem dos contratos no app (o reconhecido de cada mês), o custo
+              vem da competência de cada conta, nas mesmas linhas. O que não tem linha na sua
+              planilha aparece em “Outras receitas” ou “Outros custos”.
+            </p>
+            {[...pronta.aguardando].map(([mes, quais]) => (
+              <p key={mes}>
+                {nomeDoMes(mes)} ainda não fecha: {quais.join(", ")} entram pelo que é pago em{" "}
+                {nomeDoMes(mes + 1)}, como na sua planilha, e o extrato de {nomeDoMes(mes + 1)} ainda
+                não está completo. Até lá, essas linhas e os totais abaixo da receita ficam vazios.
+              </p>
+            ))}
+          </div>
+        ) : null}
+        <PlanilhaTable
+          linhas={pronta ? pronta.linhas : planilha.linhas}
+          ano={year}
+          mesesCalculados={mesesDoApp}
+        />
+      </>
+    );
+  }
 
   const from = /^\d{4}-\d{2}$/.test(search.de ?? "") ? `${search.de}-01` : `${year}-01-01`;
   const to = /^\d{4}-\d{2}$/.test(search.ate ?? "") ? `${search.ate}-01` : `${year}-12-01`;
@@ -97,6 +177,8 @@ export default async function PlPage({
             : "Regime de competência: quando foi ganho ou devido, não quando o dinheiro se moveu."
         }
       />
+
+      {temPlanilha ? <FonteToggle slug={slug} pagina="dre" atual="razao" /> : null}
 
       {rangeForm}
 

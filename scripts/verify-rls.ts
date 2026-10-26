@@ -31,6 +31,9 @@ function check(label: string, passed: boolean, detail = ""): void {
   console.log(`  ${passed ? GREEN + "OK   " : RED + "FALHA"}${RESET} ${label}${detail ? ` — ${detail}` : ""}`);
 }
 
+/** Como uma sessão aberta pelo código do e-mail aparece no JWT (D156). */
+const POR_CODIGO = [{ method: "otp", timestamp: 0 }];
+
 /** Thrown to undo everything the check inserted. */
 class Rollback extends Error {}
 
@@ -76,7 +79,7 @@ try {
 
     // From here on, the connection is an ordinary logged-in user.
     await tx`select set_config('role', 'authenticated', true)`;
-    await tx`select set_config('request.jwt.claims', ${JSON.stringify({ sub: userId, role: "authenticated" })}, true)`;
+    await tx`select set_config('request.jwt.claims', ${JSON.stringify({ sub: userId, role: "authenticated", amr: POR_CODIGO })}, true)`;
 
     const visibleEntities = await tx<{ slug: string }[]>`select slug from entities`;
     check(
@@ -130,6 +133,109 @@ try {
       membership.every((row) => row.user_id === userId),
       `${membership.length} vínculo(s)`,
     );
+
+    // ---- Papéis (D155): viewer lê, member escreve, owner administra -------------------
+    await tx`reset role`;
+    const viewerId = "00000000-0000-4000-8000-0000000000ab";
+    const memberId = "00000000-0000-4000-8000-0000000000ac";
+    await tx`insert into user_entities (user_id, entity_id, role) values
+               (${viewerId}, ${alpha.id}, 'viewer'), (${memberId}, ${alpha.id}, 'member')`;
+
+    const como = async (id: string, amr = POR_CODIGO) => {
+      await tx`select set_config('role', 'authenticated', true)`;
+      await tx`select set_config('request.jwt.claims', ${JSON.stringify({ sub: id, role: "authenticated", amr })}, true)`;
+    };
+    const recusa = async (fn: (sp: typeof tx) => Promise<unknown>) => {
+      try {
+        await tx.savepoint(async (sp) => {
+          await fn(sp as unknown as typeof tx);
+        });
+        return false;
+      } catch {
+        return true;
+      }
+    };
+    const inserirLancamento = (sp: typeof tx, hash: string) => sp`
+      insert into cash_entries (entity_id, account_id, occurred_on, amount, direction, description, dedup_hash)
+      values (${alpha.id}, ${accountA}, '2026-03-01', 1.00, 'out', 'papel', ${hash})`;
+
+    console.log(`\nPapéis na “${alpha.slug}”\n`);
+
+    await como(viewerId);
+    const lidoViewer = await tx<{ n: number }[]>`select count(*)::int as n from cash_entries`;
+    check("viewer lê os lançamentos", (lidoViewer[0]?.n ?? 0) > 0, `${lidoViewer[0]?.n} lançamento(s)`);
+    check("viewer não grava lançamento", await recusa((sp) => inserirLancamento(sp, "rls-viewer")));
+    const alterados = await tx`update accounts set name = name where entity_id = ${alpha.id}`;
+    check("viewer não altera nada", alterados.count === 0, `${alterados.count} linha(s)`);
+    check("viewer não lista acessos", await recusa((sp) => sp`select * from listar_acessos(${alpha.id})`));
+    check(
+      "viewer não muda salário",
+      (await tx`update folha_valores set valor = valor + 1 where entity_id = ${alpha.id}`).count === 0,
+    );
+    check("viewer não regera a folha", await recusa((sp) => sp`select regerar_folha(${alpha.id}, '2026-09-01')`));
+
+    // Uma linha de folha da outra empresa, para provar que valor de A não entra em linha de B.
+    await tx`reset role`;
+    const linhaB = await tx<{ id: string }[]>`
+      insert into folha_linhas (entity_id, nome, conta, ordem) values (${beta.id}, 'RLS outra empresa', '6.10', 9999) returning id`;
+
+    await como(memberId);
+    check("member grava lançamento", !(await recusa((sp) => inserirLancamento(sp, "rls-member"))));
+    check(
+      "member não grava salário em linha de folha de outra empresa",
+      await recusa((sp) => sp`insert into folha_valores (entity_id, linha_id, mes, valor, tipo)
+        values (${alpha.id}, ${linhaB[0]!.id}, '2026-10-01', 1, 'vigente')`),
+    );
+    const auditado = await tx<{ n: number }[]>`
+      select count(*)::int as n from audit_log where table_name = 'cash_entries' and after_json ->> 'dedup_hash' = 'rls-member'`;
+    check("o gatilho registra a auditoria do lançamento do member", auditado[0]?.n === 1);
+    check(
+      "member não forja registro de auditoria",
+      await recusa((sp) => sp`insert into audit_log (entity_id, actor, action, table_name, row_id)
+        values (${alpha.id}, 'outra pessoa', 'delete', 'cash_entries', gen_random_uuid())`),
+    );
+    check("member não lista acessos", await recusa((sp) => sp`select * from listar_acessos(${alpha.id})`));
+    check(
+      "member não libera ninguém",
+      await recusa((sp) => sp`select definir_acesso(${alpha.id}, 'alguem@ddgroup.com.br', 'owner')`),
+    );
+
+    await como(userId);
+    check("owner lista acessos", !(await recusa((sp) => sp`select * from listar_acessos(${alpha.id})`)));
+    check(
+      "owner não libera e-mail de fora do domínio",
+      await recusa((sp) => sp`select definir_acesso(${alpha.id}, 'alguem@gmail.com', 'viewer')`),
+    );
+    const liberado = await tx<{ r: string }[]>`
+      select definir_acesso(${alpha.id}, 'rls.teste@ddgroup.com.br', 'viewer') as r`;
+    check("owner libera e-mail da empresa antes do primeiro login", liberado[0]?.r === "aguardando primeiro login");
+
+    // D156: o mesmo administrador, numa sessão aberta só com senha — o caminho de quem se
+    // cadastra com o e-mail de outra pessoa sem controlar a caixa postal.
+    await como(userId, [{ method: "password", timestamp: 0 }]);
+    const lidoSenha = await tx<{ n: number }[]>`select count(*)::int as n from cash_entries`;
+    check("sessão só com senha não vê lançamento nenhum", lidoSenha[0]?.n === 0, `${lidoSenha[0]?.n} lançamento(s)`);
+    check("sessão só com senha não lista acessos", await recusa((sp) => sp`select * from listar_acessos(${alpha.id})`));
+    check("sessão só com senha não grava", await recusa((sp) => inserirLancamento(sp, "rls-senha")));
+
+    await como(viewerId);
+    check(
+      "viewer não forja registro de auditoria",
+      await recusa((sp) => sp`insert into audit_log (entity_id, actor, action, table_name, row_id)
+        values (${alpha.id}, 'forjado', 'update', 'cash_entries', gen_random_uuid())`),
+    );
+
+    await tx`reset role`;
+    check(
+      "conta nova de fora do domínio é recusada pelo banco",
+      await recusa((sp) => sp`insert into auth.users (id, email, aud, role)
+        values (gen_random_uuid(), 'rls.teste@gmail.com', 'authenticated', 'authenticated')`),
+    );
+    const nova = await tx<{ id: string }[]>`insert into auth.users (id, email, aud, role)
+      values (gen_random_uuid(), 'RLS.Teste@ddgroup.com.br', 'authenticated', 'authenticated') returning id`;
+    const vinculo = await tx<{ role: string }[]>`
+      select role::text as role from user_entities where user_id = ${nova[0]!.id} and entity_id = ${alpha.id}`;
+    check("conta da empresa nasce com o acesso liberado antes", vinculo[0]?.role === "viewer");
 
     // Roll back: nothing above ever existed.
     throw new Rollback();
