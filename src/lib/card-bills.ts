@@ -146,3 +146,23 @@ export function quebrarFaturas(
 
   return { substituidos, partes, semFatura };
 }
+
+/**
+ * Quanto saiu do banco para os cartões em cada mês — a linha "Total cartão" do fluxo.
+ *
+ * É a soma dos pagamentos de fatura (`99.02`) do mês, casados com fatura ou não. Não entra
+ * de novo em conta nenhuma: o mesmo dinheiro já está em Saídas, quebrado pelas compras
+ * (D116). É só para ler o cartão de uma vez.
+ */
+export function totalDoCartaoPorMes(
+  pagamentos: readonly Pagamento[],
+  periods: readonly string[],
+): Cents[] {
+  const indice = new Map(periods.map((period, i) => [period, i]));
+  const totais = periods.map(() => 0n);
+  for (const pagamento of pagamentos) {
+    const i = indice.get(`${pagamento.occurredOn.slice(0, 7)}-01`);
+    if (i !== undefined) totais[i] = (totais[i] as Cents) + pagamento.amount;
+  }
+  return totais;
+}

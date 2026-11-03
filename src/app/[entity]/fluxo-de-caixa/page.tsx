@@ -123,7 +123,7 @@ export default async function CashFlowPage({
   const toMonth = /^\d{4}-\d{2}$/.test(search.ate ?? "") ? `${search.ate}-01` : `${year}-12-01`;
   const to = monthEnd(toMonth);
 
-  const { report, cashAccounts, cardAccounts } = await loadCashFlow({
+  const { report, cashAccounts, cardAccounts, cardTotal } = await loadCashFlow({
     entityIds: entities.map((entity) => entity.id),
     from,
     to,
@@ -355,6 +355,22 @@ export default async function CashFlowPage({
 
               {sectionRows(inflow, "Entradas")}
               {outflowRows(outflow, "Saídas")}
+
+              {cardTotal.some((value) => value !== 0n) ? (
+                <tr className="text-sm text-muted">
+                  <Td title="Soma das faturas de cartão pagas no mês. Já está dentro de Saídas, quebrada pelas compras — não soma de novo.">
+                    Total cartão
+                  </Td>
+                  {cardTotal.map((value, index) => (
+                    <Td key={periods[index]} numeric>
+                      <Amount value={value} format={formatMoney} />
+                    </Td>
+                  ))}
+                  <Td numeric>
+                    <Amount value={cardTotal.reduce((a, b) => a + b, 0n)} format={formatMoney} />
+                  </Td>
+                </tr>
+              ) : null}
 
               <tr className="font-medium">
                 <Td>Resultado de caixa</Td>

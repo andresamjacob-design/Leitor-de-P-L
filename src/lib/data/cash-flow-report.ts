@@ -25,7 +25,7 @@ import {
   type CashFlowRow,
   type FlowCategory,
 } from "@/lib/cash-flow";
-import { quebrarFaturas, type Fatura, type Pagamento } from "@/lib/card-bills";
+import { quebrarFaturas, totalDoCartaoPorMes, type Fatura, type Pagamento } from "@/lib/card-bills";
 import { listAccounts, type Account } from "@/lib/data/accounts";
 import { listCategories, type Category } from "@/lib/data/categories";
 import { listCashEntries } from "@/lib/data/cash-entries";
@@ -204,6 +204,8 @@ export type CashFlowView = {
   categories: Category[];
   /** Row id → the category ids it stands for, so a drill-down can filter by them. */
   rowCategoryIds: Map<string, string[]>;
+  /** Pago de fatura em cada mês — informativo, já está em Saídas (linha "Total cartão"). */
+  cardTotal: Cents[];
 };
 
 export async function loadCashFlow({
@@ -357,5 +359,7 @@ export async function loadCashFlow({
     mergedRows,
   });
 
-  return { report, cashAccounts, cardAccounts, categories, rowCategoryIds };
+  const cardTotal = totalDoCartaoPorMes(pagamentos, report.periods);
+
+  return { report, cashAccounts, cardAccounts, categories, rowCategoryIds, cardTotal };
 }

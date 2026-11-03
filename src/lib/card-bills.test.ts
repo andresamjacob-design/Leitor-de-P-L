@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { quebrarFaturas, type Fatura, type Pagamento } from "@/lib/card-bills";
+import { quebrarFaturas, totalDoCartaoPorMes, type Fatura, type Pagamento } from "@/lib/card-bills";
 import { parseMoney, type Cents } from "@/lib/money";
 import type { IsoDate } from "@/lib/dates";
 
@@ -153,5 +153,21 @@ describe("quebrarFaturas", () => {
     const { partes } = quebrarFaturas([p], [f]);
 
     expect(partes[0]?.categoryId).toBeNull();
+  });
+});
+
+describe("totalDoCartaoPorMes", () => {
+  it("soma os pagamentos de fatura de cada mês, e ignora o que cai fora do intervalo", () => {
+    const pagamentos = [
+      { id: "a", accountId: "x", occurredOn: "2026-09-10", amount: 1000n },
+      { id: "b", accountId: "y", occurredOn: "2026-09-25", amount: 250n },
+      { id: "c", accountId: "x", occurredOn: "2026-10-10", amount: 700n },
+      { id: "d", accountId: "x", occurredOn: "2026-12-10", amount: 999n },
+    ];
+    expect(totalDoCartaoPorMes(pagamentos, ["2026-09-01", "2026-10-01", "2026-11-01"])).toEqual([
+      1250n,
+      700n,
+      0n,
+    ]);
   });
 });
