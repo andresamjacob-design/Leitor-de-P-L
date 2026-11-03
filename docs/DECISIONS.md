@@ -4286,3 +4286,29 @@ procura o mesmo pagador (`counterparty_name`, normalizado) já ligado a um clien
 e o mais recente vence. Pagador desconhecido fica sem cliente, com aviso. As quatro entradas
 foram religadas (Vasco `3.02`, contrato de projeto; Fast Escova e Braé `3.01`, mensalidade)
 e os três clientes apagados, com `audit_log`.
+
+### D170 — Emissão de NF da planilha e cliente com pagamento atrasado
+
+O Andre: *"preciso de um método de saber quais clientes não pagaram … uma página de emissão de
+NF que nem no meu fluxo de caixa … sabendo que a NF pode demorar até 1 mês para ser paga"*.
+
+A tela **Emissão de NF** (`/[entity]/emissao-de-nf`) mostra o bloco "Emissão de NF" da aba
+Clientes da planilha de fluxo, copiado para `planilha_linhas` com `relatorio = 'nf'` pelo mesmo
+caminho da D141 (cópia sem interpretação, regravada inteira numa transação, sem migração):
+`npm run importar:nf -- --aplicar`. Cada célula é conferida com as entradas do razão
+(`@/lib/inadimplencia`, pura e testada):
+
+- **Quem pagou** — pelo `client_id` do lançamento ou pela raiz (8 dígitos) do CNPJ, do
+  lançamento ou do cadastro do cliente; filial paga pela matriz. Entrada antiga sem CNPJ herda o
+  da mesma descrição, quando ela só aponta para uma raiz. Linha "X (NF para Salesforce)" conta
+  no cliente final X, porque é assim que o razão liga esses pagamentos.
+- **O que quita** — o dinheiro, em ordem de data, paga a nota aberta mais antiga do pagador.
+  Recebido ≥ 93% da nota, ela está paga: a diferença é retenção na fonte (IRRF 1,5% +
+  PIS/COFINS/CSLL 4,65%) e não passa para a nota seguinte.
+- **Quando vence** — no último dia do mês seguinte ao da emissão. Vencida e não paga é
+  **atrasada**; ainda no prazo, **a vencer**; mês que ainda não chegou, **prevista**.
+- **Desde quando** — só conta o que é de depois da abertura da conta corrente mais antiga
+  (jan/2026): antes disso o pagamento pode ter entrado sem estar no razão.
+- **Sem dono** — linha sem cliente nem CNPJ não é classificada (aparece à parte); entrada de
+  receita (`3.*` ou sem categoria) que não chega a nenhum pagador também aparece à parte, porque
+  pode estar pagando uma nota "atrasada". Ligar o cliente em Lançamentos resolve as duas.

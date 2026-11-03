@@ -12,6 +12,7 @@ export const NAV_ITEMS = [
   { href: "/contratos", label: "Contratos", phase: null },
   { href: "/contratos/poc", label: "Reportar avanço", phase: null },
   { href: "/contratos/extrair", label: "Ler contrato", phase: null },
+  { href: "/emissao-de-nf", label: "Emissão de NF", phase: null },
   { href: "/notas-fiscais", label: "Notas fiscais", phase: null },
   { href: "/clientes", label: "Clientes", phase: null },
   { href: "/pessoas", label: "Pessoas", phase: null },

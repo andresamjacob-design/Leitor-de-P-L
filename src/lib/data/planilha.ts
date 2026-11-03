@@ -8,7 +8,7 @@
 import { createClient } from "@/lib/supabase/server";
 import type { LinhaPlanilha, TipoLinha } from "@/lib/planilha";
 
-export type Relatorio = "dre" | "fluxo";
+export type Relatorio = "dre" | "fluxo" | "nf";
 
 export type PlanilhaCopiada = {
   linhas: LinhaPlanilha[];
