@@ -4,6 +4,7 @@
  */
 
 import { createClient } from "@/lib/supabase/server";
+import { chaveDoPagador } from "@/lib/import/cliente-pelo-nome";
 import { normalizeTaxId } from "@/lib/tax-id";
 
 export type Client = {
@@ -49,6 +50,28 @@ export async function listClients(
   const { data, error } = await query.order("name");
   if (error) throw new Error(`não foi possível carregar os clientes: ${error.message}`);
   return (data as ClientRow[]).map(toClient);
+}
+
+/**
+ * Pagador → cliente, de tudo que já está no razão com os dois (D169). O mais recente vence,
+ * para que uma correção do Andre valha sobre a ligação antiga.
+ */
+export async function pagadoresConhecidos(entityId: string): Promise<Map<string, string>> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("cash_entries")
+    .select("counterparty_name, client_id")
+    .eq("entity_id", entityId)
+    .not("counterparty_name", "is", null)
+    .not("client_id", "is", null)
+    .order("occurred_on");
+  if (error) throw new Error(`não foi possível carregar os pagadores: ${error.message}`);
+  const pagadores = new Map<string, string>();
+  for (const row of data as { counterparty_name: string; client_id: string }[]) {
+    const chave = chaveDoPagador(row.counterparty_name);
+    if (chave !== "") pagadores.set(chave, row.client_id);
+  }
+  return pagadores;
 }
 
 export async function getClient(id: string): Promise<Client | null> {

@@ -85,6 +85,13 @@
       "when": 1792071000000,
       "tag": "0011_folha_mesma_empresa",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1793713906354,
+      "tag": "0012_print_de_extrato",
+      "breakpoints": true
     }
   ]
 }

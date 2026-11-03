@@ -31,13 +31,21 @@ export type ContaCandidata = {
   type: AccountType;
   number: string | null;
   lastDigits: string | null;
+  /** Só o print usa, quando a tela mostra o banco e não o número da conta. */
+  institution?: string | null;
+  active?: boolean;
 };
 
 export type IdentidadeDoArquivo =
   /** Extrato de conta corrente: o número da conta impresso no arquivo. */
   | { tipo: "extrato"; conta: string | null }
   /** Fatura de cartão: o final da conta de cobrança e o final de cada cartão listado. */
-  | { tipo: "fatura"; finalDaConta: string | null; finaisDosCartoes: readonly string[] };
+  | { tipo: "fatura"; finalDaConta: string | null; finaisDosCartoes: readonly string[] }
+  /**
+   * Print da tela do banco (D168): o número, se a tela mostrar; senão o nome do banco, que
+   * só decide quando uma única conta cadastrada é daquele banco.
+   */
+  | { tipo: "print"; banco: string | null; conta: string | null };
 
 export type ContaEncontrada = { ok: true; conta: ContaCandidata } | { ok: false; motivo: string };
 
@@ -48,10 +56,49 @@ function numero(texto: string | null): string {
 
 const ehCartao = (conta: ContaCandidata) => conta.type === "credit_card";
 
+/**
+ * O nome do banco reduzido ao que identifica: `Banco BS2 S.A.` e `BS2` dão `bs2`. O que
+ * sobra depois de tirar "banco", "s.a." e pontuação é o nome.
+ */
+function palavra(texto: string | null): string {
+  return (texto ?? "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/\bbanco\b|\bs\.?\s?a\.?(?=\s|$)|\bbank\b/g, " ")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
 export function contaDoArquivo(
   identidade: IdentidadeDoArquivo,
   contas: readonly ContaCandidata[],
 ): ContaEncontrada {
+  if (identidade.tipo === "print") {
+    const caixa = contas.filter((c) => !ehCartao(c));
+    // 1. O número na tela, se a IA leu um que existe.
+    if (numero(identidade.conta) !== "") {
+      const pelo = contaDoArquivo({ tipo: "extrato", conta: identidade.conta }, caixa);
+      if (pelo.ok) return pelo;
+    }
+    // 2. O nome do banco na tela.
+    const banco = palavra(identidade.banco);
+    if (banco !== "") {
+      const achadas = caixa.filter((c) => palavra(`${c.institution ?? ""} ${c.name}`).includes(banco));
+      if (achadas.length === 1) return { ok: true, conta: achadas[0] as ContaCandidata };
+    }
+    // 3. O que a tela diz não bateu (o Andre em 03/11: "tente tirar essa restrição"). Print
+    //    só vem de banco que não exporta, e é a conta corrente ativa cadastrada sem número —
+    //    as que exportam têm o número, porque é por ele que o extrato delas é reconhecido.
+    const semExport = caixa.filter((c) => c.type === "bank" && c.active !== false && numero(c.number) === "");
+    return escolher(
+      semExport,
+      "não achei a conta destes prints. Cadastre a conta do banco em Contas e envie de novo.",
+      `há ${semExport.length} contas correntes sem número cadastrado (` +
+        `${semExport.map((c) => c.name).join(", ")}), e o print não diz de qual é.`,
+    );
+  }
+
   if (identidade.tipo === "extrato") {
     const lida = numero(identidade.conta);
     if (lida === "") {

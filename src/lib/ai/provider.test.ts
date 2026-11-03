@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { extractJson, getAiProvider, isAiConfigured } from "@/lib/ai/provider";
+import { extractJson, getAiProvider, isAiConfigured, userContent } from "@/lib/ai/provider";
 
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -50,5 +50,24 @@ describe("extractJson", () => {
 
   it("recusa JSON malformado", () => {
     expect(() => extractJson("[{a:1}]")).toThrow(/não é um JSON válido/);
+  });
+});
+
+describe("userContent", () => {
+  it("sem imagem, continua sendo só o texto", () => {
+    expect(userContent("oi", [])).toBe("oi");
+  });
+
+  it("com imagens, elas vêm antes do texto, na ordem dada (D168)", () => {
+    expect(
+      userContent("leia", [
+        { mediaType: "image/png", base64: "AAA" },
+        { mediaType: "image/jpeg", base64: "BBB" },
+      ]),
+    ).toEqual([
+      { type: "image", source: { type: "base64", media_type: "image/png", data: "AAA" } },
+      { type: "image", source: { type: "base64", media_type: "image/jpeg", data: "BBB" } },
+      { type: "text", text: "leia" },
+    ]);
   });
 });

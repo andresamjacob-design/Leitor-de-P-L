@@ -4229,3 +4229,60 @@ vision ficam"*. Nada muda no razão. O cartão segue no mês da compra, também 
 diante; as compras de 25 a 30/08 que a planilha de setembro traz (R$ 8.139,79) ficam em agosto
 no app. Santa Monica (R$ 16.566,76) e Vision (R$ 12.111) seguem em `6.12` em setembro: o app conta
 R$ 28.677,76 que a DRE dele não tem nessa linha, e a diferença fica explicada, não corrigida.
+
+### D168 — Extrato do BS2 da GSJacob lido de prints, sempre com revisão
+O Andre em 03/11: o BS2 da GSJacob *"não tem export em pdf nem xlsx"*; a conta fica unificada
+com as outras na `dd-group`. Ele escolheu: extrato inteiro (entradas e saídas), e a leitura
+como **rascunho + revisão**.
+
+**É a única exceção ao SPEC §8** (a IA nunca produz valor), cercada como os contratos do §9:
+- A IA (com visão) **transcreve** cada valor como o texto impresso; quem vira centavos é o
+  `parseMoney`. Texto que não é dinheiro vai para o descarte com o motivo.
+- O saldo do próprio print confere: saldo inicial + movimentos = saldo final (`conferirPrint`).
+  O erro mais provável é a emenda entre dois prints — linha repetida ou pulada —, e é ele que
+  quebra a soma.
+- **Nunca entra sozinho**, nem fechando (diferente da D145): duas linhas trocadas fecham a soma
+  e erram a data.
+
+Os prints enviados juntos são **um extrato só**, lidos numa chamada. A conta sai do número na
+tela ou, sem ele, do nome do banco, quando uma única conta cadastrada é daquele banco.
+
+**O saldo inicial de R$ 3,39** é uma transferência entre contas da empresa, não receita. Ele
+entra como **saldo de abertura** da conta (`accounts.opening_balance`), que nunca vira
+lançamento, e por isso nunca aparece na DRE nem como entrada no fluxo. A importação avisa
+quando o saldo inicial do print não bate com o saldo da conta na véspera.
+
+Migração `0012_print_de_extrato` (só acrescenta `image` ao enum `import_format`).
+
+### D169 — Entrada do print ligada ao cliente pelo nome de quem pagou
+O Andre em 03/11: *"no bs2 tem quem fez o pix… coloque por cliente, o app deve ser capaz de
+fazer isso sozinho"*. O print não traz CNPJ, então o motor não ligava nada.
+
+`clientePeloNome`: o nome **cadastrado** do cliente tem de ser o **começo** do nome do pagador,
+palavra por palavra, um cliente só, e com CNPJ no cadastro — o CNPJ entra na linha antes do
+stage, e o motor segue como num extrato do Itaú. É a exceção estreita à D87: `MS Tecnologia`
+continua não casando com `FULANO MARKETING E TECNOLOGIA`; o que não casa fica sem cliente.
+
+Aplicado aos lançamentos que já estavam no razão: Danke 12.375,00 (15/09, `3.02` — a
+mensalidade dela é sempre Pix direto em `3.02`; o `3.03` mais recente era da invoice
+Salesforce), Fast Escova 6.300,00 (24/09, `3.01`), Carflix 4.250,00 (15/10, `3.02`), Hold
+Beauty 7.200,00 + 7.200,00 + 7.268,00 (16 e 30/10, `3.01`). O Pix de R$ 47.924,41 de 21/10 do
+BS2 para a Itau GSJACOB ganhou `99.01` nas duas pontas. Sem cliente cadastrado: Insider
+(9.800,02 × 2), Beauty Supply (8.000,00), FE Franchising (6.300,00).
+
+**Atualizado em 03/11, mesmo dia** — o Andre: *"com o nome presente no print você consegue
+linkar de quem foi o pagamento e aí adicionar"*. Pagador sem cliente que case vira **cliente
+novo**, com o nome do print limpo (`nomeDeClienteNovo`) e uma nota de onde veio; cliente sem
+CNPJ também casa. E o cliente sugerido agora **chega ao razão** na aprovação
+(`approveStaged`): antes ficava em `suggested_client_id` e se perdia, para toda importação.
+Cadastrados assim: Beauty Supply Cosmetics Sociedade Unipessoal, Insider Brasil Licenciamento e
+Servicos de Softwar, Fe Franchising — ligadas as quatro entradas que faltavam.
+
+**Revertido em 03/11, mais tarde** — o Andre: *"não tem cliente novo, é Vasco da Gama
+(insider), Fast Escova (Fe), Braé (Beauty Supply)"*. Os três pagadores eram clientes que já
+existiam com outro nome, e nenhuma regra de nome acharia isso. Então: ninguém é cadastrado
+sozinho (`nomeDeClienteNovo` saiu), e antes do nome vem a **memória** — `clienteJaVisto`
+procura o mesmo pagador (`counterparty_name`, normalizado) já ligado a um cliente no razão,
+e o mais recente vence. Pagador desconhecido fica sem cliente, com aviso. As quatro entradas
+foram religadas (Vasco `3.02`, contrato de projeto; Fast Escova e Braé `3.01`, mensalidade)
+e os três clientes apagados, com `audit_log`.

@@ -80,3 +80,37 @@ describe("contaDoArquivo — fatura", () => {
     expect(conta(r)).toMatch(/mais de um cartão/);
   });
 });
+
+describe("contaDoArquivo — print (D168)", () => {
+  const COM_BS2: ContaCandidata[] = [
+    ...CONTAS,
+    { id: "bs2", name: "BS2 GSJACOB", type: "bank", number: null, lastDigits: null, institution: "Banco BS2" },
+  ];
+
+  it("sem número na tela, o nome do banco decide quando só uma conta é dele", () => {
+    expect(conta(contaDoArquivo({ tipo: "print", banco: "Banco BS2 S.A.", conta: null }, COM_BS2))).toBe("bs2");
+    expect(conta(contaDoArquivo({ tipo: "print", banco: "bs2", conta: null }, COM_BS2))).toBe("bs2");
+  });
+
+  it("com número na tela, o número decide, como num extrato", () => {
+    expect(conta(contaDoArquivo({ tipo: "print", banco: "Itaú", conta: "0098873-4" }, COM_BS2))).toBe("itau");
+  });
+
+  it("o que a tela diz não bate: vai para a conta corrente sem número (a do banco sem export)", () => {
+    expect(conta(contaDoArquivo({ tipo: "print", banco: null, conta: null }, COM_BS2))).toBe("bs2");
+    expect(conta(contaDoArquivo({ tipo: "print", banco: "Banco desconhecido", conta: "999-9" }, COM_BS2))).toBe("bs2");
+    // "Itaú" bate com duas contas; não chuta entre elas, cai na do print.
+    expect(conta(contaDoArquivo({ tipo: "print", banco: "Itaú", conta: null }, COM_BS2))).toBe("bs2");
+  });
+
+  it("sem conta nenhuma que sirva, pede o cadastro", () => {
+    expect(conta(contaDoArquivo({ tipo: "print", banco: "Banco BS2", conta: null }, CONTAS))).toMatch(/Cadastre/);
+  });
+
+  it("nunca escolhe um cartão", () => {
+    const soCartao: ContaCandidata[] = [
+      { id: "c", name: "BS2 cartão", type: "credit_card", number: null, lastDigits: "1111", institution: "BS2" },
+    ];
+    expect(contaDoArquivo({ tipo: "print", banco: "BS2", conta: null }, soCartao).ok).toBe(false);
+  });
+});

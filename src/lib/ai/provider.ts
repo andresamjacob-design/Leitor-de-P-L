@@ -27,6 +27,17 @@ export type AiRequest = {
    * returns 400 on Sonnet 5, Opus 5, and the whole 4.6+ family.
    */
   responseSchema?: Record<string, unknown>;
+  /**
+   * Imagens enviadas antes do texto, na ordem dada. Só o leitor de prints usa (D168): o
+   * BS2 não exporta extrato, e o print é o único registro que o banco dá.
+   */
+  images?: AiImage[];
+};
+
+export type AiImage = {
+  mediaType: "image/png" | "image/jpeg" | "image/webp" | "image/gif";
+  /** Os bytes em base64, sem o prefixo `data:`. */
+  base64: string;
 };
 
 export type AiResponse = {
@@ -52,11 +63,23 @@ const ENDPOINT = "https://api.anthropic.com/v1/messages";
 const API_VERSION = "2023-06-01";
 const TIMEOUT_MS = 120_000;
 
+/** Sem imagem, o conteúdo continua sendo a string de sempre — nada muda para a categorização. */
+export function userContent(prompt: string, images: readonly AiImage[]) {
+  if (images.length === 0) return prompt;
+  return [
+    ...images.map((image) => ({
+      type: "image" as const,
+      source: { type: "base64" as const, media_type: image.mediaType, data: image.base64 },
+    })),
+    { type: "text" as const, text: prompt },
+  ];
+}
+
 function anthropicProvider(apiKey: string, model: string): AiProvider {
   return {
     name: "anthropic",
     model,
-    async complete({ system, prompt, maxTokens = 4096, responseSchema }) {
+    async complete({ system, prompt, maxTokens = 4096, responseSchema, images = [] }) {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
@@ -73,7 +96,7 @@ function anthropicProvider(apiKey: string, model: string): AiProvider {
             model,
             max_tokens: maxTokens,
             system,
-            messages: [{ role: "user", content: prompt }],
+            messages: [{ role: "user", content: userContent(prompt, images) }],
             ...(responseSchema
               ? { output_config: { format: { type: "json_schema", schema: responseSchema } } }
               : {}),

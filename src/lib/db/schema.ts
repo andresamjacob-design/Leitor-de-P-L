@@ -72,7 +72,7 @@ export const recognitionSource = pgEnum("recognition_source", [
   "cash_mirror",
   "accrual",
 ]);
-export const importFormat = pgEnum("import_format", ["ofx", "csv", "xlsx", "pdf"]);
+export const importFormat = pgEnum("import_format", ["ofx", "csv", "xlsx", "pdf", "image"]);
 export const importStatus = pgEnum("import_status", [
   "parsing",
   "reviewing",

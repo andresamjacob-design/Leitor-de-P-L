@@ -19,6 +19,7 @@ function tipoPeloNome(nome: string): string {
   const n = nome.toLowerCase();
   if (n.endsWith(".pdf")) return "PDF — fatura ou extrato da Contabilizei";
   if (n.endsWith(".xlsx") || n.endsWith(".csv")) return "extrato";
+  if (/\.(png|jpe?g|webp)$/.test(n)) return "print — lido pela IA, sempre com revisão";
   return "formato não aceito";
 }
 
@@ -78,11 +79,12 @@ export function EnviarArquivos({ slug }: { slug: string }) {
           Arraste aqui o extrato do Itaú e as faturas do cartão
         </span>
         <span className="text-sm text-muted">
-          ou clique para escolher · .xlsx e .csv de extrato, .pdf de fatura ·
-          vários de uma vez
+          ou clique para escolher · .xlsx e .csv de extrato, .pdf de fatura, print
+          (.png, .jpg) do BS2 · vários de uma vez
         </span>
         <span className="text-xs text-muted">
-          A conta de cada arquivo é lida de dentro dele — não precisa escolher.
+          A conta de cada arquivo é lida de dentro dele — não precisa escolher. Os prints
+          enviados juntos são lidos como um extrato só, do primeiro ao último.
         </span>
         <input
           ref={input}
@@ -90,7 +92,7 @@ export function EnviarArquivos({ slug }: { slug: string }) {
           name="arquivos"
           type="file"
           multiple
-          accept=".xlsx,.csv,.pdf"
+          accept=".xlsx,.csv,.pdf,.png,.jpg,.jpeg,.webp"
           className="sr-only"
           onChange={(event) =>
             setArquivos(

@@ -22,7 +22,7 @@ import type { Category } from "@/lib/data/categories";
 import type { ParsedTransaction } from "@/lib/import/types";
 import { chunk, HASH_BATCH, UUID_BATCH } from "@/lib/data/batching";
 
-export type ImportFormat = "ofx" | "csv" | "xlsx" | "pdf";
+export type ImportFormat = "ofx" | "csv" | "xlsx" | "pdf" | "image";
 export type ImportStatus = "parsing" | "reviewing" | "approved" | "discarded" | "failed";
 export type StagedStatus = "pending" | "approved" | "rejected" | "duplicate";
 
@@ -479,7 +479,9 @@ export async function approveStaged(
       direction: row.direction,
       description: row.description,
       categoryId: categoryByStagedId.get(row.id) ?? row.suggestedCategoryId,
-      clientId: null,
+      // O cliente sugerido chega ao razão (D169). Antes ficava na revisão e se perdia aqui,
+      // e todo cliente de importação era ligado depois, por script.
+      clientId: row.suggestedClientId,
       personId: null,
       vendor: null,
       isIntercompany: false,
@@ -549,4 +551,14 @@ export async function discardImport(importId: string): Promise<void> {
     .update({ status: "discarded" })
     .eq("id", importId);
   if (error) throw new Error(`não foi possível descartar a importação: ${error.message}`);
+}
+
+/** O cliente achado para uma linha esperando revisão, sem mexer na conta sugerida (D169). */
+export async function setSuggestedClient(stagedId: string, clientId: string): Promise<void> {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("staged_transactions")
+    .update({ suggested_client_id: clientId })
+    .eq("id", stagedId);
+  if (error) throw new Error(`não foi possível gravar o cliente sugerido: ${error.message}`);
 }

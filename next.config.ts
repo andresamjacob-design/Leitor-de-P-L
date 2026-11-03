@@ -9,12 +9,14 @@ import type { NextConfig } from "next";
  *   - `proxyClientMaxBodySize` **corta em silêncio** acima de 10 MB, porque o `proxy.ts` (o
  *     antigo middleware) cobre todas as rotas e guarda o corpo da requisição em memória.
  *
- * 25 MB cabe um mês com folga. O limite por arquivo continua sendo 15 MB, conferido na ação.
+ * 25 MB cabia um mês com folga. Os prints do BS2 (D168) mudaram a conta: um mês são vários
+ * prints de 1–3 MB cada, enviados juntos. 40 MB. O limite por arquivo continua sendo conferido
+ * na ação (15 MB por arquivo, 5 MB por print).
  */
 const nextConfig: NextConfig = {
   experimental: {
-    serverActions: { bodySizeLimit: "25mb" },
-    proxyClientMaxBodySize: "25mb",
+    serverActions: { bodySizeLimit: "40mb" },
+    proxyClientMaxBodySize: "40mb",
   },
 };
 

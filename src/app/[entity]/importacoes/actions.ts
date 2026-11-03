@@ -14,6 +14,7 @@ import {
   listStaged,
   refreshImportStatus,
   rejectStaged,
+  setSuggestedClient,
   stageImport,
   type ImportFormat,
 } from "@/lib/data/imports";
@@ -38,11 +39,39 @@ import { decidirAprovacao, saldoDeConferencia } from "@/lib/import/aprovacao";
 import { isCashAccount } from "@/lib/ledger-types";
 import type { Cents } from "@/lib/money";
 import type { IsoDate } from "@/lib/dates";
+import { extractJson, getAiProvider, type AiImage } from "@/lib/ai/provider";
+import { listClients, pagadoresConhecidos } from "@/lib/data/clients";
+import { clienteJaVisto, clientePeloNome } from "@/lib/import/cliente-pelo-nome";
+import type { ParsedTransaction } from "@/lib/import/types";
+import {
+  PRINT_PROMPT,
+  PRINT_RESPONSE_SCHEMA,
+  PRINT_SYSTEM_PROMPT,
+  conferirPrint,
+  lerRespostaDoPrint,
+} from "@/lib/import/print-extrato";
 
 const MAX_BYTES = 15 * 1024 * 1024;
+/** O limite da API para cada imagem. Um print de celular tem 1–3 MB. */
+const MAX_PRINT_BYTES = 5 * 1024 * 1024;
+/** Um mês do BS2 cabe em poucos prints; mais que isso é melhor mandar em duas vezes. */
+const MAX_PRINTS = 15;
+
+const TIPO_DA_IMAGEM: Record<string, AiImage["mediaType"]> = {
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".webp": "image/webp",
+};
+
+function extensao(filename: string): string {
+  const lower = filename.toLowerCase();
+  return lower.slice(lower.lastIndexOf("."));
+}
 
 function formatOf(filename: string): ImportFormat | null {
   const lower = filename.toLowerCase();
+  if (TIPO_DA_IMAGEM[extensao(lower)]) return "image";
   if (lower.endsWith(".xlsx")) return "xlsx";
   if (lower.endsWith(".csv")) return "csv";
   if (lower.endsWith(".pdf")) return "pdf";
@@ -102,7 +131,24 @@ export async function enviarArquivosAction(
 
     const contas = await listAccounts([entity.id], { includeInactive: true });
     const resultados: ResultadoDoArquivo[] = [];
-    for (const arquivo of arquivos) {
+
+    // Os prints enviados juntos são um extrato só, lido de uma vez (D168): a rolagem de um
+    // continua no outro, e só juntos eles vão do saldo inicial ao final.
+    const prints = arquivos.filter((arquivo) => formatOf(arquivo.name) === "image");
+    const outros = arquivos.filter((arquivo) => formatOf(arquivo.name) !== "image");
+    if (prints.length > 0) {
+      try {
+        resultados.push(await importarPrints(entity.id, userId, prints, contas));
+      } catch (cause) {
+        resultados.push({
+          arquivo: nomeDosPrints(prints),
+          ok: false,
+          erro: cause instanceof Error ? cause.message : "não foi possível ler os prints.",
+        });
+      }
+    }
+
+    for (const arquivo of outros) {
       try {
         resultados.push(await importarArquivo(entity.id, userId, arquivo, contas));
       } catch (cause) {
@@ -138,7 +184,7 @@ async function importarArquivo(
 
   const format = formatOf(file.name);
   if (!format) {
-    throw new FormError("formato não reconhecido. Envie um .xlsx, .csv ou .pdf.");
+    throw new FormError("formato não reconhecido. Envie um .xlsx, .csv, .pdf ou print (.png, .jpg).");
   }
 
   const bytes = new Uint8Array(await file.arrayBuffer());
@@ -342,6 +388,174 @@ async function importarArquivo(
     lancamentos,
     semCategoria,
     motivoRevisao,
+  };
+}
+
+function nomeDosPrints(prints: readonly File[]): string {
+  return prints.length === 1
+    ? (prints[0] as File).name
+    : `${prints.length} prints (${prints.map((p) => p.name).join(", ")})`;
+}
+
+/**
+ * Prints da tela do banco viram uma importação esperando revisão (D168).
+ *
+ * A IA transcreve, o `lerRespostaDoPrint` converte e o saldo do print confere. **Nunca**
+ * aprova sozinho, mesmo fechando: é a única leitura do app em que um valor passou por uma
+ * IA, e por isso cada linha passa por um humano antes do razão.
+ */
+async function importarPrints(
+  entityId: string,
+  userId: string,
+  prints: readonly File[],
+  contas: Awaited<ReturnType<typeof listAccounts>>,
+): Promise<ResultadoDoArquivo> {
+  const notices: string[] = [];
+  const nome = nomeDosPrints(prints);
+
+  if (prints.length > MAX_PRINTS) {
+    throw new FormError(`envie no máximo ${MAX_PRINTS} prints por vez — divida o mês em duas partes.`);
+  }
+  const provider = getAiProvider();
+  if (!provider) {
+    throw new FormError("ler print precisa da IA, e não há chave configurada (ANTHROPIC_API_KEY).");
+  }
+
+  const images: AiImage[] = [];
+  const hash = createHash("sha256");
+  for (const print of prints) {
+    if (print.size > MAX_PRINT_BYTES) {
+      throw new FormError(`o print “${print.name}” passa de 5 MB. Tire o print de novo ou reduza a imagem.`);
+    }
+    const bytes = new Uint8Array(await print.arrayBuffer());
+    hash.update(bytes);
+    images.push({
+      mediaType: TIPO_DA_IMAGEM[extensao(print.name)] as AiImage["mediaType"],
+      base64: Buffer.from(bytes).toString("base64"),
+    });
+  }
+  const fileHash = hash.digest("hex");
+
+  const already = await findImportByHash(entityId, fileHash);
+  if (already) {
+    throw new FormError(
+      `estes prints já foram importados em ${formatPtBRDate(already.createdAt.slice(0, 10))}.`,
+    );
+  }
+
+  // ---- Leitura ----------------------------------------------------------
+  const resposta = await provider.complete({
+    system: PRINT_SYSTEM_PROMPT,
+    prompt: PRINT_PROMPT,
+    images,
+    maxTokens: 16_000,
+    responseSchema: PRINT_RESPONSE_SCHEMA,
+  });
+  const statement = lerRespostaDoPrint(extractJson(resposta.text));
+  if (statement.transactions.length === 0) {
+    throw new FormError("li os prints, mas não encontrei nenhum movimento neles.");
+  }
+
+  const conferencia = conferirPrint(statement);
+  notices.push(conferencia.message);
+  for (const warning of statement.warnings) notices.push(warning.message);
+  for (const linha of statement.discarded.slice(0, 5)) {
+    notices.push(`fora da leitura — “${linha.description}”: ${linha.reason}.`);
+  }
+  if (statement.discarded.length > 5) {
+    notices.push(`e mais ${statement.discarded.length - 5} linha(s) fora da leitura.`);
+  }
+
+  // ---- A conta ----------------------------------------------------------
+  const encontrada = contaDoArquivo(
+    { tipo: "print", banco: statement.source.institution, conta: statement.source.account },
+    contas,
+  );
+  if (!encontrada.ok) throw new FormError(encontrada.motivo);
+  const account = encontrada.conta;
+
+  // O saldo inicial do print nunca vira lançamento: é saldo, não receita (D168). Não há
+  // aviso de saldo aqui — o Andre em 03/11 só quer o resultado.
+
+  // O print traz o nome de quem pagou e nenhum CNPJ (D169). Cada entrada vai para o cliente
+  // a quem esse pagador já foi ligado no razão; senão, para o cliente cujo nome cadastrado
+  // é o começo do nome do pagador; senão, fica sem cliente na revisão. Com CNPJ no
+  // cadastro, ele entra na linha e o motor acha também a conta de receita (D136).
+  const clientes = await listClients([entityId]);
+  const pagadores = await pagadoresConhecidos(entityId);
+  const clienteDaLinha = new Map<ParsedTransaction, string>();
+  const semCliente = new Set<string>();
+  for (const transaction of statement.transactions) {
+    if (transaction.direction !== "in") continue;
+    const visto = clienteJaVisto(transaction.counterpartyName, pagadores);
+    const cliente =
+      clientes.find((c) => c.id === visto) ?? clientePeloNome(transaction.counterpartyName, clientes);
+    if (!cliente) {
+      if (transaction.counterpartyName) semCliente.add(transaction.counterpartyName);
+      continue;
+    }
+    clienteDaLinha.set(transaction, cliente.id);
+    if (transaction.counterpartyTaxId === null && cliente.taxId) {
+      transaction.counterpartyTaxId = cliente.taxId.replace(/\D/g, "");
+    }
+  }
+  if (clienteDaLinha.size > 0) {
+    notices.push(
+      `${clienteDaLinha.size} entrada${clienteDaLinha.size === 1 ? "" : "s"} ligada${clienteDaLinha.size === 1 ? "" : "s"} ` +
+        "ao cliente pelo nome de quem pagou.",
+    );
+  }
+  if (semCliente.size > 0) {
+    notices.push(`pagador sem cliente conhecido: ${[...semCliente].join(", ")}.`);
+  }
+
+  // ---- Stage — e só: print nunca vai sozinho para o razão ----------------
+  const final = statement.declaredBalances.find((b) => b.label === "saldo final do print");
+  const staged = await stageImport({
+    entityId,
+    accountId: account.id,
+    filename: nome,
+    fileHash,
+    format: "image",
+    periodStart: statement.periodStart,
+    periodEnd: statement.periodEnd,
+    statementClosingBalance: final?.balance ?? null,
+    transactions: statement.transactions,
+    userId,
+  });
+
+  const suggested = await suggestForImport(entityId, account.id, staged.id);
+  if (suggested.suggestions.size > 0) {
+    notices.push(
+      `${suggested.suggestions.size} linha${suggested.suggestions.size === 1 ? "" : "s"} ` +
+        `com categoria sugerida; ${suggested.undecided} sem sugestão.`,
+    );
+  }
+
+  // O cliente achado pelo nome vale mesmo quando o motor não sugeriu conta nenhuma — o
+  // cliente é fato do print, a conta é opinião.
+  const clientePorPagador = new Map<string, string>();
+  for (const [transaction, clientId] of clienteDaLinha) {
+    if (transaction.counterpartyName) clientePorPagador.set(transaction.counterpartyName, clientId);
+  }
+  for (const row of await listStaged(staged.id)) {
+    if (row.status !== "pending" || row.suggestedClientId !== null || !row.counterpartyName) continue;
+    const clientId = clientePorPagador.get(row.counterpartyName);
+    if (clientId) await setSuggestedClient(row.id, clientId);
+  }
+
+  return {
+    arquivo: nome,
+    ok: true,
+    importId: staged.id,
+    conta: account.name,
+    linhas: statement.transactions.length,
+    duplicatas: staged.duplicates,
+    avisos: notices,
+    aprovado: false,
+    lancamentos: 0,
+    semCategoria: 0,
+    motivoRevisao: `lido de print pela IA (${resposta.model}): toda linha passa pela revisão antes do razão.`,
   };
 }
 
