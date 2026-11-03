@@ -4312,3 +4312,12 @@ caminho da D141 (cópia sem interpretação, regravada inteira numa transação,
 - **Sem dono** — linha sem cliente nem CNPJ não é classificada (aparece à parte); entrada de
   receita (`3.*` ou sem categoria) que não chega a nenhum pagador também aparece à parte, porque
   pode estar pagando uma nota "atrasada". Ligar o cliente em Lançamentos resolve as duas.
+
+### D171 — Cliente auditado como o razão
+
+O Andre: *"adiciona trigger de audit_log na tabela de clientes"*. Até aqui só o razão,
+reconhecimento, contratos, regras e folha tinham gatilho (D156: a auditoria só nasce dele).
+Mas o cliente decide a quem cada recebimento pertence, e desde a D170 o nome dele é o que casa
+com a linha da planilha — renomear "ORC" para "ORC Orçamentos" mudou o que a Emissão de NF
+mostra. A 0013 liga o mesmo `write_audit_log` em `clients`; inclusão, edição e exclusão ficam
+registradas com o autor, sem nada a mais na aplicação.

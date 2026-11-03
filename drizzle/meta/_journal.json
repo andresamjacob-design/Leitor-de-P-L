@@ -92,6 +92,13 @@
       "when": 1793713906354,
       "tag": "0012_print_de_extrato",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1793717506354,
+      "tag": "0013_auditoria_de_clientes",
+      "breakpoints": true
     }
   ]
 }
