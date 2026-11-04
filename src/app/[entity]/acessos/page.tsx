@@ -3,7 +3,8 @@ import { ConsolidatedNotice } from "@/components/consolidated-notice";
 import { EmptyState } from "@/components/empty-state";
 import { PageHeader } from "@/components/page-header";
 import { Table, TableScroll, Td, Th } from "@/components/ui/table";
-import { listarAcessos, PAPEL_DESCRICAO, PAPEL_LABEL } from "@/lib/data/acessos";
+import { listarAcessos } from "@/lib/data/acessos";
+import { PAPEL_DESCRICAO, PAPEL_LABEL } from "@/lib/papeis";
 import { resolveScope } from "@/lib/entities";
 import { MudarAcessoForm, NovoAcessoForm } from "./acesso-form";
 

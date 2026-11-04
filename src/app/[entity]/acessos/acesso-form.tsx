@@ -5,7 +5,7 @@ import { definirAcessoAction } from "./actions";
 import { Button } from "@/components/ui/button";
 import { Field, FormError, Input, Select } from "@/components/ui/field";
 import { EMPTY_FORM_STATE } from "@/lib/form";
-import { PAPEL_DESCRICAO, PAPEL_LABEL, type Papel } from "@/lib/data/acessos";
+import { PAPEL_DESCRICAO, PAPEL_LABEL, type Papel } from "@/lib/papeis";
 
 const PAPEIS: Papel[] = ["viewer", "member", "owner"];
 

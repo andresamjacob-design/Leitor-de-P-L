@@ -6,21 +6,10 @@
  * nenhuma chave de serviço (D16).
  */
 
+import type { Papel } from "@/lib/papeis";
 import { createClient } from "@/lib/supabase/server";
 
-export type Papel = "viewer" | "member" | "owner";
-
-export const PAPEL_LABEL: Record<Papel, string> = {
-  viewer: "Ver",
-  member: "Ver e editar",
-  owner: "Administrador",
-};
-
-export const PAPEL_DESCRICAO: Record<Papel, string> = {
-  viewer: "vê fluxo, DRE e lançamentos; não muda nada",
-  member: "vê e edita: envia extratos, categoriza, corrige",
-  owner: "vê, edita e libera outras pessoas",
-};
+export type { Papel };
 
 export type Acesso = {
   email: string;
