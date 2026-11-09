@@ -52,6 +52,15 @@ export default async function OverviewPage({
     listCashEntries({ entityIds, categoryId: "none", limit: 5000 }),
   ]);
 
+  // The banner counts every year; the entries page defaults to the current one. Link with the
+  // span of the uncategorized dates so the list shows exactly what the banner counted.
+  const uncategorizedDates = uncategorized.map((entry) => String(entry.occurredOn)).sort();
+  const uncategorizedHref =
+    `/${slug}/lancamentos?categoria=none` +
+    (uncategorizedDates.length > 0
+      ? `&de=${uncategorizedDates[0]}&ate=${uncategorizedDates[uncategorizedDates.length - 1]}`
+      : "");
+
   const cashAccounts = accounts.filter((account) => isCashAccount(account.type));
   const balances = await accountBalances(cashAccounts, { until: today });
   const cash = sum([...balances.values()]);
@@ -162,8 +171,12 @@ export default async function OverviewPage({
           {uncategorized.length} lançamento{uncategorized.length === 1 ? "" : "s"} sem
           categoria — {uncategorized.length === 1 ? "ele não aparece" : "eles não aparecem"}{" "}
           em nenhuma linha do DRE.{" "}
+          <Link href={uncategorizedHref} className="underline underline-offset-2">
+            Ver quais são
+          </Link>{" "}
+          ·{" "}
           <Link href={`/${slug}/regras`} className="underline underline-offset-2">
-            Categorizar
+            criar regra
           </Link>
           .
         </p>

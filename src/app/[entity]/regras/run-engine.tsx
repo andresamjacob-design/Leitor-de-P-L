@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState } from "react";
 import { runEngineAction } from "./actions";
 import { Button } from "@/components/ui/button";
@@ -24,6 +25,14 @@ export function RunEngine({ slug, uncategorized }: { slug: string; uncategorized
             ? "Nenhum lançamento sem categoria."
             : `${uncategorized} lançamento${uncategorized === 1 ? "" : "s"} sem categoria.`}
         </span>
+        {uncategorized > 0 ? (
+          <Link
+            href={`/${slug}/lancamentos?categoria=none&de=2000-01-01&ate=2099-12-31`}
+            className="text-sm text-accent hover:underline"
+          >
+            Ver quais são
+          </Link>
+        ) : null}
       </div>
 
       <p className="text-xs text-muted">
