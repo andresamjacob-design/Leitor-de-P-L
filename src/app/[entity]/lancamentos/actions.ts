@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import {
   createCashEntry,
   deleteCashEntry,
+  setCashEntryCategory,
   updateCashEntry,
   type CashEntryInput,
 } from "@/lib/data/cash-entries";
@@ -101,4 +102,28 @@ export async function deleteCashEntryAction(
   revalidatePath(`/${slug}/lancamentos`);
   revalidatePath(`/${slug}/fluxo-de-caixa`);
   redirect(`/${slug}/lancamentos`);
+}
+
+/** The list's inline picker: one entry, one category, no redirect. */
+export async function setEntryCategoryAction(
+  _previous: FormState,
+  data: FormData,
+): Promise<FormState> {
+  const slug = String(data.get("slug") ?? "");
+  const id = String(data.get("id") ?? "");
+  const categoryId = String(data.get("categoryId") ?? "");
+
+  try {
+    const { entity, userId } = await requireWriteContext(slug);
+    if (!id || !categoryId) return { error: "escolha uma categoria." };
+    const categories = await listCategories([entity.id], { includeInactive: true });
+    const result = await setCashEntryCategory(entity.id, id, categoryId, categories, userId);
+    revalidatePath(`/${slug}`);
+    revalidatePath(`/${slug}/lancamentos`);
+    revalidatePath(`/${slug}/fluxo-de-caixa`);
+    revalidatePath(`/${slug}/dre`);
+    return result.notices.length > 0 ? { notices: result.notices } : {};
+  } catch (cause) {
+    return toFormState(cause, data);
+  }
 }

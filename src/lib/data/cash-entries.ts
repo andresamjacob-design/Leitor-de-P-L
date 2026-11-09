@@ -362,6 +362,47 @@ export async function updateCashEntry(
   return { id, notices };
 }
 
+/**
+ * Sets only the category, from the list's inline picker. Unlike `updateCashEntry` it leaves
+ * every other column alone — the dedup hash an import stored included — and then derives
+ * the competence mirror exactly as a full save would. Transfers are refused here: they need
+ * a counterpart account, which only the full form asks for.
+ */
+export async function setCashEntryCategory(
+  entityId: string,
+  id: string,
+  categoryId: string,
+  categories: readonly Category[],
+  userId: string,
+): Promise<SaveResult> {
+  const entry = await getCashEntry(id);
+  if (!entry || entry.entityId !== entityId) throw new Error("lançamento não encontrado.");
+
+  const byId = new Map(categories.map((category) => [category.id, category]));
+  const target = byId.get(categoryId);
+  if (!target) throw new Error("categoria não encontrada.");
+  if (target.kind === "transfer" || byId.get(entry.categoryId ?? "")?.kind === "transfer") {
+    throw new Error("transferência se categoriza pela tela do lançamento, que pede a conta de destino.");
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("cash_entries")
+    .update({ category_id: categoryId, updated_by: userId })
+    .eq("id", id)
+    .eq("entity_id", entityId);
+  if (error) throw new Error(`não foi possível salvar a categoria: ${error.message}`);
+
+  const input: CashEntryInput = {
+    ...entry,
+    categoryId,
+    counterpartAccountId: null,
+    allowDuplicate: false,
+  };
+  const notices = await syncDerived(entityId, id, input, categories, userId);
+  return { id, notices };
+}
+
 export async function deleteCashEntry(id: string): Promise<void> {
   const supabase = await createClient();
 

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { EmptyState } from "@/components/empty-state";
 import { ExportLinks } from "@/components/export-links";
+import { CategoryPicker } from "./category-picker";
 import { PageHeader } from "@/components/page-header";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Field, Input, Select } from "@/components/ui/field";
@@ -76,6 +77,14 @@ export default async function EntriesPage({
 
   const accountById = new Map(accounts.map((account) => [account.id, account]));
   const categoryById = new Map(categories.map((category) => [category.id, category]));
+  // The inline picker only exists for one entity (the consolidated view is read-only) and
+  // leaves transfers out: those need a counterpart account, asked by the full form.
+  const pickable =
+    scope.kind === "entity"
+      ? categories
+          .filter((category) => category.active && category.kind !== "transfer")
+          .map(({ id, code, name }) => ({ id, code, name }))
+      : null;
 
   const inflow = sum(
     entries.filter((entry) => entry.direction === "in").map((entry) => entry.amount),
@@ -200,7 +209,13 @@ export default async function EntriesPage({
                         {accountById.get(entry.accountId)?.name ?? "—"}
                       </Td>
                       <Td className="text-xs text-muted">
-                        {category ? `${category.code} · ${category.name}` : "Sem categoria"}
+                        {category ? (
+                          `${category.code} · ${category.name}`
+                        ) : pickable ? (
+                          <CategoryPicker slug={slug} entryId={entry.id} categories={pickable} />
+                        ) : (
+                          "Sem categoria"
+                        )}
                       </Td>
                       <Td className="whitespace-nowrap text-xs">
                         <span className={overridden ? "text-accent" : "text-muted"}>
