@@ -12,7 +12,9 @@ function motivoDoLinkFalhar(erro: string): string {
   if (e.includes("expired") || e.includes("invalid")) {
     return "O link venceu ou já foi usado. Peça um novo.";
   }
-  if (e === "missing_code") return "O link chegou incompleto. Peça um novo.";
+  // Quando o link venceu, o Supabase volta sem `code` e põe o motivo no #fragmento, que o
+  // servidor não vê. Na prática é quase sempre isso: link antigo ou já usado.
+  if (e === "missing_code") return "O link venceu ou já foi usado. Peça um novo e use o e-mail mais recente.";
   return "Não foi possível entrar com esse link. Peça um novo.";
 }
 

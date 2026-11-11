@@ -1,4 +1,5 @@
 import { createServerClient } from "@supabase/ssr";
+import { publicOrigin } from "@/lib/public-origin";
 import { NextResponse, type NextRequest } from "next/server";
 import { readSupabaseConfig } from "@/lib/env";
 
@@ -43,8 +44,8 @@ export default async function proxy(request: NextRequest) {
   const isPublic = PUBLIC_PATHS.some((path) => pathname.startsWith(path));
 
   if (!user && !isPublic) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/login";
+    // Pela origem pública: no Render, `nextUrl` aponta para o endereço interno do servidor.
+    const url = new URL("/login", publicOrigin(request));
     url.searchParams.set("redirect", pathname);
     return NextResponse.redirect(url);
   }

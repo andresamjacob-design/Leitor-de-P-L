@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { publicOrigin } from "@/lib/public-origin";
 import { resolveScope } from "@/lib/entities";
 import { getUser } from "@/lib/supabase/server";
 import { buildReport, isReportName, type ReportName } from "@/lib/export/reports";
@@ -25,7 +26,7 @@ export async function GET(
   // return nothing anyway — this is the third lock, and the only one on this file.
   const user = await getUser();
   if (!user) {
-    return NextResponse.redirect(new URL(`/login?redirect=/${slug}`, request.nextUrl));
+    return NextResponse.redirect(new URL(`/login?redirect=/${slug}`, publicOrigin(request)));
   }
 
   if (!isReportName(relatorio)) {
