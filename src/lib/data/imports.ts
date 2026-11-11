@@ -26,6 +26,7 @@ import {
 import type { Category } from "@/lib/data/categories";
 import type { ParsedTransaction } from "@/lib/import/types";
 import { chunk, HASH_BATCH, UUID_BATCH } from "@/lib/data/batching";
+import { clientePorCnpj } from "@/lib/cliente-por-cnpj";
 
 export type ImportFormat = "ofx" | "csv" | "xlsx" | "pdf" | "image";
 export type ImportStatus = "parsing" | "reviewing" | "approved" | "discarded" | "failed";
@@ -486,6 +487,16 @@ export async function approveStaged(
 
   const result: ApprovalResult = { approved: 0, duplicates: 0, failures: [] };
 
+  // Sem cliente sugerido, uma entrada cujo CNPJ é de um cliente cadastrado é desse cliente.
+  const { data: clientRows, error: clientsError } = await supabase
+    .from("clients")
+    .select("id, tax_id")
+    .eq("entity_id", entityId);
+  if (clientsError) throw new Error(`Failed to load clients: ${clientsError.message}`);
+  const clienteDoCnpj = clientePorCnpj(
+    (clientRows ?? []).map((client) => ({ id: client.id as string, taxId: client.tax_id as string | null })),
+  );
+
   for (const row of staged) {
     const input: CashEntryInput = {
       accountId,
@@ -497,7 +508,9 @@ export async function approveStaged(
       categoryId: categoryByStagedId.get(row.id) ?? row.suggestedCategoryId,
       // O cliente sugerido chega ao razão (D169). Antes ficava na revisão e se perdia aqui,
       // e todo cliente de importação era ligado depois, por script.
-      clientId: row.suggestedClientId,
+      clientId:
+        row.suggestedClientId ??
+        (row.direction === "in" ? clienteDoCnpj(row.counterpartyTaxId) : null),
       personId: null,
       vendor: null,
       isIntercompany: false,

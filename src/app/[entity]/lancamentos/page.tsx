@@ -16,6 +16,7 @@ import { formatPeriodShort, formatPtBRDate, todayInSaoPaulo } from "@/lib/dates"
 import { formatMoney, sum } from "@/lib/money";
 import { competenceOf, hasCompetenceOverride } from "@/lib/recognition/mirror";
 import type { EntryDirection } from "@/lib/ledger-types";
+import { clientePorCnpj } from "@/lib/cliente-por-cnpj";
 
 type Search = {
   de?: string;
@@ -89,10 +90,7 @@ export default async function EntriesPage({
       : null;
   const pickableClients = clients.map(({ id, name }) => ({ id, name }));
   // A receipt from a CNPJ that is a registered client arrives with that client chosen.
-  const digits = (text: string | null) => (text ?? "").replace(/\D/g, "");
-  const clientByTaxId = new Map(
-    clients.filter((client) => digits(client.taxId) !== "").map((client) => [digits(client.taxId), client.id]),
-  );
+  const clientByTaxId = clientePorCnpj(clients);
 
   const inflow = sum(
     entries.filter((entry) => entry.direction === "in").map((entry) => entry.amount),
@@ -236,7 +234,7 @@ export default async function EntriesPage({
                               clients={pickableClients}
                               defaultCategoryId={category?.id ?? ""}
                               defaultClientId={
-                                clientByTaxId.get(digits(entry.counterpartyTaxId)) ?? ""
+                                clientByTaxId(entry.counterpartyTaxId) ?? ""
                               }
                             />
                           </>
