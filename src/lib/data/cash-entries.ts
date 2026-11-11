@@ -374,6 +374,8 @@ export async function setCashEntryCategory(
   categoryId: string,
   categories: readonly Category[],
   userId: string,
+  /** Who paid. `undefined` keeps the entry's client; a string sets it (receipts only). */
+  clientId?: string,
 ): Promise<SaveResult> {
   const entry = await getCashEntry(id);
   if (!entry || entry.entityId !== entityId) throw new Error("lançamento não encontrado.");
@@ -386,9 +388,21 @@ export async function setCashEntryCategory(
   }
 
   const supabase = await createClient();
+  if (clientId !== undefined) {
+    // The id comes from a form, so it is checked against this entity, not trusted.
+    const { data: client } = await supabase
+      .from("clients")
+      .select("id")
+      .eq("id", clientId)
+      .eq("entity_id", entityId)
+      .maybeSingle();
+    if (!client) throw new Error("cliente não encontrado nesta empresa.");
+  }
+  const nextClientId = clientId ?? entry.clientId;
+
   const { error } = await supabase
     .from("cash_entries")
-    .update({ category_id: categoryId, updated_by: userId })
+    .update({ category_id: categoryId, client_id: nextClientId, updated_by: userId })
     .eq("id", id)
     .eq("entity_id", entityId);
   if (error) throw new Error(`não foi possível salvar a categoria: ${error.message}`);
@@ -396,6 +410,7 @@ export async function setCashEntryCategory(
   const input: CashEntryInput = {
     ...entry,
     categoryId,
+    clientId: nextClientId,
     counterpartAccountId: null,
     allowDuplicate: false,
   };

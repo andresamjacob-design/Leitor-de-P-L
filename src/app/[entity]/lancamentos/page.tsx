@@ -9,6 +9,7 @@ import { Field, Input, Select } from "@/components/ui/field";
 import { Amount, Table, TableScroll, Td, Th } from "@/components/ui/table";
 import { listAccounts } from "@/lib/data/accounts";
 import { listCategories } from "@/lib/data/categories";
+import { listClients } from "@/lib/data/clients";
 import { listCashEntries } from "@/lib/data/cash-entries";
 import { resolveScope } from "@/lib/entities";
 import { formatPeriodShort, formatPtBRDate, todayInSaoPaulo } from "@/lib/dates";
@@ -44,9 +45,10 @@ export default async function EntriesPage({
   const from = search.de || `${year}-01-01`;
   const to = search.ate || `${year}-12-31`;
 
-  const [accounts, categories] = await Promise.all([
+  const [accounts, categories, clients] = await Promise.all([
     listAccounts(entityIds, { includeInactive: true }),
     listCategories(entityIds, { includeInactive: true }),
+    listClients(entityIds),
   ]);
 
   // A drill-down from the consolidated cash flow sends a chart-of-accounts code, because
@@ -83,8 +85,14 @@ export default async function EntriesPage({
     scope.kind === "entity"
       ? categories
           .filter((category) => category.active && category.kind !== "transfer")
-          .map(({ id, code, name }) => ({ id, code, name }))
+          .map(({ id, code, name, kind }) => ({ id, code, name, kind }))
       : null;
+  const pickableClients = clients.map(({ id, name }) => ({ id, name }));
+  // A receipt from a CNPJ that is a registered client arrives with that client chosen.
+  const digits = (text: string | null) => (text ?? "").replace(/\D/g, "");
+  const clientByTaxId = new Map(
+    clients.filter((client) => digits(client.taxId) !== "").map((client) => [digits(client.taxId), client.id]),
+  );
 
   const inflow = sum(
     entries.filter((entry) => entry.direction === "in").map((entry) => entry.amount),
@@ -209,10 +217,31 @@ export default async function EntriesPage({
                         {accountById.get(entry.accountId)?.name ?? "—"}
                       </Td>
                       <Td className="text-xs text-muted">
-                        {category ? (
+                        {pickable &&
+                        (!category ||
+                          (entry.direction === "in" &&
+                            category.kind === "revenue" &&
+                            entry.clientId === null)) ? (
+                          <>
+                            {category ? (
+                              <span className="mb-1 block">
+                                {category.code} · {category.name} · sem cliente
+                              </span>
+                            ) : null}
+                            <CategoryPicker
+                              slug={slug}
+                              entryId={entry.id}
+                              direction={entry.direction}
+                              categories={pickable}
+                              clients={pickableClients}
+                              defaultCategoryId={category?.id ?? ""}
+                              defaultClientId={
+                                clientByTaxId.get(digits(entry.counterpartyTaxId)) ?? ""
+                              }
+                            />
+                          </>
+                        ) : category ? (
                           `${category.code} · ${category.name}`
-                        ) : pickable ? (
-                          <CategoryPicker slug={slug} entryId={entry.id} categories={pickable} />
                         ) : (
                           "Sem categoria"
                         )}

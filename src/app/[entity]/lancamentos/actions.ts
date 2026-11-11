@@ -112,12 +112,22 @@ export async function setEntryCategoryAction(
   const slug = String(data.get("slug") ?? "");
   const id = String(data.get("id") ?? "");
   const categoryId = String(data.get("categoryId") ?? "");
+  // Only the receipt form sends a client; empty means "not chosen", which keeps the entry's.
+  const clientId = String(data.get("clientId") ?? "") || undefined;
 
   try {
     const { entity, userId } = await requireWriteContext(slug);
     if (!id || !categoryId) return { error: "escolha uma categoria." };
     const categories = await listCategories([entity.id], { includeInactive: true });
-    const result = await setCashEntryCategory(entity.id, id, categoryId, categories, userId);
+    const result = await setCashEntryCategory(
+      entity.id,
+      id,
+      categoryId,
+      categories,
+      userId,
+      clientId,
+    );
+    revalidatePath(`/${slug}/clientes`);
     revalidatePath(`/${slug}`);
     revalidatePath(`/${slug}/lancamentos`);
     revalidatePath(`/${slug}/fluxo-de-caixa`);
