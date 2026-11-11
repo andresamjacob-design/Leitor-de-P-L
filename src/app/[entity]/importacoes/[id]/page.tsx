@@ -6,6 +6,7 @@ import { ReviewForm } from "./review-form";
 import { AiSuggestButton } from "./ai-button";
 import { getAccount } from "@/lib/data/accounts";
 import { listCategories } from "@/lib/data/categories";
+import { listClients } from "@/lib/data/clients";
 import { getImport, listStaged } from "@/lib/data/imports";
 import { resolveScope } from "@/lib/entities";
 import { formatPtBRDate } from "@/lib/dates";
@@ -27,11 +28,13 @@ export default async function ReviewImportPage({
   const record = await getImport(id);
   if (!record) notFound();
 
-  const [staged, account, categories] = await Promise.all([
+  const [staged, account, categories, clients] = await Promise.all([
     listStaged(id),
     getAccount(record.accountId),
     listCategories([record.entityId]),
+    listClients([record.entityId], { includeInactive: true }),
   ]);
+  const clientNames = Object.fromEntries(clients.map((client) => [client.id, client.name]));
 
   const pending = staged.filter((row) => row.status === "pending");
   const approved = staged.filter((row) => row.status === "approved");
@@ -101,7 +104,13 @@ export default async function ReviewImportPage({
       {staged.length === 0 ? (
         <p className="text-sm text-muted">Este arquivo não produziu nenhuma linha.</p>
       ) : (
-        <ReviewForm slug={slug} importId={id} staged={staged} categories={categories} />
+        <ReviewForm
+          slug={slug}
+          importId={id}
+          staged={staged}
+          categories={categories}
+          clientNames={clientNames}
+        />
       )}
 
       {approved.length > 0 ? (

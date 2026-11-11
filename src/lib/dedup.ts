@@ -142,3 +142,74 @@ export function duplicatasPorDocumento(
     return true;
   });
 }
+
+// ---------------------------------------------------------------------------
+// Terceira camada: o documento apareceu de um lado só
+// ---------------------------------------------------------------------------
+
+/** O movimento com o texto que o banco escreveu e o nome de quem pagou ou recebeu. */
+export type MovimentoPorNome = MovimentoPorDocumento & {
+  description: string;
+  counterpartyName: string | null;
+};
+
+const chaveNome = (m: MovimentoPorNome): string =>
+  [
+    m.occurredOn,
+    m.amount,
+    m.direction,
+    normalizeDescription(m.description),
+    normalizeDescription(m.counterpartyName ?? ""),
+  ].join("|");
+
+/**
+ * Quais linhas novas são o mesmo movimento de uma linha do razão em que **só um dos dois
+ * lados trouxe o CPF/CNPJ**.
+ *
+ * O hash usa o documento quando há e o nome quando não há; a segunda camada exige documento
+ * dos dois lados. O que fica entre as duas: a leitura de print. Em 03/11 os prints da Conta
+ * BS2 trouxeram o PIX de R$ 6.300 da FE FRANCHISING de 22/10 só com o nome; em 11/11 novos
+ * prints da mesma conta trouxeram o mesmo PIX **com** o CNPJ. Hash diferente, segunda camada
+ * cega, e a linha voltou como pendente — aprovar contaria a receita duas vezes.
+ *
+ * Esta camada compara data, valor, sentido, descrição e **nome** da contraparte — tudo o que
+ * o hash compara, menos o documento. As travas:
+ *
+ *   - **Só quando exatamente um lado tem documento.** Com documento dos dois lados, quem
+ *     decide é a segunda camada; sem documento em nenhum, o próprio hash já usou o nome.
+ *     Isso também impede que esta camada gaste uma linha do razão que a segunda já usou:
+ *     a segunda só consome linhas com documento para linhas novas com documento, e esta
+ *     só casa linha nova com documento contra razão sem, e vice-versa.
+ *   - **Nome e descrição presentes e iguais.** Sem nome, data + valor + "PIX RECEBIDO"
+ *     juntariam dois pagadores diferentes.
+ *   - **Um para um**, e o que o hash já reconheceu sai do estoque — como na segunda camada.
+ */
+export function duplicatasPorNome(
+  novos: readonly MovimentoPorNome[],
+  jaDuplicata: readonly boolean[],
+  razao: readonly (MovimentoPorNome & { dedupHash: string })[],
+  hashesJaCasados: ReadonlySet<string>,
+): boolean[] {
+  const temDoc = (m: MovimentoPorDocumento) => soDigitos(m.counterpartyTaxId) !== "";
+  const temNome = (m: MovimentoPorNome) => normalizeDescription(m.counterpartyName ?? "") !== "";
+
+  // Dois estoques: linhas do razão com documento só servem a linhas novas sem, e o inverso.
+  const estoque = { comDoc: new Map<string, number>(), semDoc: new Map<string, number>() };
+  for (const linha of razao) {
+    if (hashesJaCasados.has(linha.dedupHash) || !temNome(linha)) continue;
+    const alvo = temDoc(linha) ? estoque.comDoc : estoque.semDoc;
+    const chave = chaveNome(linha);
+    alvo.set(chave, (alvo.get(chave) ?? 0) + 1);
+  }
+
+  return novos.map((novo, i) => {
+    if (jaDuplicata[i] === true) return true;
+    if (!temNome(novo)) return false;
+    const alvo = temDoc(novo) ? estoque.semDoc : estoque.comDoc;
+    const chave = chaveNome(novo);
+    const disponivel = alvo.get(chave) ?? 0;
+    if (disponivel === 0) return false;
+    alvo.set(chave, disponivel - 1);
+    return true;
+  });
+}

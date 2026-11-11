@@ -24,11 +24,14 @@ export function ReviewForm({
   importId,
   staged,
   categories,
+  clientNames,
 }: {
   slug: string;
   importId: string;
   staged: StagedTransaction[];
   categories: Category[];
+  /** Client id → name, to show who a suggestion will attribute the money to. */
+  clientNames: Record<string, string>;
 }) {
   const [state, action, pending] = useActionState(reviewImportAction, EMPTY_FORM_STATE);
   const pendingRows = staged.filter((row) => row.status === "pending");
@@ -152,7 +155,14 @@ export function ReviewForm({
                       </span>
                     ) : null}
                   </Td>
-                  <Td className="text-xs text-muted">{row.counterpartyName ?? "—"}</Td>
+                  <Td className="text-xs text-muted">
+                    {row.counterpartyName ?? "—"}
+                    {row.suggestedClientId && clientNames[row.suggestedClientId] ? (
+                      <span className="block text-foreground">
+                        → cliente {clientNames[row.suggestedClientId]}
+                      </span>
+                    ) : null}
+                  </Td>
                   <Td>
                     {decided ? (
                       <span className="text-xs text-muted">—</span>

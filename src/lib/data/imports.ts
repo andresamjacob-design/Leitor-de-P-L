@@ -12,7 +12,12 @@ import { createClient } from "@/lib/supabase/server";
 import { fromNumeric, toNumeric, type Cents } from "@/lib/money";
 import type { IsoDate } from "@/lib/dates";
 import type { EntryDirection } from "@/lib/ledger-types";
-import { dedupHash, duplicatasPorDocumento, type MovimentoPorDocumento } from "@/lib/dedup";
+import {
+  dedupHash,
+  duplicatasPorDocumento,
+  duplicatasPorNome,
+  type MovimentoPorNome,
+} from "@/lib/dedup";
 import {
   createCashEntry,
   DuplicateEntryError,
@@ -316,17 +321,22 @@ async function stageRows(
           datas[0] as IsoDate,
           datas[datas.length - 1] as IsoDate,
         );
-  const duplicata = duplicatasPorDocumento(
-    input.transactions.map((transaction) => ({
-      occurredOn: transaction.occurredOn,
-      amount: transaction.amount,
-      direction: transaction.direction,
-      counterpartyTaxId: transaction.counterpartyTaxId,
-    })),
+  const novos = input.transactions.map((transaction) => ({
+    occurredOn: transaction.occurredOn,
+    amount: transaction.amount,
+    direction: transaction.direction,
+    counterpartyTaxId: transaction.counterpartyTaxId,
+    description: transaction.description,
+    counterpartyName: transaction.counterpartyName,
+  }));
+  const porDocumento = duplicatasPorDocumento(
+    novos,
     hashes.map((hash) => existing.has(hash)),
     razao,
     existing,
   );
+  // Terceira camada: o CPF/CNPJ veio de um lado só (leitura de print) — compara pelo nome.
+  const duplicata = duplicatasPorNome(novos, porDocumento, razao, existing);
   let duplicates = 0;
 
   const rows = input.transactions.map((transaction, index) => {
@@ -375,15 +385,17 @@ async function razaoNoIntervalo(
   accountId: string,
   de: IsoDate,
   ate: IsoDate,
-): Promise<(MovimentoPorDocumento & { dedupHash: string })[]> {
+): Promise<(MovimentoPorNome & { dedupHash: string })[]> {
   const supabase = await createClient();
   const PAGINA = 1000;
-  const linhas: (MovimentoPorDocumento & { dedupHash: string })[] = [];
+  const linhas: (MovimentoPorNome & { dedupHash: string })[] = [];
 
   for (let inicio = 0; ; inicio += PAGINA) {
     const { data, error } = await supabase
       .from("cash_entries")
-      .select("id, occurred_on, amount, direction, counterparty_tax_id, dedup_hash")
+      .select(
+        "id, occurred_on, amount, direction, description, counterparty_name, counterparty_tax_id, dedup_hash",
+      )
       .eq("entity_id", entityId)
       .eq("account_id", accountId)
       .gte("occurred_on", de)
@@ -397,6 +409,8 @@ async function razaoNoIntervalo(
       occurred_on: IsoDate;
       amount: string | number;
       direction: EntryDirection;
+      description: string;
+      counterparty_name: string | null;
       counterparty_tax_id: string | null;
       dedup_hash: string;
     }[];
@@ -407,6 +421,8 @@ async function razaoNoIntervalo(
         amount: fromNumeric(row.amount),
         direction: row.direction,
         counterpartyTaxId: row.counterparty_tax_id,
+        description: row.description,
+        counterpartyName: row.counterparty_name,
         dedupHash: row.dedup_hash,
       });
     }

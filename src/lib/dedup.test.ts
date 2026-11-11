@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { dedupHash, normalizeDescription, duplicatasPorDocumento } from "@/lib/dedup";
+import {
+  dedupHash,
+  normalizeDescription,
+  duplicatasPorDocumento,
+  duplicatasPorNome,
+} from "@/lib/dedup";
 import { parseMoney } from "@/lib/money";
 
 const base = {
@@ -157,5 +162,66 @@ describe("duplicatasPorDocumento", () => {
         new Set(),
       ),
     ).toEqual([false, false, false, false]);
+  });
+});
+
+describe("duplicatasPorNome", () => {
+  const CNPJ = "34243495000100";
+  const pix = (doc: string | null, nome: string | null = "FE FRANCHISING LTDA", reais = 6300n) => ({
+    occurredOn: "2026-10-22",
+    amount: reais * 100n,
+    direction: "in" as const,
+    counterpartyTaxId: doc,
+    description: "CRÉDITO PIX CHAVE",
+    counterpartyName: nome,
+  });
+  const noRazao = (m: ReturnType<typeof pix>, hash = "h1") => ({ ...m, dedupHash: hash });
+
+  it("reconhece o print que agora trouxe o CNPJ que o primeiro print não trouxe", () => {
+    // O caso real de 11/11: razão sem documento, linha nova com.
+    expect(duplicatasPorNome([pix(CNPJ)], [false], [noRazao(pix(null))], new Set())).toEqual([true]);
+  });
+
+  it("e o inverso: razão com documento, linha nova sem", () => {
+    expect(duplicatasPorNome([pix(null)], [false], [noRazao(pix(CNPJ))], new Set())).toEqual([true]);
+  });
+
+  it("não decide quando os dois lados têm documento — isso é da segunda camada", () => {
+    expect(duplicatasPorNome([pix(CNPJ)], [false], [noRazao(pix(CNPJ))], new Set())).toEqual([false]);
+  });
+
+  it("sem nome não junta: dois pagadores diferentes podem coincidir em data e valor", () => {
+    expect(duplicatasPorNome([pix(CNPJ, null)], [false], [noRazao(pix(null, null))], new Set())).toEqual([
+      false,
+    ]);
+  });
+
+  it("nome diferente é outro movimento", () => {
+    expect(
+      duplicatasPorNome([pix(CNPJ, "OUTRA EMPRESA LTDA")], [false], [noRazao(pix(null))], new Set()),
+    ).toEqual([false]);
+  });
+
+  it("valor diferente é outro movimento", () => {
+    expect(duplicatasPorNome([pix(CNPJ, undefined, 6200n)], [false], [noRazao(pix(null))], new Set())).toEqual([
+      false,
+    ]);
+  });
+
+  it("casa um para um: duas linhas novas e uma no razão, uma entra", () => {
+    expect(duplicatasPorNome([pix(CNPJ), pix(CNPJ)], [false, false], [noRazao(pix(null))], new Set())).toEqual([
+      true,
+      false,
+    ]);
+  });
+
+  it("a linha do razão que o hash já reconheceu não absolve outra", () => {
+    expect(duplicatasPorNome([pix(CNPJ)], [false], [noRazao(pix(null), "h1")], new Set(["h1"]))).toEqual([
+      false,
+    ]);
+  });
+
+  it("mantém o que as camadas anteriores já marcaram", () => {
+    expect(duplicatasPorNome([pix(CNPJ)], [true], [], new Set())).toEqual([true]);
   });
 });
