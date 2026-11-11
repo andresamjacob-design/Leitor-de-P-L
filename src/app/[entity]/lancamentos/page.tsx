@@ -219,6 +219,9 @@ export default async function EntriesPage({
                         (!category ||
                           (entry.direction === "in" &&
                             category.kind === "revenue" &&
+                            // Só receita de cliente pede cliente; rendimento de aplicação
+                            // também é "revenue", mas fica nas Financeiras.
+                            category.dreGroup === "receita_bruta" &&
                             entry.clientId === null)) ? (
                           <>
                             {category ? (
